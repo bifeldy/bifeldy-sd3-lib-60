@@ -11,7 +11,6 @@
  */
 
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,11 +18,15 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
 
+using Serilog;
+
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
+using System.Reflection;
+using Serilog.Events;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -47,6 +50,13 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         /* ** */
+
+        public static void SetupSerilog() {
+            Builder.Host.UseSerilog((hostContext, services, configuration) => {
+                string appPathDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+                configuration.WriteTo.File(appPathDir + $"/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
+            });
+        }
 
         public static void AddSwagger(
             string apiUrlPrefix = "api",

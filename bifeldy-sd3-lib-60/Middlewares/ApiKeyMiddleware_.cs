@@ -58,7 +58,12 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
 
             StreamReader reader = new StreamReader(request.Body);
-            RequestJson reqBody = _cs.JsonToObject<RequestJson>(await reader.ReadToEndAsync());
+            RequestJson reqBody = null;
+
+            string rbString = await reader.ReadToEndAsync();
+            if (!string.IsNullOrEmpty(rbString) && rbString.Trim().StartsWith("{")) {
+                reqBody = _cs.JsonToObject<RequestJson>(rbString);
+            }
 
             string apiKey = string.Empty;
             if (!string.IsNullOrEmpty(request.Cookies[_envVar.API_KEY_NAME])) {
