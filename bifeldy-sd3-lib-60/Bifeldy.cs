@@ -29,15 +29,17 @@ namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
 
+        public static WebApplicationBuilder Builder = null;
         public static IServiceCollection Services = null;
-        public static WebApplication App = null;
         public static IConfiguration Config = null;
+        public static WebApplication App = null;
 
         /* ** */
 
-        public static void InitSvc(IServiceCollection services, IConfiguration config) {
-            Services = services;
-            Config = config;
+        public static void InitBuilder(WebApplicationBuilder builder) {
+            Builder = builder;
+            Services = builder.Services;
+            Config = builder.Configuration;
         }
 
         public static void InitApp(WebApplication app) {
@@ -135,14 +137,8 @@ namespace bifeldy_sd3_lib_60 {
             Services.AddScoped<IPostgres, CPostgres>();
             Services.AddScoped<IMsSQL, CMsSQL>();
             Services.AddScoped<IOraPg>(p => {
-                IOptions<EnvVar> o = p.GetService<IOptions<EnvVar>>();
-                EnvVar _envVar = o.Value;
-                if (_envVar.IS_USING_POSTGRES) {
-                    return p.GetService<CPostgres>();
-                }
-                else {
-                    return p.GetService<COracle>();
-                }
+                EnvVar _envVar = p.GetService<IOptions<EnvVar>>().Value;
+                return _envVar.IS_USING_POSTGRES ? p.GetService<CPostgres>() : p.GetService<COracle>();
             });
             // --
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
@@ -158,6 +154,9 @@ namespace bifeldy_sd3_lib_60 {
             Services.AddSingleton<IBerkasService, CBerkasService>();
             Services.AddSingleton<ISftpService, CSftpService>();
             Services.AddSingleton<IStreamService, CStreamService>();
+            Services.AddSingleton<IChiperService, CChiperService>();
+            Services.AddSingleton<ILockerService, CLockerService>();
+            Services.AddSingleton<IConfigService, CConfigService>();
         }
 
         public static void UseNginxProxyPathSegment() {
