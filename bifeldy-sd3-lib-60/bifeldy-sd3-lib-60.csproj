@@ -4,7 +4,25 @@
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>bifeldy_sd3_lib_60</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNetZip" Version="1.16.0" />
+    <PackageReference Include="FluentFTP" Version="39.4.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.25" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.22" />
+    <PackageReference Include="Oracle.EntityFrameworkCore" Version="6.21.120" />
+    <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
+    <PackageReference Include="SSH.NET" Version="2023.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="SettingLibb">
+      <HintPath>Libraries\SettingLibb.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>
