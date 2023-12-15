@@ -61,43 +61,49 @@ namespace bifeldy_sd3_lib_60 {
         public static void AddSwagger(
             string apiUrlPrefix = "api",
             string docsTitle = "API Documentation",
-            string docsDescription = "// No Description"
+            string docsDescription = "// No Description",
+            bool enableApiKey = true,
+            bool enableJwt = true
         ) {
             Services.AddSwaggerGen(c => {
                 c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo {
                     Title = docsTitle,
                     Description = docsDescription
                 });
-                OpenApiSecurityScheme apiKey = new OpenApiSecurityScheme {
-                    Description = @"API-Key Origin. Example: 'http://.../...?key=000...'",
-                    Name = "key",
-                    In = ParameterLocation.Query,
-                    Type = SecuritySchemeType.ApiKey,
-                    Scheme = "ApiKey",
-                    Reference = new OpenApiReference {
-                        Id = "api_key",
-                        Type = ReferenceType.SecurityScheme
-                    }
-                };
-                c.AddSecurityDefinition(apiKey.Reference.Id, apiKey);
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement {
-                    { apiKey, Array.Empty<string>() }
-                });
-                OpenApiSecurityScheme jwt = new OpenApiSecurityScheme {
-                    Description = @"JWT Information. Example: 'Bearer eyj...'",
-                    Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "Bearer",
-                    Reference = new OpenApiReference {
-                        Id = "jwt",
-                        Type = ReferenceType.SecurityScheme
-                    }
-                };
-                c.AddSecurityDefinition(jwt.Reference.Id, jwt);
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement {
-                    { jwt, Array.Empty<string>() }
-                });
+                if (enableApiKey) {
+                    OpenApiSecurityScheme apiKey = new OpenApiSecurityScheme {
+                        Description = @"API-Key Origin. Example: 'http://.../...?key=000...'",
+                        Name = "key",
+                        In = ParameterLocation.Query,
+                        Type = SecuritySchemeType.ApiKey,
+                        Scheme = "ApiKey",
+                        Reference = new OpenApiReference {
+                            Id = "api_key",
+                            Type = ReferenceType.SecurityScheme
+                        }
+                    };
+                    c.AddSecurityDefinition(apiKey.Reference.Id, apiKey);
+                    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                        { apiKey, Array.Empty<string>() }
+                    });
+                }
+                if (enableJwt) {
+                    OpenApiSecurityScheme jwt = new OpenApiSecurityScheme {
+                        Description = @"JWT Information. Example: 'Bearer eyj...'",
+                        Name = "Authorization",
+                        In = ParameterLocation.Header,
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "Bearer",
+                        Reference = new OpenApiReference {
+                            Id = "jwt",
+                            Type = ReferenceType.SecurityScheme
+                        }
+                    };
+                    c.AddSecurityDefinition(jwt.Reference.Id, jwt);
+                    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                        { jwt, Array.Empty<string>() }
+                    });
+                }
             });
         }
 
