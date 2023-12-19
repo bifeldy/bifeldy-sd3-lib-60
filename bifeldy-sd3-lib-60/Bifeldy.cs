@@ -173,6 +173,8 @@ namespace bifeldy_sd3_lib_60 {
             Services.AddSingleton<IChiperService, CChiperService>();
             Services.AddSingleton<ILockerService, CLockerService>();
             Services.AddSingleton<IConfigService, CConfigService>();
+            Services.AddSingleton<IPubSubService, CPubSubService>();
+            Services.AddSingleton<IKafkaService, CKafkaService>();
         }
 
         public static void UseNginxProxyPathSegment() {
