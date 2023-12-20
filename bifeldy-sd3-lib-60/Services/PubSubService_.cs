@@ -20,7 +20,7 @@ namespace bifeldy_sd3_lib_60.Services {
         BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
         BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName);
         BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue);
-        void Unsubscribe(string variableName);
+        void Remove(string variableName);
     }
 
     public sealed class CPubSubService : IPubSubService {
