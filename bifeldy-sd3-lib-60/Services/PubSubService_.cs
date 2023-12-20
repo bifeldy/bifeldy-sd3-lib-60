@@ -11,12 +11,8 @@
  * 
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Dynamic;
 using System.Reactive.Subjects;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -31,7 +27,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IConverterService _converter;
 
-        IDictionary<string, BehaviorSubject<dynamic>> keyValuePairs = new Dictionary<string, BehaviorSubject<dynamic>>();
+        IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
 
         public CPubSubService(IConverterService converter) {
             _converter = converter;
@@ -46,14 +42,14 @@ namespace bifeldy_sd3_lib_60.Services {
                 T defaultValue = _converter.GetDefaultValueT<T>();
                 return CreateGlobalAppBehaviorSubject(variableName, defaultValue);
             }
-            return (dynamic) keyValuePairs[variableName];
+            return keyValuePairs[variableName];
         }
 
         public BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue) {
             if (!keyValuePairs.ContainsKey(variableName)) {
-                keyValuePairs.Add(variableName, (dynamic) CreateNewBehaviorSubject(initialValue));
+                keyValuePairs.Add(variableName, CreateNewBehaviorSubject(initialValue));
             }
-            return (dynamic) keyValuePairs[variableName];
+            return keyValuePairs[variableName];
         }
 
         public void Unsubscribe(string variableName) {
