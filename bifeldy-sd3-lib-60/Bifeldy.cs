@@ -10,23 +10,26 @@
  * 
  */
 
+using System.Reflection;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
 
 using Serilog;
+using Serilog.Events;
 
+using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
-using System.Reflection;
-using Serilog.Events;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -57,6 +60,8 @@ namespace bifeldy_sd3_lib_60 {
                 configuration.WriteTo.File(appPathDir + $"/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
             });
         }
+
+        /* ** */
 
         public static void AddSwagger(
             string apiUrlPrefix = "api",
@@ -152,9 +157,9 @@ namespace bifeldy_sd3_lib_60 {
             Services.AddScoped<IOracle, COracle>();
             Services.AddScoped<IPostgres, CPostgres>();
             Services.AddScoped<IMsSQL, CMsSQL>();
-            Services.AddScoped<IOraPg>(p => {
-                EnvVar _envVar = p.GetService<IOptions<EnvVar>>().Value;
-                return _envVar.IS_USING_POSTGRES ? p.GetService<CPostgres>() : p.GetService<COracle>();
+            Services.AddScoped<IOraPg>(sp => {
+                EnvVar _envVar = sp.GetRequiredService<IOptions<EnvVar>>().Value;
+                return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<CPostgres>() : sp.GetRequiredService<COracle>();
             });
             // --
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
@@ -176,6 +181,31 @@ namespace bifeldy_sd3_lib_60 {
             Services.AddSingleton<IPubSubService, CPubSubService>();
             Services.AddSingleton<IKafkaService, CKafkaService>();
         }
+
+        /* ** */
+
+        public static void AddKafkaProducerBackground(string hostPort, string topic) {
+            Services.AddHostedService(sp => {
+                ILogger<CKafkaProducer> _logger = sp.GetRequiredService<ILogger<CKafkaProducer>>();
+                IConverterService _converter = sp.GetRequiredService<IConverterService>();
+                IPubSubService _pubSub = sp.GetRequiredService<IPubSubService>();
+                IKafkaService _kafka = sp.GetRequiredService<IKafkaService>();
+                return new CKafkaProducer(_logger, _converter, _pubSub, _kafka, hostPort, topic);
+            });
+        }
+
+        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null) {
+            Services.AddHostedService(sp => {
+                ILogger<CKafkaConsumer> _logger = sp.GetRequiredService<ILogger<CKafkaConsumer>>();
+                IApplicationService _app = sp.GetRequiredService<IApplicationService>();
+                IConverterService _converter = sp.GetRequiredService<IConverterService>();
+                IPubSubService _pubSub = sp.GetRequiredService<IPubSubService>();
+                IKafkaService _kafka = sp.GetRequiredService<IKafkaService>();
+                return new CKafkaConsumer(_logger, _app, _converter, _pubSub, _kafka, hostPort, topic, groupId);
+            });
+        }
+
+        /* ** */
 
         public static void UseNginxProxyPathSegment() {
             App.Use(async (context, next) => {
