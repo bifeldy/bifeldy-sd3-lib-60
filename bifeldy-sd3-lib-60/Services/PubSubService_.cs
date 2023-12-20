@@ -52,9 +52,8 @@ namespace bifeldy_sd3_lib_60.Services {
             return keyValuePairs[variableName];
         }
 
-        public void Unsubscribe(string variableName) {
+        public void Remove(string variableName) {
             if (keyValuePairs.ContainsKey(variableName)) {
-                keyValuePairs[variableName].Dispose();
                 keyValuePairs.Remove(variableName);
             }
         }

@@ -62,7 +62,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public override void Dispose() {
             consumer?.Dispose();
-            _pubSub.Unsubscribe(KAFKA_NAME);
+            observeable?.Dispose();
             base.Dispose();
         }
 
