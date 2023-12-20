@@ -56,7 +56,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public override void Dispose() {
             producer?.Dispose();
-            observeable?.Dispose();
+            _pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
             base.Dispose();
         }
 
@@ -68,11 +68,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             if (observeable == null) {
                 observeable = _pubSub.CreateGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME, null);
                 observeable.Subscribe(async data => {
-                    Message<string, string> msg = new Message<string, string> {
-                        Key = data.Key,
-                        Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
-                    };
-                    await producer.ProduceAsync(_topic, msg, stoppingToken);
+                    if (data != null) {
+                        Message<string, string> msg = new Message<string, string> {
+                            Key = data.Key,
+                            Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
+                        };
+                        await producer.ProduceAsync(_topic, msg, stoppingToken);
+                    }
                 });
             }
             while (!stoppingToken.IsCancellationRequested) {

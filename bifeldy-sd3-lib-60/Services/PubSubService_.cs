@@ -20,7 +20,7 @@ namespace bifeldy_sd3_lib_60.Services {
         BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
         BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName);
         BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue);
-        void Remove(string variableName);
+        void DisposeAndRemoveAllSubscriber(string variableName);
     }
 
     public sealed class CPubSubService : IPubSubService {
@@ -52,8 +52,9 @@ namespace bifeldy_sd3_lib_60.Services {
             return keyValuePairs[variableName];
         }
 
-        public void Remove(string variableName) {
+        public void DisposeAndRemoveAllSubscriber(string variableName) {
             if (keyValuePairs.ContainsKey(variableName)) {
+                keyValuePairs[variableName].Dispose();
                 keyValuePairs.Remove(variableName);
             }
         }
