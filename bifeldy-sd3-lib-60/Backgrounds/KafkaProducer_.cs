@@ -66,7 +66,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 producer = _kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
             }
             if (observeable == null) {
-                observeable = _pubSub.CreateGlobalAppBehaviorSubject(KAFKA_NAME, new KafkaMessage<string, dynamic>());
+                observeable = _pubSub.CreateGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME, null);
                 observeable.Subscribe(async data => {
                     Message<string, string> msg = new Message<string, string> {
                         Key = data.Key,

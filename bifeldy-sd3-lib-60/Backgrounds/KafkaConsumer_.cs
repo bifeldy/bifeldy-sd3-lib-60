@@ -69,7 +69,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             await Task.Yield();
             if (observeable == null) {
-                observeable = _pubSub.CreateGlobalAppBehaviorSubject(KAFKA_NAME, new KafkaMessage<string, dynamic>());
+                observeable = _pubSub.CreateGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME, null);
             }
             if (consumer == null) {
                 consumer = _kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId ?? _app.AppName);
