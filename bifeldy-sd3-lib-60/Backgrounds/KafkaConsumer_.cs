@@ -32,15 +32,15 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private readonly string _hostPort;
         private readonly string _groupId;
-        private readonly string _topic;
+        private readonly string _topicName;
 
-        BehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
+        private BehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
 
-        IConsumer<string, string> consumer = null;
+        private IConsumer<string, string> consumer = null;
 
         private string KAFKA_NAME {
             get {
-                return $"KAFKA_CONSUMER_{_topic?.ToUpper()}";
+                return $"KAFKA_CONSUMER_{_topicName?.ToUpper()}";
             }
         }
 
@@ -48,7 +48,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public CKafkaConsumer(
             ILogger<CKafkaConsumer> logger, IApplicationService app, IConverterService converter, IPubSubService pubSub, IKafkaService kafka,
-            string hostPort, string topic, string groupId = null
+            string hostPort, string topicName, string groupId = null
         ) {
             _logger = logger;
             _app = app;
@@ -56,7 +56,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             _pubSub = pubSub;
             _kafka = kafka;
             _hostPort = hostPort;
-            _topic = topic;
+            _topicName = topicName;
             _groupId = groupId;
         }
 
@@ -69,11 +69,14 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             await Task.Yield();
             if (observeable == null) {
-                observeable = _pubSub.CreateGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME, null);
+                observeable = _pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
             }
             if (consumer == null) {
                 consumer = _kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId ?? _app.AppName);
-                consumer.Subscribe(_topic);
+                TopicPartition topicPartition = _kafka.CreateKafkaConsumerTopicPartition(_topicName, -1);
+                TopicPartitionOffset topicPartitionOffset = _kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
+                consumer.Assign(topicPartitionOffset);
+                consumer.Subscribe(_topicName);
             }
             ulong i = 0;
             while (!stoppingToken.IsCancellationRequested) {
@@ -89,11 +92,12 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     message.Value = _converter.JsonToObject<dynamic>(result.Message.Value);
                 }
                 observeable.OnNext(message);
-                if (i++ % COMMIT_AFTER_N_MESSAGES == 0) {
+                if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
                     consumer.Commit();
                     i = 0;
                 }
             }
+            consumer.Close();
         }
 
     }

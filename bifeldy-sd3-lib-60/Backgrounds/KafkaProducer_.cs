@@ -30,32 +30,37 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly IKafkaService _kafka;
 
         private readonly string _hostPort;
-        private readonly string _topic;
+        private readonly string _topicName;
 
-        IProducer<string, string> producer = null;
+        private IProducer<string, string> producer = null;
 
-        BehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
+        private BehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
+
+        private List<Message<string, string>> msgs = new List<Message<string, string>>();
+
+        private IDisposable kafkaSubs = null;
 
         private string KAFKA_NAME {
             get {
-                return $"KAFKA_PRODUCER_{_topic?.ToUpper()}";
+                return $"KAFKA_PRODUCER_{_topicName?.ToUpper()}";
             }
         }
 
         public CKafkaProducer(
             ILogger<CKafkaProducer> logger, IConverterService converter, IPubSubService pubSub, IKafkaService kafka,
-            string hostPort, string topic
+            string hostPort, string topicName
         ) {
             _logger = logger;
             _converter = converter;
             _pubSub = pubSub;
             _kafka = kafka;
             _hostPort = hostPort;
-            _topic = topic;
+            _topicName = topicName;
         }
 
         public override void Dispose() {
             producer?.Dispose();
+            kafkaSubs?.Dispose();
             _pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
             base.Dispose();
         }
@@ -66,19 +71,29 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 producer = _kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
             }
             if (observeable == null) {
-                observeable = _pubSub.CreateGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME, null);
-                observeable.Subscribe(async data => {
+                observeable = _pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                kafkaSubs = observeable.Subscribe(async data => {
                     if (data != null) {
                         Message<string, string> msg = new Message<string, string> {
                             Key = data.Key,
                             Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
                         };
-                        await producer.ProduceAsync(_topic, msg, stoppingToken);
+                        msgs.Append(msg);
+                        await producer.ProduceAsync(_topicName, msg, stoppingToken);
                     }
                 });
             }
             while (!stoppingToken.IsCancellationRequested) {
-                //
+                foreach (Message<string, string> msg in msgs) {
+                    try {
+                        await producer.ProduceAsync(_topicName, msg, stoppingToken);
+                    }
+                    catch (Exception e) {
+                        _logger.LogError($"[KAFKA_PRODUCER] {e.Message}");
+                    }
+                    msgs.Remove(msg);
+                }
+                Thread.Sleep(1000);
             }
         }
 

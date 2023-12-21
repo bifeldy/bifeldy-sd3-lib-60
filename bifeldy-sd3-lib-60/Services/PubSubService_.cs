@@ -17,6 +17,7 @@ using System.Reactive.Subjects;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IPubSubService {
+        bool IsExist(string variableName);
         BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
         BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName);
         BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue);
@@ -31,6 +32,10 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public CPubSubService(IConverterService converter) {
             _converter = converter;
+        }
+
+        public bool IsExist(string variableName) {
+            return keyValuePairs.ContainsKey(variableName);
         }
 
         public BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) {
