@@ -78,7 +78,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                             Key = data.Key,
                             Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
                         };
-                        msgs.Append(msg);
+                        msgs.Add(msg);
                         await producer.ProduceAsync(_topicName, msg, stoppingToken);
                     }
                 });
