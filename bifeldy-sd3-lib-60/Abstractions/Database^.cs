@@ -90,7 +90,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         protected async Task OpenConnection() {
             if (Database.CurrentTransaction == null) {
                 if (GetConnection().State != ConnectionState.Closed) {
-                    throw new Exception("Database Connection Is Already In Use!");
+                    throw new Exception("Koneksi Database Sedang Digunakan");
                 }
                 await Database.OpenConnectionAsync();
             }
@@ -252,7 +252,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 string filePathResult = $"{stringPathDownload}/{stringFileName}";
                 DbDataReader rdrGetBlob = await databaseCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
                 if (!rdrGetBlob.HasRows) {
-                    throw new Exception("Error file not found");
+                    throw new Exception("File Tidak Ditemukan");
                 }
                 while (await rdrGetBlob.ReadAsync()) {
                     FileStream fs = new FileStream(filePathResult, FileMode.OpenOrCreate, FileAccess.Write);

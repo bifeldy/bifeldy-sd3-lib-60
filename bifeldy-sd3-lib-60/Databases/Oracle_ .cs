@@ -80,7 +80,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 for (int i = 0; i < parameters.Count; i++) {
                     string pName = parameters[i].NAME.StartsWith($"{prefix}") ? parameters[i].NAME.Substring(1) : parameters[i].NAME;
                     if (string.IsNullOrEmpty(pName)) {
-                        throw new Exception("Parameter Name Required!");
+                        throw new Exception("Nama Parameter Wajib Diisi");
                     }
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
