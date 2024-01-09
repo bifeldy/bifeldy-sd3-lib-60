@@ -13,15 +13,15 @@
 
 using System.Dynamic;
 
-using System.Reactive.Subjects;
+using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IPubSubService {
         bool IsExist(string variableName);
-        BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
-        BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName);
-        BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue);
+        RxBehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
+        RxBehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName);
+        RxBehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue);
         void DisposeAndRemoveAllSubscriber(string variableName);
     }
 
@@ -39,11 +39,11 @@ namespace bifeldy_sd3_lib_60.Services {
             return keyValuePairs.ContainsKey(variableName);
         }
 
-        public BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) {
-            return new BehaviorSubject<T>(initialValue);
+        public RxBehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) {
+            return new RxBehaviorSubject<T>(initialValue);
         }
 
-        public BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName) {
+        public RxBehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName) {
             if (!keyValuePairs.ContainsKey(variableName)) {
                 T defaultValue = _converter.GetDefaultValueT<T>();
                 return CreateGlobalAppBehaviorSubject(variableName, defaultValue);
@@ -51,7 +51,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return keyValuePairs[variableName];
         }
 
-        public BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue) {
+        public RxBehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue) {
             if (!keyValuePairs.ContainsKey(variableName)) {
                 keyValuePairs.Add(variableName, CreateNewBehaviorSubject(initialValue));
             }

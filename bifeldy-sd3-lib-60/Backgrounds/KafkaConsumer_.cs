@@ -10,8 +10,6 @@
  * 
  */
 
-using System.Reactive.Subjects;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -34,7 +32,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly string _groupId;
         private readonly string _topicName;
 
-        private BehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
+        private RxBehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
 
         private IConsumer<string, string> consumer = null;
 
