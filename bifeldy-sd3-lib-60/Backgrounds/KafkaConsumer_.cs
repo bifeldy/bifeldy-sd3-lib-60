@@ -36,7 +36,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds
         private IGeneralRepository generalRepo;
 
         private readonly string _hostPort;
-        private readonly string _groupId;
+        private string _groupId;
         private string _topicName;
 
         private readonly bool _suffixKodeDc;
@@ -83,6 +83,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds
 
                 if (_suffixKodeDc) {
                     string kodeDc = await generalRepo.GetKodeDc();
+                    _groupId += $"_{kodeDc}";
                     _topicName += $"_{kodeDc}";
                 }
                 if (observeable == null) {
@@ -98,7 +99,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
                     ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
-                    logger.LogInformation($"[KAFKA_CONSUMER] 🏗 {result.Message.Key} :: {result.Message.Value}");
+                    logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
                     KafkaMessage<string, dynamic> message = new KafkaMessage<string, dynamic> {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
@@ -117,7 +118,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds
                 consumer.Close();
             }
             catch (Exception ex) {
-                logger.LogInformation($"[KAFKA_CONSUMER_ERROR] 🏗 {ex.Message}");
+                logger.LogError($"[KAFKA_CONSUMER_ERROR] 🏗 {ex.Message}");
             }
         }
 
