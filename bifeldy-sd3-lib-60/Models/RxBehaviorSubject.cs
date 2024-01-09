@@ -15,7 +15,7 @@ using System.Reactive.Subjects;
 
 namespace bifeldy_sd3_lib_60.Models {
 
-    // Gak Bisa Inherit Langsung Dari
+    // Wrapper Saja ~ Gak Bisa Inherit Langsung Dari
     // sealed BehaviorSubject
 
     public sealed class RxBehaviorSubject<T> : SubjectBase<T>, IDisposable {
