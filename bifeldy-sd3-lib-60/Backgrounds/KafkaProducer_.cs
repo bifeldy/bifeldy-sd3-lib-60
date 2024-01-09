@@ -80,11 +80,14 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 kafka = _scopedService.ServiceProvider.GetRequiredService<IKafkaService>();
                 generalRepo = _scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
+                if (_suffixKodeDc) {
+                    string kodeDc = await generalRepo.GetKodeDc();
+                    _topicName += $"_{kodeDc}";
+                }
+                if (producer == null) {
+                    producer = kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
+                }
                 if (observeable == null) {
-                    if (_suffixKodeDc) {
-                        string kodeDc = await generalRepo.GetKodeDc();
-                        _topicName += $"_{kodeDc}";
-                    }
                     observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
                     kafkaSubs = observeable.Subscribe(async data => {
                         if (data != null) {
@@ -96,9 +99,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                             await producer.ProduceAsync(_topicName, msg, stoppingToken);
                         }
                     });
-                }
-                if (producer == null) {
-                    producer = kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
                 }
                 while (!stoppingToken.IsCancellationRequested) {
                     foreach (Message<string, string> msg in msgs) {

@@ -81,19 +81,19 @@ namespace bifeldy_sd3_lib_60.Backgrounds
                 kafka = _scopedService.ServiceProvider.GetRequiredService<IKafkaService>();
                 generalRepo = _scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
+                if (_suffixKodeDc) {
+                    string kodeDc = await generalRepo.GetKodeDc();
+                    _topicName += $"_{kodeDc}";
+                }
+                if (observeable == null) {
+                    observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                }
                 if (consumer == null) {
-                    if (_suffixKodeDc) {
-                        string kodeDc = await generalRepo.GetKodeDc();
-                        _topicName += $"_{kodeDc}";
-                    }
                     consumer = kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId);
                     TopicPartition topicPartition = kafka.CreateKafkaConsumerTopicPartition(_topicName, -1);
                     TopicPartitionOffset topicPartitionOffset = kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
                     consumer.Assign(topicPartitionOffset);
                     consumer.Subscribe(_topicName);
-                }
-                if (observeable == null) {
-                    observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
                 }
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
