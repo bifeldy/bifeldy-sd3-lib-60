@@ -30,6 +30,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IOracle : IOraPg {
         void InitializeConnection(string dbTnsOdp = null, string dbUsername = null, string dbPassword = null);
+        COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid);
     }
 
     public sealed class COracle : CDatabase, IOracle {
@@ -44,7 +45,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs
-        ) : base(options, logger, cs) {
+        ) : base(options, envVar, logger, cs) {
             _logger = logger;
             _envVar = envVar.Value;
             _as = @as;
@@ -55,7 +56,9 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
-            options.UseOracle(DbConnectionString);
+            options.UseOracle(DbConnectionString, opt => {
+                opt.UseOracleSQLCompatibility("11");
+            });
         }
 
         public void InitializeConnection(string dbTnsOdp = null, string dbUsername = null, string dbPassword = null) {
@@ -198,6 +201,13 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.CommandType = CommandType.Text;
             BindQueryParameter(cmd, bindParam);
             return await RetrieveBlob(cmd, stringPathDownload, stringFileName);
+        }
+
+        public COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid) {
+            COracle oracle = (COracle) Clone();
+            string dbTnsOdp = $"(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={dbIpAddrss})(PORT={dbPort})))(CONNECT_DATA=(SERVICE_NAME={dbNameSid})))";
+            oracle.InitializeConnection(dbUsername, dbPassword, dbTnsOdp);
+            return oracle;
         }
 
     }

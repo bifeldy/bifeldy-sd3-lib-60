@@ -56,8 +56,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
             ILogger<CListMailServerRepository> logger,
             IApplicationService @as,
             IGlobalService gs,
-            IOraPg orapg
-        ) : base(envVar, @as, orapg) {
+            IOraPg orapg,
+            IMsSQL mssql
+        ) : base(envVar, @as, orapg, mssql) {
             _envVar = envVar.Value;
             _logger = logger;
             _gs = gs;

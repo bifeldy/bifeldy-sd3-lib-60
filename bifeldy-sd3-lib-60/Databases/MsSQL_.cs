@@ -29,6 +29,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IMsSQL : IDatabase {
         void InitializeConnection(string dbIpAddrss = null, string dbName = null, string dbUsername = null, string dbPassword = null);
+        CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName);
     }
 
     public sealed class CMsSQL : CDatabase, IMsSQL {
@@ -43,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs
-        ) : base(options, logger, cs) {
+        ) : base(options, envVar, logger, cs) {
             _logger = logger;
             _envVar = envVar.Value;
             _as = @as;
@@ -190,6 +191,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.CommandType = CommandType.Text;
             BindQueryParameter(cmd, bindParam);
             return await RetrieveBlob(cmd, stringPathDownload, stringFileName);
+        }
+
+        public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {
+            CMsSQL mssql = (CMsSQL) Clone();
+            mssql.InitializeConnection(dbIpAddrss, dbUsername, dbPassword, dbName);
+            return mssql;
         }
 
     }

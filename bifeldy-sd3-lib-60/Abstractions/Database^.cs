@@ -25,6 +25,7 @@ using Microsoft.Extensions.Logging;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using Microsoft.Extensions.Options;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
@@ -49,6 +50,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
     public abstract partial class CDatabase : DbContext, IDatabase, ICloneable {
 
+        private readonly EnvVar _envVar;
+
         private readonly ILogger<CDatabase> _logger;
         private readonly IConverterService _cs;
 
@@ -62,7 +65,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public bool HasUnCommitRollbackSqlQuery => Database.CurrentTransaction != null;
 
-        public CDatabase(DbContextOptions options, ILogger<CDatabase> logger, IConverterService cs) : base(options) {
+        public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs) : base(options) {
+            _envVar = envVar.Value;
             _logger = logger;
             _cs = cs;
         }
@@ -71,6 +75,21 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             base.OnModelCreating(modelBuilder);
             Assembly entitiesAssembly = typeof(EntityTable).Assembly;
             modelBuilder.RegisterAllEntities<EntityTable>(entitiesAssembly);
+            // DbSet<T> Case Sensitive ~
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes()) {
+                string tblName = entityType.GetTableName();
+                if (_envVar.IS_USING_POSTGRES) {
+                    entityType.SetTableName(tblName.ToLower());
+                }
+            }
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes()) {
+                foreach (var property in entityType.GetProperties()) {
+                    string colName = property.GetColumnBaseName();
+                    if (_envVar.IS_USING_POSTGRES) {
+                        property.SetColumnName(colName.ToLower());
+                    }
+                }
+            }
         }
 
         public object Clone() {

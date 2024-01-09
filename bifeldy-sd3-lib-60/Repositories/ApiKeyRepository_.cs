@@ -41,8 +41,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IGlobalService gs,
-            IOraPg orapg
-        ) : base(envVar, @as, orapg) {
+            IOraPg orapg,
+            IMsSQL mssql
+        ) : base(envVar, @as, orapg, mssql) {
             _gs = gs;
             _orapg = orapg;
         }

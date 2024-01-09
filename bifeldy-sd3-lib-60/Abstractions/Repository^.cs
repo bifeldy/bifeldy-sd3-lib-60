@@ -26,8 +26,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
     public interface IRepository {
         Task<string> GetJenisDc();
         Task<string> GetKodeDc();
-        Task<string> CekVersi();
-        Task<bool> LoginUser(string userNameNik, string password);
+        Task<string> GetNamaDc();
+        Task<DateTime> OraPg_DateYesterdayOrTommorow(int lastDay);
+        Task<DateTime> OraPg_GetLastOrNextMonth(int lastMonth);
+        Task<DateTime> OraPg_GetCurrentTimestamp();
+        Task<DateTime> OraPg_GetCurrentDate();
     }
 
     public abstract class CRepository : IRepository {
@@ -37,11 +40,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         private readonly IApplicationService _as;
 
         private readonly IOraPg _orapg;
+        private readonly IMsSQL _mssql;
 
-        public CRepository(IOptions<EnvVar> envVar, IApplicationService @as, IOraPg orapg) {
+        public CRepository(IOptions<EnvVar> envVar, IApplicationService @as, IOraPg orapg, IMsSQL mssql) {
             _envVar = envVar.Value;
             _as = @as;
             _orapg = orapg;
+            _mssql = mssql;
         }
 
         public async Task<string> GetJenisDc() {
@@ -71,72 +76,40 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             }
         }
 
-        public async Task<string> CekVersi() {
-            if (_as.DebugMode) {
-                return "OKE";
-            }
-            else {
-                try {
-                    string res1 = await _orapg.ExecScalarAsync<string>(
-                        $@"
-                            SELECT
-                                CASE
-                                    WHEN COALESCE(aprove, 'N') = 'Y' AND {(
-                                            _envVar.IS_USING_POSTGRES ?
-                                            "COALESCE(tgl_berlaku, NOW())::DATE <= CURRENT_DATE" :
-                                            "TRUNC(COALESCE(tgl_berlaku, SYSDATE)) <= TRUNC(SYSDATE)"
-                                        )} 
-                                        THEN COALESCE(VERSI_BARU, '0')
-                                    WHEN COALESCE(aprove, 'N') = 'N'
-                                        THEN COALESCE(versi_lama, '0')
-                                    ELSE
-                                        COALESCE(versi_lama, '0')
-                                END AS VERSI
-                            FROM
-                                dc_program_vbdtl_t
-                            WHERE
-                                UPPER(dc_kode) = :dc_kode
-                                AND UPPER(nama_prog) LIKE :nama_prog
-                        ",
-                        new List<CDbQueryParamBind> {
-                            new CDbQueryParamBind { NAME = "dc_kode", VALUE = await GetKodeDc() },
-                            new CDbQueryParamBind { NAME = "nama_prog", VALUE = $"%{_as.AppName}%" }
-                        }
-                    );
-                    if (string.IsNullOrEmpty(res1)) {
-                        return $"Program :: {_as.AppName}" + Environment.NewLine + "Belum Terdaftar Di Master Program DC";
-                    }
-                    if (res1 == _as.AppVersion) {
-                        return "OKE";
-                    }
-                    else {
-                        return $"Versi Program :: {_as.AppName}" + Environment.NewLine + $"Tidak Sama Dengan Master Program = v{res1}";
-                    }
-                }
-                catch (Exception ex1) {
-                    return ex1.Message;
-                }
-            }
-        }
-
-        public async Task<bool> LoginUser(string userNameNik, string password) {
-            string loggedInUsername = await _orapg.ExecScalarAsync<string>(
+        public async Task<DateTime> OraPg_DateYesterdayOrTommorow(int lastDay) {
+            return await _orapg.ExecScalarAsync<DateTime>(
                 $@"
-                    SELECT
-                        user_name
-                    FROM
-                        dc_user_t
-                    WHERE
-                        (UPPER(user_name) = :user_name OR UPPER(user_nik) = :user_nik)
-                        AND UPPER(user_password) = :password
+                    SELECT {(_envVar.IS_USING_POSTGRES ? "CURRENT_DATE" : "TRUNC(SYSDATE)")} {(lastDay >= 0 ? "+" : "-")} :last_day
+                    {(_envVar.IS_USING_POSTGRES ? "" : "FROM DUAL")}
                 ",
                 new List<CDbQueryParamBind> {
-                    new CDbQueryParamBind { NAME = "user_name", VALUE = userNameNik },
-                    new CDbQueryParamBind { NAME = "user_nik", VALUE = userNameNik },
-                    new CDbQueryParamBind { NAME = "password", VALUE = password }
+                    new CDbQueryParamBind { NAME = "last_day", VALUE = lastDay }
                 }
             );
-            return !string.IsNullOrEmpty(loggedInUsername);
+        }
+
+        public async Task<DateTime> OraPg_GetLastOrNextMonth(int lastMonth) {
+            return await _orapg.ExecScalarAsync<DateTime>(
+                $@"
+                    SELECT TRUNC(add_months({(_envVar.IS_USING_POSTGRES ? "CURRENT_DATE" : "SYSDATE")}, {(lastMonth >= 0 ? "+" : "-")} :last_month))
+                    {(_envVar.IS_USING_POSTGRES ? "" : "FROM DUAL")}
+                ",
+                new List<CDbQueryParamBind> {
+                    new CDbQueryParamBind { NAME = "last_month", VALUE = lastMonth }
+                }
+            );
+        }
+
+        public async Task<DateTime> OraPg_GetCurrentTimestamp() {
+            return await _orapg.ExecScalarAsync<DateTime>($@"
+                SELECT {(_envVar.IS_USING_POSTGRES ? "CURRENT_TIMESTAMP" : "SYSDATE FROM DUAL")}
+            ");
+        }
+
+        public async Task<DateTime> OraPg_GetCurrentDate() {
+            return await _orapg.ExecScalarAsync<DateTime>($@"
+                SELECT {(_envVar.IS_USING_POSTGRES ? "CURRENT_DATE" : "TRUNC(SYSDATE) FROM DUAL")}
+            ");
         }
 
     }

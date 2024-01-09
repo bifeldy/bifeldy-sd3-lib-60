@@ -33,7 +33,8 @@ using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 
-namespace bifeldy_sd3_lib_60 {
+namespace bifeldy_sd3_lib_60
+{
 
     public static class Bifeldy {
 
@@ -164,6 +165,7 @@ namespace bifeldy_sd3_lib_60 {
                 return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<CPostgres>() : sp.GetRequiredService<COracle>();
             });
             // --
+            Services.AddScoped<IGeneralRepository, CGeneralRepository>();
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
             Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
             // --
@@ -179,7 +181,6 @@ namespace bifeldy_sd3_lib_60 {
             Services.AddSingleton<IStreamService, CStreamService>();
             Services.AddSingleton<IChiperService, CChiperService>();
             Services.AddSingleton<ILockerService, CLockerService>();
-            Services.AddSingleton<IConfigService, CConfigService>();
             Services.AddSingleton<IPubSubService, CPubSubService>();
             Services.AddSingleton<IKafkaService, CKafkaService>();
         }
@@ -188,22 +189,16 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void AddKafkaProducerBackground(string hostPort, string topic) {
             Services.AddHostedService(sp => {
-                ILogger<CKafkaProducer> _logger = sp.GetRequiredService<ILogger<CKafkaProducer>>();
-                IConverterService _converter = sp.GetRequiredService<IConverterService>();
-                IPubSubService _pubSub = sp.GetRequiredService<IPubSubService>();
-                IKafkaService _kafka = sp.GetRequiredService<IKafkaService>();
-                return new CKafkaProducer(_logger, _converter, _pubSub, _kafka, hostPort, topic);
+                IServiceScopeFactory _ss = sp.GetRequiredService<IServiceScopeFactory>();
+                return new CKafkaProducer(_ss, hostPort, topic);
             });
         }
 
-        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null) {
+        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null, bool suffixKodeDc = false) {
             Services.AddHostedService(sp => {
-                ILogger<CKafkaConsumer> _logger = sp.GetRequiredService<ILogger<CKafkaConsumer>>();
+                IServiceScopeFactory _ss = sp.GetRequiredService<IServiceScopeFactory>();
                 IApplicationService _app = sp.GetRequiredService<IApplicationService>();
-                IConverterService _converter = sp.GetRequiredService<IConverterService>();
-                IPubSubService _pubSub = sp.GetRequiredService<IPubSubService>();
-                IKafkaService _kafka = sp.GetRequiredService<IKafkaService>();
-                return new CKafkaConsumer(_logger, _app, _converter, _pubSub, _kafka, hostPort, topic, groupId);
+                return new CKafkaConsumer(_ss, hostPort, topic, groupId ?? _app.AppName, suffixKodeDc);
             });
         }
 

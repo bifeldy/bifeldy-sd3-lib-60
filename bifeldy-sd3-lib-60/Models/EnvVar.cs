@@ -229,6 +229,20 @@ namespace bifeldy_sd3_lib_60.Models {
             }
         }
 
+        private string wsSyncHo = "http://127.0.0.1";
+        public string WS_SYNCHO {
+            get {
+                string wsSyncHoEnv = GetEnvVar("WS_SYNCHO");
+                if (!string.IsNullOrEmpty(wsSyncHoEnv)) {
+                    wsSyncHo = wsSyncHoEnv;
+                }
+                return wsSyncHo;
+            }
+            set {
+                wsSyncHo = value;
+            }
+        }
+
         // private string haha;
         // public string HAHA {
         //     get => haha ??= "TEST";

@@ -34,6 +34,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IPostgres : IOraPg {
         void InitializeConnection(string dbIpAddress = null, string dbPort = null, string dbUsername = null, string dbPassword = null, string dbName = null);
+        CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName);
     }
 
     public sealed class CPostgres : CDatabase, IPostgres {
@@ -48,7 +49,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs
-        ) : base(options, logger, cs) {
+        ) : base(options, envVar, logger, cs) {
             _logger = logger;
             _envVar = envVar.Value;
             _as = @as;
@@ -335,6 +336,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.CommandType = CommandType.Text;
             BindQueryParameter(cmd, bindParam);
             return await RetrieveBlob(cmd, stringPathDownload, stringFileName);
+        }
+
+        public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {
+            CPostgres postgres = (CPostgres) Clone();
+            postgres.InitializeConnection(dbIpAddrss, dbPort, dbUsername, dbPassword, dbName);
+            return postgres;
         }
 
     }
