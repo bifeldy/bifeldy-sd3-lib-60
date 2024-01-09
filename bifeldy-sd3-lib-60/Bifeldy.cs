@@ -30,6 +30,7 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
+using Helmet;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -219,16 +220,24 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
+        public static void UseHelmet() {
+            App.UseHelmet(o => {
+                o.UseContentSecurityPolicy = false; // Buat Web Socket (Blazor SignalR, Socket.io, Web RTC)
+                o.UseXContentTypeOptions = false; // Boleh Content-Sniff :: .mkv Dibaca .mp4
+                o.UseReferrerPolicy = false; // Kalau Pakai Service Worker (Gak Set Origin, Tapi Referrer)
+            });
+        }
+
+        public static void UseErrorHandlerMiddleware() {
+            // App.UseMiddleware<ErrorHandlerMiddleware>();
+        }
+
         public static void UseApiKeyMiddleware() {
             App.UseMiddleware<ApiKeyMiddleware>();
         }
 
         public static void UseJwtMiddleware() {
             // App.UseMiddleware<JwtMiddleware>();
-        }
-
-        public static void UseErrorHandlerMiddleware() {
-            // App.UseMiddleware<ErrorHandlerMiddleware>();
         }
 
     }
