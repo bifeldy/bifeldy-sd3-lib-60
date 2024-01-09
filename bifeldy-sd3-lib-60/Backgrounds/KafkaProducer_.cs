@@ -66,39 +66,44 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             await Task.Yield();
+            try {
 
-            logger = _scopedService.ServiceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
-            converter = _scopedService.ServiceProvider.GetRequiredService<IConverterService>();
-            pubSub = _scopedService.ServiceProvider.GetRequiredService<IPubSubService>();
-            kafka = _scopedService.ServiceProvider.GetRequiredService<IKafkaService>();
+                logger = _scopedService.ServiceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
+                converter = _scopedService.ServiceProvider.GetRequiredService<IConverterService>();
+                pubSub = _scopedService.ServiceProvider.GetRequiredService<IPubSubService>();
+                kafka = _scopedService.ServiceProvider.GetRequiredService<IKafkaService>();
 
-            if (producer == null) {
-                producer = kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
-            }
-            if (observeable == null) {
-                observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
-                kafkaSubs = observeable.Subscribe(async data => {
-                    if (data != null) {
-                        Message<string, string> msg = new Message<string, string> {
-                            Key = data.Key,
-                            Value = typeof(string) == data.Value.GetType() ? data.Value : converter.ObjectToJson(data.Value)
-                        };
-                        msgs.Add(msg);
-                        await producer.ProduceAsync(_topicName, msg, stoppingToken);
-                    }
-                });
-            }
-            while (!stoppingToken.IsCancellationRequested) {
-                foreach (Message<string, string> msg in msgs) {
-                    try {
-                        await producer.ProduceAsync(_topicName, msg, stoppingToken);
-                    }
-                    catch (Exception e) {
-                        logger.LogError($"[KAFKA_PRODUCER] {e.Message}");
-                    }
-                    msgs.Remove(msg);
+                if (producer == null) {
+                    producer = kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
                 }
-                Thread.Sleep(1000);
+                if (observeable == null) {
+                    observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                    kafkaSubs = observeable.Subscribe(async data => {
+                        if (data != null) {
+                            Message<string, string> msg = new Message<string, string> {
+                                Key = data.Key,
+                                Value = typeof(string) == data.Value.GetType() ? data.Value : converter.ObjectToJson(data.Value)
+                            };
+                            msgs.Add(msg);
+                            await producer.ProduceAsync(_topicName, msg, stoppingToken);
+                        }
+                    });
+                }
+                while (!stoppingToken.IsCancellationRequested) {
+                    foreach (Message<string, string> msg in msgs) {
+                        try {
+                            await producer.ProduceAsync(_topicName, msg, stoppingToken);
+                        }
+                        catch (Exception e) {
+                            logger.LogError($"[KAFKA_PRODUCER] {e.Message}");
+                        }
+                        msgs.Remove(msg);
+                    }
+                    Thread.Sleep(1000);
+                }
+            }
+            catch (Exception ex) {
+                logger.LogInformation($"[KAFKA_PRODUCER_ERROR] 🏗 {ex.Message}");
             }
         }
 
