@@ -12,6 +12,7 @@
  */
 
 using System.Dynamic;
+
 using System.Reactive.Subjects;
 
 namespace bifeldy_sd3_lib_60.Services {
