@@ -106,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                             await producer.ProduceAsync(_topicName, msg, stoppingToken);
                         }
                         catch (Exception e) {
-                            logger.LogError($"[KAFKA_PRODUCER] {e.Message}");
+                            logger.LogError($"[KAFKA_PRODUCER_MESSAGE] {e.Message}");
                         }
                         msgs.Remove(msg);
                     }
@@ -114,7 +114,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 }
             }
             catch (Exception ex) {
-                logger.LogInformation($"[KAFKA_PRODUCER_ERROR] 🏗 {ex.Message}");
+                logger.LogError($"[KAFKA_PRODUCER_ERROR] 🏗 {ex.Message}");
             }
         }
 
