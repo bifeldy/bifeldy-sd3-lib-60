@@ -225,7 +225,38 @@ namespace bifeldy_sd3_lib_60
         }
 
         public static void UseErrorHandlerMiddleware() {
-            // App.UseMiddleware<ErrorHandlerMiddleware>();
+            App.Use(async (context, next) => {
+
+                // Khusus API Path :: Akan Di Handle Error Dengan Balikan Data JSON
+                // Selain Itu Atau Jika Masih Ada Error Lain
+                // Misal Di Catch Akan Terlempar Ke Halaman Error Bawaan UI
+
+                if (!context.Request.Path.Value.StartsWith("/api/")) {
+                    await next();
+                }
+                else {
+                    try {
+                        await next();
+                    }
+                    catch (Exception ex) {
+                        IConverterService _cs = App.Services.GetRequiredService<IConverterService>();
+                        HttpResponse response = context.Response;
+
+                        response.Clear();
+                        response.StatusCode = 500;
+                        response.ContentType = "application/json";
+
+                        object resBody = new {
+                            info = "🙄 500 - Whoops :: Terjadi Kesalahan 😪",
+                            result = new {
+                                message = $"💩 {ex.Message} 🤬"
+                            }
+                        };
+
+                        await response.WriteAsync(_cs.ObjectToJson(resBody));
+                    }
+                }
+            });
         }
 
         public static void UseApiKeyMiddleware() {
