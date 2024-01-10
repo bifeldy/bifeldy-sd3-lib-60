@@ -32,6 +32,7 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
+using Microsoft.Extensions.Hosting;
 
 namespace bifeldy_sd3_lib_60
 {
@@ -246,10 +247,15 @@ namespace bifeldy_sd3_lib_60
                         response.StatusCode = 500;
                         response.ContentType = "application/json";
 
+                        string errMsg = "Gagal Memproses Data";
+                        if (App.Environment.IsDevelopment()) {
+                            errMsg = ex.Message;
+                        }
+
                         object resBody = new {
                             info = "🙄 500 - Whoops :: Terjadi Kesalahan 😪",
                             result = new {
-                                message = $"💩 {ex.Message} 🤬"
+                                message = $"💩 {errMsg} 🤬"
                             }
                         };
 
