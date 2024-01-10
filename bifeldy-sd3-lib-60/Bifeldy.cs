@@ -187,18 +187,18 @@ namespace bifeldy_sd3_lib_60
 
         /* ** */
 
-        public static void AddKafkaProducerBackground(string hostPort, string topic) {
+        public static void AddKafkaProducerBackground(string hostPort, string topic, bool _suffixKodeDc = false) {
             Services.AddHostedService(sp => {
                 IServiceScopeFactory _ss = sp.GetRequiredService<IServiceScopeFactory>();
-                return new CKafkaProducer(_ss, hostPort, topic);
+                return new CKafkaProducer(_ss, hostPort, topic, _suffixKodeDc);
             });
         }
 
-        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null, bool suffixKodeDc = false) {
+        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null, bool _suffixKodeDc = false) {
             Services.AddHostedService(sp => {
                 IServiceScopeFactory _ss = sp.GetRequiredService<IServiceScopeFactory>();
                 IApplicationService _app = sp.GetRequiredService<IApplicationService>();
-                return new CKafkaConsumer(_ss, hostPort, topic, groupId ?? _app.AppName, suffixKodeDc);
+                return new CKafkaConsumer(_ss, hostPort, topic, groupId ?? _app.AppName, _suffixKodeDc);
             });
         }
 

@@ -82,9 +82,15 @@ namespace bifeldy_sd3_lib_60.Backgrounds
                 generalRepo = _scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
                 if (_suffixKodeDc) {
+                    if (!_groupId.EndsWith("_")) {
+                        _groupId += "_";
+                    }
+                    if (!_topicName.EndsWith("_")) {
+                        _topicName += "_";
+                    }
                     string kodeDc = await generalRepo.GetKodeDc();
-                    _groupId += $"_{kodeDc}";
-                    _topicName += $"_{kodeDc}";
+                    _groupId += kodeDc;
+                    _topicName += kodeDc;
                 }
                 if (observeable == null) {
                     observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);

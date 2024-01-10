@@ -81,8 +81,11 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 generalRepo = _scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
                 if (_suffixKodeDc) {
+                    if (!_topicName.EndsWith("_")) {
+                        _topicName += "_";
+                    }
                     string kodeDc = await generalRepo.GetKodeDc();
-                    _topicName += $"_{kodeDc}";
+                    _topicName += kodeDc;
                 }
                 if (producer == null) {
                     producer = kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
