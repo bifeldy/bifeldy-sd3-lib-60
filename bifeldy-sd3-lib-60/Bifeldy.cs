@@ -205,6 +205,26 @@ namespace bifeldy_sd3_lib_60
 
         /* ** */
 
+        public static async void Handle404ApiNotFound(HttpContext context) {
+            IConverterService _cs = App.Services.GetRequiredService<IConverterService>();
+            HttpResponse response = context.Response;
+
+            response.Clear();
+            response.StatusCode = 404;
+            response.ContentType = "application/json";
+
+            object resBody = new {
+                info = "🙄 404 - Whoops :: API Tidak Ditemukan 😪",
+                result = new {
+                    message = $"💩 Silahkan Periksa Kembali Dokumentasi API 🤬"
+                }
+            };
+
+            await response.WriteAsync(_cs.ObjectToJson(resBody));
+        }
+
+        /* ** */
+
         public static void UseNginxProxyPathSegment() {
             App.Use(async (context, next) => {
                 if (context.Request.Headers.TryGetValue("X-Forwarded-Prefix", out StringValues pathBase)) {
