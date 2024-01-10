@@ -61,8 +61,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             RequestJson reqBody = null;
 
             string rbString = await reader.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(rbString) && rbString.Trim().StartsWith("{")) {
-                reqBody = _cs.JsonToObject<RequestJson>(rbString);
+            if (!string.IsNullOrEmpty(rbString)) {
+                try {
+                    reqBody = _cs.JsonToObject<RequestJson>(rbString);
+                }
+                catch (Exception ex) {
+                    _logger.LogError($"[API_KEY_BODY] 🌸 {ex.Message}");
+                }
             }
 
             string apiKey = string.Empty;
@@ -97,7 +102,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             context.Items["api_key"] = apiKey;
             _logger.LogInformation($"[API_KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
 
-            if (!request.Path.Value.Contains("/api") || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+            if (!request.Path.Value.StartsWith("/api/") || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
                 await _next(context);
             }
             else {
