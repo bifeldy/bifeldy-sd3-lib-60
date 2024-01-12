@@ -19,17 +19,18 @@ using Confluent.Kafka;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Repositories;
+using System;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaProducer : BackgroundService {
 
-        private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<CKafkaProducer> _logger;
+        private readonly IConverterService _converter;
+        private readonly IPubSubService _pubSub;
+        private readonly IKafkaService _kafka;
 
-        private ILogger<CKafkaProducer> logger;
-        private IConverterService converter;
-        private IPubSubService pubSub;
-        private IKafkaService kafka;
+        private readonly IGeneralRepository _generalRepo;
 
         private readonly string _hostPort;
         private string _topicName;
@@ -54,7 +55,14 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             IServiceProvider serviceProvider,
             string hostPort, string topicName, bool suffixKodeDc = false
         ) {
-            _serviceProvider = serviceProvider;
+            _logger = serviceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
+            _converter = serviceProvider.GetRequiredService<IConverterService>();
+            _pubSub = serviceProvider.GetRequiredService<IPubSubService>();
+            _kafka = serviceProvider.GetRequiredService<IKafkaService>();
+
+            IServiceScope scopedService = serviceProvider.CreateScope();
+            _generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
+
             _hostPort = hostPort;
             _topicName = topicName;
             _suffixKodeDc = suffixKodeDc;
@@ -63,7 +71,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         public override void Dispose() {
             producer?.Dispose();
             kafkaSubs?.Dispose();
-            pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
+            _pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
             base.Dispose();
         }
 
@@ -71,31 +79,23 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             try {
                 await Task.Yield();
 
-                logger = _serviceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
-                converter = _serviceProvider.GetRequiredService<IConverterService>();
-                pubSub = _serviceProvider.GetRequiredService<IPubSubService>();
-                kafka = _serviceProvider.GetRequiredService<IKafkaService>();
-
-                IServiceScope scopedService = _serviceProvider.CreateScope();
-                IGeneralRepository generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
-
                 if (_suffixKodeDc) {
                     if (!_topicName.EndsWith("_")) {
                         _topicName += "_";
                     }
-                    string kodeDc = await generalRepo.GetKodeDc();
+                    string kodeDc = await _generalRepo.GetKodeDc();
                     _topicName += kodeDc;
                 }
                 if (producer == null) {
-                    producer = kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
+                    producer = _kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
                 }
                 if (observeable == null) {
-                    observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                    observeable = _pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
                     kafkaSubs = observeable.Subscribe(async data => {
                         if (data != null) {
                             Message<string, string> msg = new Message<string, string> {
                                 Key = data.Key,
-                                Value = typeof(string) == data.Value.GetType() ? data.Value : converter.ObjectToJson(data.Value)
+                                Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
                             };
                             msgs.Add(msg);
                             await producer.ProduceAsync(_topicName, msg, stoppingToken);
@@ -108,17 +108,15 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                             await producer.ProduceAsync(_topicName, msg, stoppingToken);
                         }
                         catch (Exception e) {
-                            logger.LogError($"[KAFKA_PRODUCER_MESSAGE] {e.Message}");
+                            _logger.LogError($"[KAFKA_PRODUCER_MESSAGE] {e.Message}");
                         }
                         msgs.Remove(msg);
                     }
                     Thread.Sleep(1000);
                 }
-
-                scopedService.Dispose();
             }
             catch (Exception ex) {
-                logger.LogError($"[KAFKA_PRODUCER_ERROR] 🏗 {ex.Message}");
+                _logger.LogError($"[KAFKA_PRODUCER_ERROR] 🏗 {ex.Message}");
             }
         }
 

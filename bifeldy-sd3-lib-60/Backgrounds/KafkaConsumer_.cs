@@ -19,17 +19,18 @@ using Confluent.Kafka;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
+using System;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaConsumer : BackgroundService {
 
-        private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<CKafkaConsumer> _logger;
+        private readonly IConverterService _converter;
+        private readonly IPubSubService _pubSub;
+        private readonly IKafkaService _kafka;
 
-        private ILogger<CKafkaConsumer> logger;
-        private IConverterService converter;
-        private IPubSubService pubSub;
-        private IKafkaService kafka;
+        private readonly IGeneralRepository _generalRepo;
 
         private readonly string _hostPort;
         private string _groupId;
@@ -53,7 +54,14 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             IServiceProvider serviceProvider,
             string hostPort, string topicName, string groupId, bool suffixKodeDc = false
         ) {
-            _serviceProvider = serviceProvider;
+            _logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
+            _converter = serviceProvider.GetRequiredService<IConverterService>();
+            _pubSub = serviceProvider.GetRequiredService<IPubSubService>();
+            _kafka = serviceProvider.GetRequiredService<IKafkaService>();
+
+            IServiceScope scopedService = serviceProvider.CreateScope();
+            _generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
+
             _hostPort = hostPort;
             _topicName = topicName;
             _groupId = groupId;
@@ -62,21 +70,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public override void Dispose() {
             consumer?.Dispose();
-            pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
+            _pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
             base.Dispose();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
                 await Task.Yield();
-
-                logger = _serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
-                converter = _serviceProvider.GetRequiredService<IConverterService>();
-                pubSub = _serviceProvider.GetRequiredService<IPubSubService>();
-                kafka = _serviceProvider.GetRequiredService<IKafkaService>();
-
-                IServiceScope scopedService = _serviceProvider.CreateScope();
-                IGeneralRepository generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
                 if (_suffixKodeDc) {
                     if (!_groupId.EndsWith("_")) {
@@ -85,24 +85,24 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     if (!_topicName.EndsWith("_")) {
                         _topicName += "_";
                     }
-                    string kodeDc = await generalRepo.GetKodeDc();
+                    string kodeDc = await _generalRepo.GetKodeDc();
                     _groupId += kodeDc;
                     _topicName += kodeDc;
                 }
                 if (observeable == null) {
-                    observeable = pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                    observeable = _pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
                 }
                 if (consumer == null) {
-                    consumer = kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId);
-                    TopicPartition topicPartition = kafka.CreateKafkaConsumerTopicPartition(_topicName, -1);
-                    TopicPartitionOffset topicPartitionOffset = kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
+                    consumer = _kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId);
+                    TopicPartition topicPartition = _kafka.CreateKafkaConsumerTopicPartition(_topicName, -1);
+                    TopicPartitionOffset topicPartitionOffset = _kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
                     consumer.Assign(topicPartitionOffset);
                     consumer.Subscribe(_topicName);
                 }
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
                     ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
-                    logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
+                    _logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
                     KafkaMessage<string, dynamic> message = new KafkaMessage<string, dynamic> {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
@@ -110,7 +110,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         Value = result.Message.Value
                     };
                     if (result.Message.Value.StartsWith("{")) {
-                        message.Value = converter.JsonToObject<dynamic>(result.Message.Value);
+                        message.Value = _converter.JsonToObject<dynamic>(result.Message.Value);
                     }
                     observeable.OnNext(message);
                     if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
@@ -119,11 +119,9 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     }
                 }
                 consumer.Close();
-
-                scopedService.Dispose();
             }
             catch (Exception ex) {
-                logger.LogError($"[KAFKA_CONSUMER_ERROR] 🏗 {ex.Message}");
+                _logger.LogError($"[KAFKA_CONSUMER_ERROR] 🏗 {ex.Message}");
             }
         }
 
