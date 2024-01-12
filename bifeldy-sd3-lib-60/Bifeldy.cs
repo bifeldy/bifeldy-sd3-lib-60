@@ -215,15 +215,15 @@ namespace bifeldy_sd3_lib_60
             });
         }
 
-        public static void CreateJobSchedule<T>(string name, string cronString, bool startNow = false) {
-            JobBuilder jobBuilder = JobBuilder.Create(typeof(T)).WithIdentity($"JOB_{name}");
-            IJobDetail jobDetail = jobBuilder.Build();
-            TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity($"TRIG_{name}");
-            if (startNow) {
-                triggerBuilder.StartNow();
+        public static void CreateJobSchedule<T>(string cronString, string jobName = null) {
+            if (string.IsNullOrEmpty(jobName)) {
+                jobName = typeof(T).Name;
             }
+            JobBuilder jobBuilder = JobBuilder.Create(typeof(T)).WithIdentity(jobName);
+            IJobDetail jobDetail = jobBuilder.Build();
+            TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity(jobName);
             ITrigger trigger = triggerBuilder.WithCronSchedule(cronString).Build();
-            jobList.Add($"JOB_{name}", new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
+            jobList.Add(jobName, new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
         }
 
         public async static Task<DateTimeOffset[]> StartJobScheduler() {

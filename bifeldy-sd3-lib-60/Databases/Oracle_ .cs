@@ -62,7 +62,16 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public void InitializeConnection(string dbTnsOdp = null, string dbUsername = null, string dbPassword = null) {
-            DbTnsOdp = dbTnsOdp ?? _as.GetVariabel("ODPOrcl", _envVar.KUNCI_GXXX);
+            string _dbTnsOdp = dbTnsOdp ?? _as.GetVariabel("ODPOrcl", _envVar.KUNCI_GXXX);
+            if (!string.IsNullOrEmpty(_dbTnsOdp)) {
+                _dbTnsOdp = Regex.Replace(_dbTnsOdp, @"\s+", "");
+            }
+            DbTnsOdp = _dbTnsOdp;
+            string _dbName = null;
+            if (!string.IsNullOrEmpty(DbTnsOdp)) {
+                _dbName = DbTnsOdp.Split(new string[] { "SERVICE_NAME=" }, StringSplitOptions.None)[1].Split(new string[] { ")" }, StringSplitOptions.None)[0];
+            }
+            DbName = _dbName;
             DbUsername = dbUsername ?? _as.GetVariabel("UserOrcl", _envVar.KUNCI_GXXX);
             DbPassword = dbPassword ?? _as.GetVariabel("PasswordOrcl", _envVar.KUNCI_GXXX);
             DbConnectionString = $"Data Source={DbTnsOdp};User ID={DbUsername};Password={DbPassword};";
