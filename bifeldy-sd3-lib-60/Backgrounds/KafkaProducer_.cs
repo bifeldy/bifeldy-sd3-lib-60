@@ -24,17 +24,15 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaProducer : BackgroundService {
 
-        private readonly IServiceScope _scopedService;
+        private readonly IServiceProvider _serviceProvider;
 
         private ILogger<CKafkaProducer> logger;
         private IConverterService converter;
         private IPubSubService pubSub;
         private IKafkaService kafka;
 
-        private IGeneralRepository generalRepo;
-
         private readonly string _hostPort;
-        private  string _topicName;
+        private string _topicName;
 
         private readonly bool _suffixKodeDc;
 
@@ -53,10 +51,10 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         }
 
         public CKafkaProducer(
-            IServiceScopeFactory scopedService,
+            IServiceProvider serviceProvider,
             string hostPort, string topicName, bool suffixKodeDc = false
         ) {
-            _scopedService = scopedService.CreateScope();
+            _serviceProvider = serviceProvider;
             _hostPort = hostPort;
             _topicName = topicName;
             _suffixKodeDc = suffixKodeDc;
@@ -66,7 +64,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             producer?.Dispose();
             kafkaSubs?.Dispose();
             pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
-            _scopedService.Dispose();
             base.Dispose();
         }
 
@@ -74,11 +71,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             try {
                 await Task.Yield();
 
-                logger = _scopedService.ServiceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
-                converter = _scopedService.ServiceProvider.GetRequiredService<IConverterService>();
-                pubSub = _scopedService.ServiceProvider.GetRequiredService<IPubSubService>();
-                kafka = _scopedService.ServiceProvider.GetRequiredService<IKafkaService>();
-                generalRepo = _scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
+                logger = _serviceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
+                converter = _serviceProvider.GetRequiredService<IConverterService>();
+                pubSub = _serviceProvider.GetRequiredService<IPubSubService>();
+                kafka = _serviceProvider.GetRequiredService<IKafkaService>();
+
+                IServiceScope scopedService = _serviceProvider.CreateScope();
+                IGeneralRepository generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
                 if (_suffixKodeDc) {
                     if (!_topicName.EndsWith("_")) {
@@ -115,6 +114,8 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     }
                     Thread.Sleep(1000);
                 }
+
+                scopedService.Dispose();
             }
             catch (Exception ex) {
                 logger.LogError($"[KAFKA_PRODUCER_ERROR] 🏗 {ex.Message}");

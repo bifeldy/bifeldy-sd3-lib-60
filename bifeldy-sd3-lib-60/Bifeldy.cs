@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
@@ -32,7 +32,6 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
-using Microsoft.Extensions.Hosting;
 
 namespace bifeldy_sd3_lib_60
 {
@@ -190,16 +189,14 @@ namespace bifeldy_sd3_lib_60
 
         public static void AddKafkaProducerBackground(string hostPort, string topic, bool _suffixKodeDc = false) {
             Services.AddHostedService(sp => {
-                IServiceScopeFactory _ss = sp.GetRequiredService<IServiceScopeFactory>();
-                return new CKafkaProducer(_ss, hostPort, topic, _suffixKodeDc);
+                return new CKafkaProducer(sp, hostPort, topic, _suffixKodeDc);
             });
         }
 
         public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null, bool _suffixKodeDc = false) {
             Services.AddHostedService(sp => {
-                IServiceScopeFactory _ss = sp.GetRequiredService<IServiceScopeFactory>();
                 IApplicationService _app = sp.GetRequiredService<IApplicationService>();
-                return new CKafkaConsumer(_ss, hostPort, topic, groupId ?? _app.AppName, _suffixKodeDc);
+                return new CKafkaConsumer(sp, hostPort, topic, groupId ?? _app.AppName, _suffixKodeDc);
             });
         }
 
