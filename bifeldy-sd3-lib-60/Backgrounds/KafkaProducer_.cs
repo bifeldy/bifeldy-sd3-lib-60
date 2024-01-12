@@ -10,6 +10,7 @@
  * 
  */
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +18,6 @@ using Confluent.Kafka;
 
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using Microsoft.Extensions.DependencyInjection;
 using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
