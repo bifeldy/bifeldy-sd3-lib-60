@@ -21,8 +21,7 @@ using bifeldy_sd3_lib_60.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace bifeldy_sd3_lib_60.Backgrounds
-{
+namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaConsumer : BackgroundService {
 
