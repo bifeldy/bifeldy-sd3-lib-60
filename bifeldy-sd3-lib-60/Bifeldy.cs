@@ -23,6 +23,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
 
+using Quartz;
+
 using Serilog;
 using Serilog.Events;
 
@@ -42,6 +44,8 @@ namespace bifeldy_sd3_lib_60
         public static IServiceCollection Services = null;
         public static IConfiguration Config = null;
         public static WebApplication App = null;
+
+        private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new();
 
         /* ** */
 
@@ -171,6 +175,7 @@ namespace bifeldy_sd3_lib_60
             // --
             // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
             // --
+            Services.AddSingleton<IJobSchedulerService, CJobSchedulerService>();
             Services.AddSingleton<IApplicationService, CApplicationService>();
             Services.AddSingleton<IGlobalService, CGlobalService>();
             Services.AddSingleton<IConverterService, CConverterService>();
@@ -198,6 +203,36 @@ namespace bifeldy_sd3_lib_60
                 IApplicationService _app = sp.GetRequiredService<IApplicationService>();
                 return new CKafkaConsumer(sp, hostPort, topic, groupId ?? _app.AppName, _suffixKodeDc);
             });
+        }
+
+        /* ** */
+
+        public static void AddJobScheduler() {
+            Services.AddQuartz();
+            Services.AddQuartzHostedService(opt => {
+                opt.WaitForJobsToComplete = true;
+            });
+        }
+
+        public static void CreateJobSchedule<T>(string name, string cronString, bool startNow = false) {
+            JobBuilder jobBuilder = JobBuilder.Create(typeof(T)).WithIdentity($"JOB_{name}");
+            IJobDetail jobDetail = jobBuilder.Build();
+            TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity($"TRIG_{name}");
+            if (startNow) {
+                triggerBuilder.StartNow();
+            }
+            ITrigger trigger = triggerBuilder.WithCronSchedule(cronString).Build();
+            jobList.Add($"JOB_{name}", new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
+        }
+
+        public async static Task<DateTimeOffset[]> StartJobScheduler() {
+            ISchedulerFactory schedulerFactory = App.Services.GetRequiredService<ISchedulerFactory>();
+            IScheduler scheduler = await schedulerFactory.GetScheduler();
+            List<Task<DateTimeOffset>> allJobs = new List<Task<DateTimeOffset>>();
+            foreach (KeyValuePair<string, KeyValuePair<IJobDetail, ITrigger>> jl in jobList) {
+                allJobs.Add(scheduler.ScheduleJob(jl.Value.Key, jl.Value.Value));
+            }
+            return await Task.WhenAll(allJobs);
         }
 
         /* ** */
