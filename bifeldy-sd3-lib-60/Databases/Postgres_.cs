@@ -282,7 +282,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                                     case NpgsqlDbType.Smallint:
                                         try {
                                             if (dR[i] is byte) {
-                                                var swap = Convert.ToInt16(dR[i]);
+                                                short swap = Convert.ToInt16(dR[i]);
                                                 writer.Write(swap, types[i]);
                                                 break;
                                             }

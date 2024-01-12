@@ -26,6 +26,7 @@ using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
@@ -76,14 +77,14 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             Assembly entitiesAssembly = typeof(EntityTable).Assembly;
             modelBuilder.RegisterAllEntities<EntityTable>(entitiesAssembly);
             // DbSet<T> Case Sensitive ~
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes()) {
+            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
                 string tblName = entityType.GetTableName();
                 if (_envVar.IS_USING_POSTGRES) {
                     entityType.SetTableName(tblName.ToLower());
                 }
             }
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes()) {
-                foreach (var property in entityType.GetProperties()) {
+            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
+                foreach (IMutableProperty property in entityType.GetProperties()) {
                     string colName = property.GetColumnBaseName();
                     if (_envVar.IS_USING_POSTGRES) {
                         property.SetColumnName(colName.ToLower());

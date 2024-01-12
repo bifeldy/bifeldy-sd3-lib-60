@@ -186,7 +186,7 @@ namespace bifeldy_sd3_lib_60.Repositories
 
         // Bisa Kena SQL Injection
         public async Task<bool> OraPg_AlterTable_AddColumnIfNotExist(string tableName, string columnName, string columnType) {
-            var cols = new List<string>();
+            List<string> cols = new List<string>();
             DataColumnCollection columns = await _orapg.GetAllColumnTableAsync(tableName);
             foreach (DataColumn col in columns) {
                 cols.Add(col.ColumnName.ToUpper());
