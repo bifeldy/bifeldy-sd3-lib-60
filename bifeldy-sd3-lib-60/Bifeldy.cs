@@ -175,7 +175,6 @@ namespace bifeldy_sd3_lib_60
             // --
             // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
             // --
-            Services.AddSingleton<IJobSchedulerService, CJobSchedulerService>();
             Services.AddSingleton<IApplicationService, CApplicationService>();
             Services.AddSingleton<IGlobalService, CGlobalService>();
             Services.AddSingleton<IConverterService, CConverterService>();
@@ -208,7 +207,9 @@ namespace bifeldy_sd3_lib_60
         /* ** */
 
         public static void AddJobScheduler() {
-            Services.AddQuartz();
+            Services.AddQuartz(opt => {
+                opt.UseMicrosoftDependencyInjectionJobFactory();
+            });
             Services.AddQuartzHostedService(opt => {
                 opt.WaitForJobsToComplete = true;
             });
