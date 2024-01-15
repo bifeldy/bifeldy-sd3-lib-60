@@ -74,7 +74,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             DbSet<DC_LISTMAILSERVER_T> dbSet = _orapg.Set<DC_LISTMAILSERVER_T>();
             IQueryable<DC_LISTMAILSERVER_T> query = null;
             if (!string.IsNullOrEmpty(dckode)) {
-                dbSet.Where(ak => ak.MAIL_DCKODE == dckode);
+                dbSet.Where(ms => ms.MAIL_DCKODE == dckode);
             }
             return await ((query == null) ? dbSet : query).ToListAsync();
         }
