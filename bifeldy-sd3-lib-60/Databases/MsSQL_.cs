@@ -55,7 +55,10 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
-            options.UseSqlServer(DbConnectionString);
+            options.UseSqlServer(DbConnectionString)
+                .LogTo(s => Console.WriteLine(s))
+                .EnableDetailedErrors(_as.DebugMode)
+                .EnableSensitiveDataLogging(_as.DebugMode);
         }
 
         public void InitializeConnection(string dbIpAddrss = null, string dbName = null, string dbUsername = null, string dbPassword = null) {

@@ -58,7 +58,10 @@ namespace bifeldy_sd3_lib_60.Databases {
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
             options.UseOracle(DbConnectionString, opt => {
                 opt.UseOracleSQLCompatibility("11");
-            });
+            })
+                .LogTo(s => Console.WriteLine(s))
+                .EnableDetailedErrors(_as.DebugMode)
+                .EnableSensitiveDataLogging(_as.DebugMode);
         }
 
         public void InitializeConnection(string dbTnsOdp = null, string dbUsername = null, string dbPassword = null) {
