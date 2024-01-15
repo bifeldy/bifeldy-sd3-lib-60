@@ -24,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IApiKeyRepository {
         Task<bool> Create(DC_APIKEY_T apiKey);
-        Task<List<DC_APIKEY_T>> GetAll();
+        Task<List<DC_APIKEY_T>> GetAll(string key = null);
         Task<DC_APIKEY_T> GetById(string key);
         Task<bool> Update(string key, DC_APIKEY_T apiKey);
         Task<bool> Delete(string key);
@@ -53,22 +53,27 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return await _orapg.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<DC_APIKEY_T>> GetAll() {
-            return await _orapg.Set<DC_APIKEY_T>().ToListAsync();
+        public async Task<List<DC_APIKEY_T>> GetAll(string key = null) {
+            DbSet<DC_APIKEY_T> dbSet = _orapg.Set<DC_APIKEY_T>();
+            IQueryable<DC_APIKEY_T> query = null;
+            if (!string.IsNullOrEmpty(key)) {
+                query = dbSet.Where(ak => ak.KEY == key);
+            }
+            return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
         public async Task<DC_APIKEY_T> GetById(string key) {
-            return await _orapg.Set<DC_APIKEY_T>().Where(ak => ak.KEY == key).FirstOrDefaultAsync();
+            return (await GetAll(key)).FirstOrDefault();
         }
 
         public async Task<bool> Update(string key, DC_APIKEY_T newApiKey) {
-            DC_APIKEY_T oldApiKey = await _orapg.Set<DC_APIKEY_T>().Where(ak => ak.KEY == key).FirstOrDefaultAsync();
+            DC_APIKEY_T oldApiKey = await GetById(key);
             oldApiKey.APP_NAME = newApiKey.APP_NAME;
             return await _orapg.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> Delete(string key) {
-            DC_APIKEY_T apiKey = await _orapg.Set<DC_APIKEY_T>().Where(ak => ak.KEY == key).FirstOrDefaultAsync();
+            DC_APIKEY_T apiKey = await GetById(key);
             _orapg.Set<DC_APIKEY_T>().Remove(apiKey);
             return await _orapg.SaveChangesAsync() > 0;
         }

@@ -29,7 +29,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IListMailServerRepository {
         Task<bool> Create(DC_LISTMAILSERVER_T apiKey);
-        Task<List<DC_LISTMAILSERVER_T>> GetAll();
+        Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null);
         Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode);
         Task<bool> Update(string dckode, DC_LISTMAILSERVER_T newListMailServer);
         Task<bool> Delete(string dckode);
@@ -70,16 +70,21 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return await _orapg.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<DC_LISTMAILSERVER_T>> GetAll() {
-            return await _orapg.Set<DC_LISTMAILSERVER_T>().ToListAsync();
+        public async Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null) {
+            DbSet<DC_LISTMAILSERVER_T> dbSet = _orapg.Set<DC_LISTMAILSERVER_T>();
+            IQueryable<DC_LISTMAILSERVER_T> query = null;
+            if (!string.IsNullOrEmpty(dckode)) {
+                dbSet.Where(ak => ak.MAIL_DCKODE == dckode);
+            }
+            return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
         public async Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode) {
-            return await _orapg.Set<DC_LISTMAILSERVER_T>().Where(m => m.MAIL_DCKODE == dckode).FirstOrDefaultAsync();
+            return (await GetAll(dckode)).FirstOrDefault();
         }
 
         public async Task<bool> Update(string dckode, DC_LISTMAILSERVER_T newListMailServer) {
-            DC_LISTMAILSERVER_T oldListMailServer = await _orapg.Set<DC_LISTMAILSERVER_T>().Where(m => m.MAIL_DCKODE == dckode).FirstOrDefaultAsync();
+            DC_LISTMAILSERVER_T oldListMailServer = await GetByDcKode(dckode);
             oldListMailServer.MAIL_DCNAME = newListMailServer.MAIL_DCNAME;
             oldListMailServer.MAIL_IP = newListMailServer.MAIL_IP;
             oldListMailServer.MAIL_HOSTNAME = newListMailServer.MAIL_HOSTNAME;
@@ -91,7 +96,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<bool> Delete(string dckode) {
-            DC_LISTMAILSERVER_T apiKey = await _orapg.Set<DC_LISTMAILSERVER_T>().Where(m => m.MAIL_DCKODE == dckode).FirstOrDefaultAsync();
+            DC_LISTMAILSERVER_T apiKey = await GetByDcKode(dckode);
             _orapg.Set<DC_LISTMAILSERVER_T>().Remove(apiKey);
             return await _orapg.SaveChangesAsync() > 0;
         }
