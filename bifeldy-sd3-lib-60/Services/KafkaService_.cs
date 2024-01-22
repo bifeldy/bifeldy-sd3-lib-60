@@ -15,34 +15,42 @@ using Microsoft.Extensions.Logging;
 
 using Confluent.Kafka;
 
-using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IKafkaService {
-        ProducerConfig GenerateProducerConfig(string hostPort);
+        ProducerConfig GenerateKafkaProducerConfig(string hostPort);
         IProducer<T1, T2> GenerateProducerBuilder<T1, T2>(ProducerConfig config);
         IProducer<T1, T2> CreateKafkaProducerInstance<T1, T2>(string hostPort);
-        Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topic, KafkaMessage<string, dynamic> data);
-        ConsumerConfig GenerateConsumerConfig(string hostPort, string groupId, AutoOffsetReset autoOffsetReset);
+        Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topic, Message<string, dynamic> data);
+        ConsumerConfig GenerateKafkaConsumerConfig(string hostPort, string groupId, AutoOffsetReset autoOffsetReset);
         IConsumer<T1, T2> GenerateConsumerBuilder<T1, T2>(ConsumerConfig config);
         IConsumer<T1, T2> CreateKafkaConsumerInstance<T1, T2>(string hostPort, string groupId);
         TopicPartition CreateKafkaConsumerTopicPartition(string topicName, int partition);
         TopicPartitionOffset CreateKafkaConsumerTopicPartitionOffset(TopicPartition topicPartition, long offset);
-        KafkaMessage<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1);
+        Message<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1);
+        string GetKeyProducerListener(string hostPort, string topicName);
+        string GetTopicNameProducerListener(string topicName, string suffixKodeDc = null);
+        void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, CancellationToken stoppingToken = default);
+        void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null);
+        (string, string) GetTopicNameConsumerListener(string topicName, string groupId, string suffixKodeDc = null);
+        void CreateKafkaConsumerListener(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, dynamic>> execLambda = null);
     }
 
     public sealed class CKafkaService : IKafkaService {
 
         private readonly ILogger<CKafkaService> _logger;
         private readonly IConverterService _converter;
+        private readonly IPubSubService _pubSub;
 
-        public CKafkaService(ILogger<CKafkaService> logger, IConverterService converter) {
+        public CKafkaService(ILogger<CKafkaService> logger, IConverterService converter, IPubSubService pubSub) {
             _logger = logger;
             _converter = converter;
+            _pubSub = pubSub;
         }
 
-        public ProducerConfig GenerateProducerConfig(string hostPort) {
+        public ProducerConfig GenerateKafkaProducerConfig(string hostPort) {
             return new ProducerConfig {
                 BootstrapServers = hostPort
             };
@@ -53,20 +61,19 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public IProducer<T1, T2> CreateKafkaProducerInstance<T1, T2>(string hostPort) {
-            return GenerateProducerBuilder<T1, T2>(GenerateProducerConfig(hostPort));
+            return GenerateProducerBuilder<T1, T2>(GenerateKafkaProducerConfig(hostPort));
         }
 
-        public async Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topic, KafkaMessage<string, dynamic> data) {
+        public async Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topic, Message<string, dynamic> data) {
             using (IProducer<string, string> producer = CreateKafkaProducerInstance<string, string>(hostPort)) {
-                Message<string, string> msg = new Message<string, string> {
-                    Key = data.Key,
-                    Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
-                };
-                return await producer.ProduceAsync(topic, msg);
+                if (typeof(string) != data.Value.GetType()) {
+                    data.Value = _converter.ObjectToJson(data.Value);
+                }
+                return await producer.ProduceAsync(topic, (dynamic) data);
             }
         }
 
-        public ConsumerConfig GenerateConsumerConfig(string hostPort, string groupId, AutoOffsetReset autoOffsetReset) {
+        public ConsumerConfig GenerateKafkaConsumerConfig(string hostPort, string groupId, AutoOffsetReset autoOffsetReset) {
             return new ConsumerConfig {
                 BootstrapServers = hostPort,
                 GroupId = groupId,
@@ -80,7 +87,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public IConsumer<T1, T2> CreateKafkaConsumerInstance<T1, T2>(string hostPort, string groupId) {
-            return GenerateConsumerBuilder<T1, T2>(GenerateConsumerConfig(hostPort, groupId, AutoOffsetReset.Earliest));
+            return GenerateConsumerBuilder<T1, T2>(GenerateKafkaConsumerConfig(hostPort, groupId, AutoOffsetReset.Earliest));
         }
 
         public TopicPartition CreateKafkaConsumerTopicPartition(string topicName, int partition) {
@@ -91,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return new TopicPartitionOffset(topicPartition, new Offset(offset));
         }
 
-        public KafkaMessage<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1) {
+        public Message<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1) {
             using (IConsumer<string, dynamic> consumer = CreateKafkaConsumerInstance<string, dynamic>(hostPort, groupId)) {
                 TimeSpan timeout = TimeSpan.FromSeconds(3);
                 TopicPartition topicPartition = CreateKafkaConsumerTopicPartition(topicName, partition);
@@ -102,14 +109,78 @@ namespace bifeldy_sd3_lib_60.Services {
                 TopicPartitionOffset topicPartitionOffset = CreateKafkaConsumerTopicPartitionOffset(topicPartition, offset);
                 consumer.Assign(topicPartitionOffset);
                 ConsumeResult<string, dynamic> result = consumer.Consume(timeout);
-                _logger.LogInformation($"[KAFKA_CONSUMER_{consumer.Position(topicPartition)}] 🏗 {result.Message.Key} :: {result.Message.Value}");
-                Message<string, dynamic> message = result.Message;
-                if (result.Message.Value.StartsWith("{")) {
-                    message.Value = _converter.JsonToObject<T>(result.Message.Value);
-                }
-                consumer.Close();
-                return (KafkaMessage<string, dynamic>) message;
+                return result.Message;
             }
+        }
+
+        public string GetKeyProducerListener(string hostPort, string topicName) {
+            return $"KAFKA_PRODUCER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
+        }
+
+        public string GetTopicNameProducerListener(string topicName, string suffixKodeDc) {
+            if (!string.IsNullOrEmpty(suffixKodeDc)) {
+                if (!topicName.EndsWith("_")) {
+                    topicName += "_";
+                }
+                topicName += suffixKodeDc;
+            }
+            return topicName;
+        }
+
+        public void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc, CancellationToken stoppingToken = default) {
+            topicName = GetTopicNameProducerListener(topicName, suffixKodeDc);
+            string key = GetKeyProducerListener(hostPort, topicName);
+            IProducer<string, string> producer = CreateKafkaProducerInstance<string, string>(hostPort);
+            _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).Subscribe(async data => {
+                if (data != null) {
+                    if (typeof(string) != data.Value.GetType()) {
+                        data.Value = _converter.ObjectToJson(data.Value);
+                    }
+                    await producer.ProduceAsync(topicName, (dynamic) data, stoppingToken);
+                }
+            });
+        }
+
+        public void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null) {
+            topicName = GetTopicNameProducerListener(topicName, suffixKodeDc);
+            string key = GetKeyProducerListener(hostPort, topicName);
+            _pubSub.DisposeAndRemoveSubscriber(key);
+        }
+
+        public (string, string) GetTopicNameConsumerListener(string topicName, string groupId, string suffixKodeDc = null) {
+            if (!string.IsNullOrEmpty(suffixKodeDc)) {
+                if (!groupId.EndsWith("_")) {
+                    groupId += "_";
+                }
+                if (!topicName.EndsWith("_")) {
+                    topicName += "_";
+                }
+                groupId += suffixKodeDc;
+                topicName += suffixKodeDc;
+            }
+            return (topicName, groupId);
+        }
+
+        public void CreateKafkaConsumerListener(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, dynamic>> execLambda = null) {
+            (topicName, groupId) = GetTopicNameConsumerListener(topicName, groupId, suffixKodeDc);
+            string key = $"KAFKA_CONSUMER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
+            IConsumer<string, string> consumer = CreateKafkaConsumerInstance<string, string>(hostPort, groupId);
+            TopicPartition topicPartition = CreateKafkaConsumerTopicPartition(topicName, -1);
+            TopicPartitionOffset topicPartitionOffset = CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
+            consumer.Assign(topicPartitionOffset);
+            consumer.Subscribe(topicName);
+            ulong i = 0;
+            while (!stoppingToken.IsCancellationRequested) {
+                ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
+                Message<string, string> message = result.Message;
+                _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).OnNext((dynamic) message);
+                if (++i % 10 == 0) {
+                    consumer.Commit();
+                    i = 0;
+                }
+            }
+            consumer.Close();
+            _pubSub.DisposeAndRemoveSubscriber(key);
         }
 
     }

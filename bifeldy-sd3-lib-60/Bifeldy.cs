@@ -226,6 +226,18 @@ namespace bifeldy_sd3_lib_60
             jobList.Add(jobName, new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
         }
 
+        public static void CreateJobSchedules(string cronString, params Type[] classInheritFromCQuartzJobScheduler) {
+            for (int i = 0; i < classInheritFromCQuartzJobScheduler.Length; i++) {
+                Type classInherited = classInheritFromCQuartzJobScheduler[i];
+                string jobName = $"{classInherited.Name}_{i}";
+                JobBuilder jobBuilder = JobBuilder.Create(classInherited).WithIdentity(jobName);
+                IJobDetail jobDetail = jobBuilder.Build();
+                TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity(jobName);
+                ITrigger trigger = triggerBuilder.WithCronSchedule(cronString).Build();
+                jobList.Add(jobName, new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
+            }
+        }
+
         public async static Task<DateTimeOffset[]> StartJobScheduler() {
             ISchedulerFactory schedulerFactory = App.Services.GetRequiredService<ISchedulerFactory>();
             IScheduler scheduler = await schedulerFactory.GetScheduler();

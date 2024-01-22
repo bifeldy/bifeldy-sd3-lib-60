@@ -13,7 +13,7 @@
 
 using Quartz;
 
-namespace bifeldy_sd3_lib_60.Models {
+namespace bifeldy_sd3_lib_60.Abstractions {
 
     public abstract class CQuartzJobScheduler : IJob {
 

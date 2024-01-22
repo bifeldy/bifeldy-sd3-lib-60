@@ -16,10 +16,10 @@ using Microsoft.Extensions.Logging;
 
 using Confluent.Kafka;
 
+using System.Reactive.Subjects;
+
 using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
-using System;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
@@ -38,13 +38,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private readonly bool _suffixKodeDc;
 
-        private RxBehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
+        private BehaviorSubject<Message<string, dynamic>> observeable = null;
 
         private IConsumer<string, string> consumer = null;
 
         private string KAFKA_NAME {
             get {
-                return $"KAFKA_CONSUMER_{_topicName?.ToUpper()}";
+                return $"KAFKA_CONSUMER_{_hostPort.ToUpper()}#{_topicName.ToUpper()}";
             }
         }
 
@@ -70,7 +70,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public override void Dispose() {
             consumer?.Dispose();
-            _pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
+            _pubSub.DisposeAndRemoveSubscriber(KAFKA_NAME);
             base.Dispose();
         }
 
@@ -90,7 +90,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     _topicName += kodeDc;
                 }
                 if (observeable == null) {
-                    observeable = _pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                    observeable = _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(KAFKA_NAME);
                 }
                 if (consumer == null) {
                     consumer = _kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId);
@@ -103,7 +103,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 while (!stoppingToken.IsCancellationRequested) {
                     ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
                     _logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
-                    KafkaMessage<string, dynamic> message = new KafkaMessage<string, dynamic> {
+                    Message<string, dynamic> message = new Message<string, dynamic> {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
                         Timestamp = result.Message.Timestamp,

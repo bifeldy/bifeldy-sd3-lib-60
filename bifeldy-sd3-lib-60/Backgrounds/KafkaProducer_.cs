@@ -16,10 +16,10 @@ using Microsoft.Extensions.Logging;
 
 using Confluent.Kafka;
 
-using bifeldy_sd3_lib_60.Models;
+using System.Reactive.Subjects;
+
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Repositories;
-using System;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
@@ -39,7 +39,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private IProducer<string, string> producer = null;
 
-        private RxBehaviorSubject<KafkaMessage<string, dynamic>> observeable = null;
+        private BehaviorSubject<Message<string, dynamic>> observeable = null;
 
         private List<Message<string, string>> msgs = new List<Message<string, string>>();
 
@@ -47,7 +47,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private string KAFKA_NAME {
             get {
-                return $"KAFKA_PRODUCER_{_topicName?.ToUpper()}";
+                return $"KAFKA_PRODUCER_{_hostPort.ToUpper()}#{_topicName.ToUpper()}";
             }
         }
 
@@ -71,7 +71,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         public override void Dispose() {
             producer?.Dispose();
             kafkaSubs?.Dispose();
-            _pubSub.DisposeAndRemoveAllSubscriber(KAFKA_NAME);
+            _pubSub.DisposeAndRemoveSubscriber(KAFKA_NAME);
             base.Dispose();
         }
 
@@ -90,7 +90,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     producer = _kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
                 }
                 if (observeable == null) {
-                    observeable = _pubSub.GetGlobalAppBehaviorSubject<KafkaMessage<string, dynamic>>(KAFKA_NAME);
+                    observeable = _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(KAFKA_NAME);
                     kafkaSubs = observeable.Subscribe(async data => {
                         if (data != null) {
                             Message<string, string> msg = new Message<string, string> {

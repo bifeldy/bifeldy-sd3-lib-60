@@ -94,7 +94,7 @@ namespace bifeldy_sd3_lib_60.Services {
             byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip((Keysize / 8) * 2).Take(cipherTextBytesWithSaltAndIv.Length - ((Keysize / 8) * 2)).ToArray();
             using (Rfc2898DeriveBytes password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (RijndaelManaged symmetricKey = new RijndaelManaged()) {
+                using (Aes symmetricKey = Aes.Create("AesManaged")) {
                     symmetricKey.BlockSize = 256;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;

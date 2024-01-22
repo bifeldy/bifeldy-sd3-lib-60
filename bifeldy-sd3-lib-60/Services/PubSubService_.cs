@@ -13,16 +13,16 @@
 
 using System.Dynamic;
 
-using bifeldy_sd3_lib_60.Models;
+using System.Reactive.Subjects;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IPubSubService {
-        bool IsExist(string variableName);
-        RxBehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
-        RxBehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName);
-        RxBehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue);
-        void DisposeAndRemoveAllSubscriber(string variableName);
+        bool IsExist(string key);
+        BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue);
+        BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string key);
+        BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string key, T initialValue);
+        void DisposeAndRemoveSubscriber(string key);
     }
 
     public sealed class CPubSubService : IPubSubService {
@@ -35,39 +35,39 @@ namespace bifeldy_sd3_lib_60.Services {
             _converter = converter;
         }
 
-        public bool IsExist(string variableName) {
-            return keyValuePairs.ContainsKey(variableName);
+        public bool IsExist(string key) {
+            return keyValuePairs.ContainsKey(key);
         }
 
-        public RxBehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) {
-            return new RxBehaviorSubject<T>(initialValue);
+        public BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) {
+            return new BehaviorSubject<T>(initialValue);
         }
 
-        public RxBehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string variableName) {
-            if (string.IsNullOrEmpty(variableName)) {
-                throw new Exception("Nama Variable Wajib Diisi");
+        public BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string key) {
+            if (string.IsNullOrEmpty(key)) {
+                throw new Exception("Nama Key Wajib Diisi");
             }
-            if (!keyValuePairs.ContainsKey(variableName)) {
+            if (!keyValuePairs.ContainsKey(key)) {
                 T defaultValue = _converter.GetDefaultValueT<T>();
-                return CreateGlobalAppBehaviorSubject(variableName, defaultValue);
+                return CreateGlobalAppBehaviorSubject(key, defaultValue);
             }
-            return keyValuePairs[variableName];
+            return keyValuePairs[key];
         }
 
-        public RxBehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string variableName, T initialValue) {
-            if (string.IsNullOrEmpty(variableName)) {
-                throw new Exception("Nama Variable Wajib Diisi");
+        public BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string key, T initialValue) {
+            if (string.IsNullOrEmpty(key)) {
+                throw new Exception("Nama Key Wajib Diisi");
             }
-            if (!keyValuePairs.ContainsKey(variableName)) {
-                keyValuePairs.Add(variableName, CreateNewBehaviorSubject(initialValue));
+            if (!keyValuePairs.ContainsKey(key)) {
+                keyValuePairs.Add(key, CreateNewBehaviorSubject(initialValue));
             }
-            return keyValuePairs[variableName];
+            return keyValuePairs[key];
         }
 
-        public void DisposeAndRemoveAllSubscriber(string variableName) {
-            if (keyValuePairs.ContainsKey(variableName)) {
-                keyValuePairs[variableName].Dispose();
-                keyValuePairs.Remove(variableName);
+        public void DisposeAndRemoveSubscriber(string key) {
+            if (keyValuePairs.ContainsKey(key)) {
+                keyValuePairs[key].Dispose();
+                keyValuePairs.Remove(key);
             }
         }
 
