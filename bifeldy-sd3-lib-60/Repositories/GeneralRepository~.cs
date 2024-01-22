@@ -16,6 +16,8 @@ using System.Data;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Confluent.Kafka;
+
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Abstractions;
@@ -28,7 +30,9 @@ namespace bifeldy_sd3_lib_60.Repositories
     public interface IGeneralRepository : IRepository {
         string DbName { get; }
         Task<string> GetURLWebService(string webType);
-        Task<bool> OraPg_AlterTable_AddColumnIfNotExist(string tableName, string columnName, string columnType);
+        Task<bool> SaveKafkaToTable(string topic, Offset offset, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T");
+        Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
+        Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk);
     }
 
     public class CGeneralRepository : CRepository, IGeneralRepository
@@ -182,24 +186,17 @@ namespace bifeldy_sd3_lib_60.Repositories
             );
         }
 
-        /* ** */
-
-        // Bisa Kena SQL Injection
-        public async Task<bool> OraPg_AlterTable_AddColumnIfNotExist(string tableName, string columnName, string columnType) {
-            List<string> cols = new List<string>();
-            DataColumnCollection columns = await _orapg.GetAllColumnTableAsync(tableName);
-            foreach (DataColumn col in columns) {
-                cols.Add(col.ColumnName.ToUpper());
-            }
-            if (!cols.Contains(columnName.ToUpper())) {
-                return await _orapg.ExecQueryAsync($@"
-                    ALTER TABLE {tableName}
-                        ADD {(_envVar.IS_USING_POSTGRES ? "COLUMN" : "(")}
-                            {columnName} {columnType}
-                        {(_envVar.IS_USING_POSTGRES ? "" : ")")}
-                ");
-            }
-            return false;
+        public async Task<bool> SaveKafkaToTable(string topic, Offset offset, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T") {
+            return await _orapg.ExecQueryAsync($@"
+                INSERT INTO {tabelName} (TOPIC, OFFS, KEY, VALUE, TMSTAMP)
+                VALUES (:topic, :offs, :key, :value, :tmstmp)
+            ", new List<CDbQueryParamBind> {
+                new CDbQueryParamBind { NAME = "topic", VALUE = topic },
+                new CDbQueryParamBind { NAME = "offs", VALUE = offset.Value },
+                new CDbQueryParamBind { NAME = "key", VALUE = msg.Key },
+                new CDbQueryParamBind { NAME = "value", VALUE = msg.Value },
+                new CDbQueryParamBind { NAME = "tmstmp", VALUE = msg.Timestamp }
+            });
         }
 
         /* ** */
@@ -222,7 +219,6 @@ namespace bifeldy_sd3_lib_60.Repositories
         // IDictionary<string, CDatabase> dbCon = await GetListBranchDbConnection("G001");
         // var res = dbCon["G055"].ExecScalarAsync<...>(...);
         //
-
         public async Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk) {
             IDictionary<string, CDatabase> dbCons = new Dictionary<string, CDatabase>();
 

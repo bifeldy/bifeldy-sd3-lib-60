@@ -103,16 +103,16 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 while (!stoppingToken.IsCancellationRequested) {
                     ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
                     _logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
-                    Message<string, dynamic> message = new Message<string, dynamic> {
-                        Headers = result.Message.Headers,
-                        Key = result.Message.Key,
-                        Timestamp = result.Message.Timestamp,
-                        Value = result.Message.Value
-                    };
-                    if (result.Message.Value.StartsWith("{")) {
-                        message.Value = _converter.JsonToObject<dynamic>(result.Message.Value);
+                    try {
+                        await _generalRepo.SaveKafkaToTable(result.Topic, result.Offset, result.Message);
                     }
-                    observeable.OnNext(message);
+                    catch (Exception e) {
+                        _logger.LogError($"[KAFKA_CONSUMER_SAVEDB] 🏗 {e.Message}");
+                    }
+                    if (result.Message.Value.StartsWith("{")) {
+                        result.Message.Value = _converter.JsonToObject<dynamic>(result.Message.Value);
+                    }
+                    observeable.OnNext((dynamic) result.Message);
                     if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
                         consumer.Commit();
                         i = 0;
