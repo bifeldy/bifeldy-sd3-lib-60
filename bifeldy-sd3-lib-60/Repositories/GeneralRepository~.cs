@@ -11,8 +11,6 @@
  * 
  */
 
-using System.Data;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -24,8 +22,7 @@ using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Tables;
 using bifeldy_sd3_lib_60.Services;
 
-namespace bifeldy_sd3_lib_60.Repositories
-{
+namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IGeneralRepository : IRepository {
         string DbName { get; }
@@ -35,8 +32,7 @@ namespace bifeldy_sd3_lib_60.Repositories
         Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk);
     }
 
-    public class CGeneralRepository : CRepository, IGeneralRepository
-    {
+    public class CGeneralRepository : CRepository, IGeneralRepository {
 
         private readonly EnvVar _envVar;
 
@@ -84,13 +80,10 @@ namespace bifeldy_sd3_lib_60.Repositories
 
         /** Custom Queries */
 
-        public string DbName
-        {
-            get
-            {
+        public string DbName {
+            get {
                 string FullDbName = string.Empty;
-                try
-                {
+                try {
                     FullDbName += _orapg.DbName;
                 }
                 catch {
@@ -188,14 +181,14 @@ namespace bifeldy_sd3_lib_60.Repositories
 
         public async Task<bool> SaveKafkaToTable(string topic, Offset offset, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T") {
             return await _orapg.ExecQueryAsync($@"
-                INSERT INTO {tabelName} (TOPIC, OFFS, KEY, VALUE, TMSTAMP)
+                INSERT INTO {tabelName} (TOPIC, OFFS, KEY, VAL, TMSTAMP)
                 VALUES (:topic, :offs, :key, :value, :tmstmp)
             ", new List<CDbQueryParamBind> {
                 new CDbQueryParamBind { NAME = "topic", VALUE = topic },
                 new CDbQueryParamBind { NAME = "offs", VALUE = offset.Value },
                 new CDbQueryParamBind { NAME = "key", VALUE = msg.Key },
                 new CDbQueryParamBind { NAME = "value", VALUE = msg.Value },
-                new CDbQueryParamBind { NAME = "tmstmp", VALUE = msg.Timestamp }
+                new CDbQueryParamBind { NAME = "tmstmp", VALUE = msg.Timestamp.UtcDateTime }
             });
         }
 
