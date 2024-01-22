@@ -29,13 +29,17 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
         private readonly IKafkaService _kafka;
+        private readonly ILockerService _locker;
 
         private readonly IGeneralRepository _generalRepo;
 
         private readonly string _hostPort;
         private string _topicName;
+        private readonly short _replication;
+        private readonly int _partition;
 
         private readonly bool _suffixKodeDc;
+        private readonly string _pubSubName;
 
         private IProducer<string, string> producer = null;
 
@@ -47,25 +51,31 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private string KAFKA_NAME {
             get {
-                return $"KAFKA_PRODUCER_{_hostPort.ToUpper()}#{_topicName.ToUpper()}";
+                return "KAFKA_" + _pubSubName ?? $"PRODUCER_{_hostPort.ToUpper()}#{_topicName.ToUpper()}";
             }
         }
 
         public CKafkaProducer(
             IServiceProvider serviceProvider,
-            string hostPort, string topicName, bool suffixKodeDc = false
+            string hostPort, string topicName, short replication = 1, int partition = 1,
+            bool suffixKodeDc = false, string pubSubName = null
         ) {
             _logger = serviceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
             _converter = serviceProvider.GetRequiredService<IConverterService>();
             _pubSub = serviceProvider.GetRequiredService<IPubSubService>();
             _kafka = serviceProvider.GetRequiredService<IKafkaService>();
+            _locker = serviceProvider.GetRequiredService<ILockerService>();
 
             IServiceScope scopedService = serviceProvider.CreateScope();
             _generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
             _hostPort = hostPort;
             _topicName = topicName;
+            _replication = replication;
+            _partition = partition;
+
             _suffixKodeDc = suffixKodeDc;
+            _pubSubName = pubSubName;
         }
 
         public override void Dispose() {
@@ -87,6 +97,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     _topicName += kodeDc;
                 }
                 if (producer == null) {
+                    await _kafka.CreateTopicIfNotExist(_hostPort, _topicName);
                     producer = _kafka.CreateKafkaProducerInstance<string, string>(_hostPort);
                 }
                 if (observeable == null) {
@@ -95,22 +106,26 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         if (data != null) {
                             Message<string, string> msg = new Message<string, string> {
                                 Key = data.Key,
-                                Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
+                                Value = typeof(object) == data.Value.GetType() ? _converter.ObjectToJson(data.Value) : data.Value.ToString()
                             };
+                            await _locker.MutexGlobalApp.WaitAsync();
                             msgs.Add(msg);
-                            await producer.ProduceAsync(_topicName, msg, stoppingToken);
+                            _locker.MutexGlobalApp.Release();
                         }
                     });
                 }
                 while (!stoppingToken.IsCancellationRequested) {
-                    foreach (Message<string, string> msg in msgs) {
+                    await _locker.MutexGlobalApp.WaitAsync();
+                    Message<string, string>[] cpMsgs = msgs.ToArray();
+                    msgs.Clear();
+                    _locker.MutexGlobalApp.Release();
+                    foreach (Message<string, string> msg in cpMsgs) {
                         try {
                             await producer.ProduceAsync(_topicName, msg, stoppingToken);
                         }
                         catch (Exception e) {
                             _logger.LogError($"[KAFKA_PRODUCER_MESSAGE] {e.Message}");
                         }
-                        msgs.Remove(msg);
                     }
                     Thread.Sleep(1000);
                 }

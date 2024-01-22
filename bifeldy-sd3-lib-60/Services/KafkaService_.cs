@@ -16,10 +16,12 @@ using Microsoft.Extensions.Logging;
 using Confluent.Kafka;
 
 using bifeldy_sd3_lib_60.Repositories;
+using Confluent.Kafka.Admin;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IKafkaService {
+        Task CreateTopicIfNotExist(string hostPort, string topicName, short replication = 1, int partition = 1);
         ProducerConfig GenerateKafkaProducerConfig(string hostPort);
         IProducer<T1, T2> GenerateProducerBuilder<T1, T2>(ProducerConfig config);
         IProducer<T1, T2> CreateKafkaProducerInstance<T1, T2>(string hostPort);
@@ -44,10 +46,33 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
 
+        TimeSpan timeout = TimeSpan.FromSeconds(10);
+
         public CKafkaService(ILogger<CKafkaService> logger, IConverterService converter, IPubSubService pubSub) {
             _logger = logger;
             _converter = converter;
             _pubSub = pubSub;
+        }
+
+        public async Task CreateTopicIfNotExist(string hostPort, string topicName, short replication = 1, int partition = 1) {
+            try {
+                AdminClientConfig adminConfig = new AdminClientConfig {
+                    BootstrapServers = hostPort
+                };
+                using (IAdminClient adminClient = new AdminClientBuilder(adminConfig).Build()) {
+                    Metadata metadata = adminClient.GetMetadata(timeout);
+                    List<TopicMetadata> topicsMetadata = metadata.Topics;
+                    bool isExist = metadata.Topics.Select(a => a.Topic).Contains(topicName);
+                    if (!isExist) {
+                        await adminClient.CreateTopicsAsync(new List<TopicSpecification> {
+                            new TopicSpecification { Name = topicName, ReplicationFactor = replication, NumPartitions = partition }
+                        });
+                    }
+                }
+            }
+            catch (Exception ex) {
+                _logger.LogError($"[KAFKA_CONSUMER_TOPIC] 📝 {ex.Message}");
+            }
         }
 
         public ProducerConfig GenerateKafkaProducerConfig(string hostPort) {
@@ -100,7 +125,6 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public Message<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1) {
             using (IConsumer<string, dynamic> consumer = CreateKafkaConsumerInstance<string, dynamic>(hostPort, groupId)) {
-                TimeSpan timeout = TimeSpan.FromSeconds(3);
                 TopicPartition topicPartition = CreateKafkaConsumerTopicPartition(topicName, partition);
                 if (offset < 0) {
                     WatermarkOffsets watermarkOffsets = consumer.QueryWatermarkOffsets(topicPartition, timeout);
@@ -162,6 +186,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public void CreateKafkaConsumerListener(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, dynamic>> execLambda = null) {
+            const ulong COMMIT_AFTER_N_MESSAGES = 10; 
             (topicName, groupId) = GetTopicNameConsumerListener(topicName, groupId, suffixKodeDc);
             string key = $"KAFKA_CONSUMER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
             IConsumer<string, string> consumer = CreateKafkaConsumerInstance<string, string>(hostPort, groupId);
@@ -174,7 +199,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
                 Message<string, string> message = result.Message;
                 _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).OnNext((dynamic) message);
-                if (++i % 10 == 0) {
+                if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
                     consumer.Commit();
                     i = 0;
                 }

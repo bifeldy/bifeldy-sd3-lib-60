@@ -191,17 +191,31 @@ namespace bifeldy_sd3_lib_60
 
         /* ** */
 
-        public static void AddKafkaProducerBackground(string hostPort, string topic, bool _suffixKodeDc = false) {
+        public static void AddKafkaProducerBackground(string hostPort, string topic, short replication = 1, int partition = 1, bool _suffixKodeDc = false, string pubSubName = null) {
             Services.AddHostedService(sp => {
-                return new CKafkaProducer(sp, hostPort, topic, _suffixKodeDc);
+                return new CKafkaProducer(sp, hostPort, topic, replication, partition, _suffixKodeDc, pubSubName);
             });
         }
 
-        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null, bool _suffixKodeDc = false) {
+        public static void AddKafkaConsumerBackground(string hostPort, string topic, string groupId = null, bool _suffixKodeDc = false, string pubSubName = null) {
             Services.AddHostedService(sp => {
                 IApplicationService _app = sp.GetRequiredService<IApplicationService>();
-                return new CKafkaConsumer(sp, hostPort, topic, groupId ?? _app.AppName, _suffixKodeDc);
+                return new CKafkaConsumer(sp, hostPort, topic, string.IsNullOrEmpty(groupId) ? _app.AppName : groupId, _suffixKodeDc, pubSubName);
             });
+        }
+
+        public static void AddKafkaAutoProducerConsumerBackground() {
+            IDictionary<string, KafkaInstance> kafkaSettings = Config.GetSection("KAFKA").Get<IDictionary<string, KafkaInstance>>();
+            foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
+                if (ks.Key.StartsWith("PRODUCER_")) {
+                    AddKafkaProducerBackground(ks.Value.HOSTPORT, ks.Value.TOPIC, ks.Value.REPLICATION, ks.Value.PARTITION, ks.Value.SUFFIXKODEDC, ks.Key);
+                }
+            }
+            foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
+                if (ks.Key.StartsWith("CONSUMER_")) {
+                    AddKafkaConsumerBackground(ks.Value.HOSTPORT, ks.Value.TOPIC, ks.Value.GROUPID, ks.Value.SUFFIXKODEDC, ks.Key);
+                }
+            }
         }
 
         /* ** */
