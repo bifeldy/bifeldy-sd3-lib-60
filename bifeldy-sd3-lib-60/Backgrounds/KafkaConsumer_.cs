@@ -109,7 +109,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
                     _logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
                     try {
-                        await _generalRepo.SaveKafkaToTable(result.Topic, result.Offset, result.Message);
+                        await _generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message);
                     }
                     catch (Exception e) {
                         _logger.LogError($"[KAFKA_CONSUMER_SAVEDB] 🏗 {e.Message}");

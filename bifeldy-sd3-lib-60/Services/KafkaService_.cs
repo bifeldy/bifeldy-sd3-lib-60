@@ -31,13 +31,13 @@ namespace bifeldy_sd3_lib_60.Services {
         IConsumer<T1, T2> CreateKafkaConsumerInstance<T1, T2>(string hostPort, string groupId);
         TopicPartition CreateKafkaConsumerTopicPartition(string topicName, int partition);
         TopicPartitionOffset CreateKafkaConsumerTopicPartitionOffset(TopicPartition topicPartition, long offset);
-        Message<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1);
-        string GetKeyProducerListener(string hostPort, string topicName);
+        Message<string, T> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1);
+        string GetKeyProducerListener(string hostPort, string topicName, string pubSubName = null);
         string GetTopicNameProducerListener(string topicName, string suffixKodeDc = null);
-        void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, CancellationToken stoppingToken = default);
-        void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null);
+        void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, CancellationToken stoppingToken = default, string pubSubName = null);
+        void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, string pubSubName = null);
         (string, string) GetTopicNameConsumerListener(string topicName, string groupId, string suffixKodeDc = null);
-        void CreateKafkaConsumerListener(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, dynamic>> execLambda = null);
+        void CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, T>> execLambda = null, string pubSubName = null);
     }
 
     public sealed class CKafkaService : IKafkaService {
@@ -71,7 +71,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
             catch (Exception ex) {
-                _logger.LogError($"[KAFKA_CONSUMER_TOPIC] 📝 {ex.Message}");
+                _logger.LogError($"[KAFKA_TOPIC] 📝 {ex.Message}");
             }
         }
 
@@ -91,10 +91,11 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topic, Message<string, dynamic> data) {
             using (IProducer<string, string> producer = CreateKafkaProducerInstance<string, string>(hostPort)) {
-                if (typeof(string) != data.Value.GetType()) {
-                    data.Value = _converter.ObjectToJson(data.Value);
-                }
-                return await producer.ProduceAsync(topic, (dynamic) data);
+                Message<string, string> msg = new Message<string, string> {
+                    Key = data.Key,
+                    Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
+                };
+                return await producer.ProduceAsync(topic, msg);
             }
         }
 
@@ -123,8 +124,8 @@ namespace bifeldy_sd3_lib_60.Services {
             return new TopicPartitionOffset(topicPartition, new Offset(offset));
         }
 
-        public Message<string, dynamic> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1) {
-            using (IConsumer<string, dynamic> consumer = CreateKafkaConsumerInstance<string, dynamic>(hostPort, groupId)) {
+        public Message<string, T> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1) {
+            using (IConsumer<string, string> consumer = CreateKafkaConsumerInstance<string, string>(hostPort, groupId)) {
                 TopicPartition topicPartition = CreateKafkaConsumerTopicPartition(topicName, partition);
                 if (offset < 0) {
                     WatermarkOffsets watermarkOffsets = consumer.QueryWatermarkOffsets(topicPartition, timeout);
@@ -132,13 +133,20 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
                 TopicPartitionOffset topicPartitionOffset = CreateKafkaConsumerTopicPartitionOffset(topicPartition, offset);
                 consumer.Assign(topicPartitionOffset);
-                ConsumeResult<string, dynamic> result = consumer.Consume(timeout);
-                return result.Message;
+                ConsumeResult<string, string> result = consumer.Consume(timeout);
+                Message<string, T> message = new Message<string, T> {
+                    Headers = result.Message.Headers,
+                    Key = result.Message.Key,
+                    Value = typeof(T) == typeof(string) ? (dynamic) result.Message.Value : _converter.JsonToObject<T>(result.Message.Value),
+                    Timestamp = result.Message.Timestamp
+                };
+                consumer.Close();
+                return message;
             }
         }
 
-        public string GetKeyProducerListener(string hostPort, string topicName) {
-            return $"KAFKA_PRODUCER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
+        public string GetKeyProducerListener(string hostPort, string topicName, string pubSubName = null) {
+            return !string.IsNullOrEmpty(pubSubName) ? pubSubName : $"KAFKA_PRODUCER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
         }
 
         public string GetTopicNameProducerListener(string topicName, string suffixKodeDc) {
@@ -151,23 +159,24 @@ namespace bifeldy_sd3_lib_60.Services {
             return topicName;
         }
 
-        public void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc, CancellationToken stoppingToken = default) {
+        public void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc, CancellationToken stoppingToken = default, string pubSubName = null) {
             topicName = GetTopicNameProducerListener(topicName, suffixKodeDc);
-            string key = GetKeyProducerListener(hostPort, topicName);
+            string key = GetKeyProducerListener(hostPort, topicName, pubSubName);
             IProducer<string, string> producer = CreateKafkaProducerInstance<string, string>(hostPort);
             _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).Subscribe(async data => {
                 if (data != null) {
-                    if (typeof(string) != data.Value.GetType()) {
-                        data.Value = _converter.ObjectToJson(data.Value);
-                    }
-                    await producer.ProduceAsync(topicName, (dynamic) data, stoppingToken);
+                    Message<string, string> msg = new Message<string, string> {
+                        Key = data.Key,
+                        Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
+                    };
+                    await producer.ProduceAsync(topicName, msg, stoppingToken);
                 }
             });
         }
 
-        public void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null) {
+        public void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, string pubSubName = null) {
             topicName = GetTopicNameProducerListener(topicName, suffixKodeDc);
-            string key = GetKeyProducerListener(hostPort, topicName);
+            string key = GetKeyProducerListener(hostPort, topicName, pubSubName);
             _pubSub.DisposeAndRemoveSubscriber(key);
         }
 
@@ -185,10 +194,10 @@ namespace bifeldy_sd3_lib_60.Services {
             return (topicName, groupId);
         }
 
-        public void CreateKafkaConsumerListener(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, dynamic>> execLambda = null) {
+        public void CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, CancellationToken stoppingToken = default, Action<Message<string, T>> execLambda = null, string pubSubName = null) {
             const ulong COMMIT_AFTER_N_MESSAGES = 10; 
             (topicName, groupId) = GetTopicNameConsumerListener(topicName, groupId, suffixKodeDc);
-            string key = $"KAFKA_CONSUMER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
+            string key = !string.IsNullOrEmpty(pubSubName) ? pubSubName : $"KAFKA_CONSUMER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
             IConsumer<string, string> consumer = CreateKafkaConsumerInstance<string, string>(hostPort, groupId);
             TopicPartition topicPartition = CreateKafkaConsumerTopicPartition(topicName, -1);
             TopicPartitionOffset topicPartitionOffset = CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
@@ -197,8 +206,16 @@ namespace bifeldy_sd3_lib_60.Services {
             ulong i = 0;
             while (!stoppingToken.IsCancellationRequested) {
                 ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
-                Message<string, string> message = result.Message;
-                _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).OnNext((dynamic) message);
+                Message<string, T> message = new Message<string, T> {
+                    Headers = result.Message.Headers,
+                    Key = result.Message.Key,
+                    Value = typeof(T) == typeof(string) ? (dynamic) result.Message.Value : _converter.JsonToObject<T>(result.Message.Value),
+                    Timestamp = result.Message.Timestamp
+                };
+                if (execLambda != null) {
+                    execLambda(message);
+                }
+                _pubSub.GetGlobalAppBehaviorSubject<Message<string, T>>(key).OnNext(message);
                 if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
                     consumer.Commit();
                     i = 0;

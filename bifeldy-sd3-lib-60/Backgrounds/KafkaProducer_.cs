@@ -106,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         if (data != null) {
                             Message<string, string> msg = new Message<string, string> {
                                 Key = data.Key,
-                                Value = typeof(object) == data.Value.GetType() ? _converter.ObjectToJson(data.Value) : data.Value.ToString()
+                                Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
                             };
                             await _locker.MutexGlobalApp.WaitAsync();
                             msgs.Add(msg);

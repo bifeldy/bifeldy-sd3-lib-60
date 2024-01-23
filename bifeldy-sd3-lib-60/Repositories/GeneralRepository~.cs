@@ -27,7 +27,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
     public interface IGeneralRepository : IRepository {
         string DbName { get; }
         Task<string> GetURLWebService(string webType);
-        Task<bool> SaveKafkaToTable(string topic, Offset offset, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T");
+        Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T");
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
         Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk);
     }
@@ -179,13 +179,14 @@ namespace bifeldy_sd3_lib_60.Repositories {
             );
         }
 
-        public async Task<bool> SaveKafkaToTable(string topic, Offset offset, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T") {
+        public async Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T") {
             return await _orapg.ExecQueryAsync($@"
-                INSERT INTO {tabelName} (TOPIC, OFFS, KEY, VAL, TMSTAMP)
-                VALUES (:topic, :offs, :key, :value, :tmstmp)
+                INSERT INTO {tabelName} (TPC, OFFS, PARTT, KEY, VAL, TMSTAMP)
+                VALUES (:tpc, :offs, :partt, :key, :value, :tmstmp)
             ", new List<CDbQueryParamBind> {
-                new CDbQueryParamBind { NAME = "topic", VALUE = topic },
-                new CDbQueryParamBind { NAME = "offs", VALUE = offset.Value },
+                new CDbQueryParamBind { NAME = "tpc", VALUE = topic },
+                new CDbQueryParamBind { NAME = "offs", VALUE = offset },
+                new CDbQueryParamBind { NAME = "partt", VALUE = partition },
                 new CDbQueryParamBind { NAME = "key", VALUE = msg.Key },
                 new CDbQueryParamBind { NAME = "value", VALUE = msg.Value },
                 new CDbQueryParamBind { NAME = "tmstmp", VALUE = msg.Timestamp.UtcDateTime }
