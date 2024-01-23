@@ -14,16 +14,23 @@
 using System.Text;
 using System.Security.Cryptography;
 
+using Ionic.Crc;
+
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IChiperService {
-        string Encrypt(string plainText, string passPhrase = null);
-        string Decrypt(string cipherText, string passPhrase = null);
+        string EncryptText(string plainText, string passPhrase = null);
+        string DecryptText(string cipherText, string passPhrase = null);
+        string CalculateMD5(string filePath);
+        string CalculateCRC32(string filePath);
+        string CalculateSHA1(string filePath);
     }
 
     public sealed class CChiperService : IChiperService {
 
         private readonly IApplicationService _app;
+
+        private readonly IStreamService _stream;
 
         // This constant is used to determine the keysize of the encryption algorithm in bits.
         // We divide this by 8 within the code below to get the equivalent number of bytes.
@@ -32,8 +39,9 @@ namespace bifeldy_sd3_lib_60.Services {
         // This constant determines the number of iterations for the password bytes generation function.
         private const int DerivationIterations = 1000;
 
-        public CChiperService(IApplicationService app) {
+        public CChiperService(IApplicationService app, IStreamService stream) {
             _app = app;
+            _stream = stream;
         }
 
         private byte[] Generate256BitsOfRandomEntropy() {
@@ -45,7 +53,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return randomBytes;
         }
 
-        public string Encrypt(string plainText, string passPhrase = null) {
+        public string EncryptText(string plainText, string passPhrase = null) {
             if (string.IsNullOrEmpty(passPhrase)) {
                 passPhrase = _app.AppName;
             }
@@ -79,7 +87,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string Decrypt(string cipherText, string passPhrase = null) {
+        public string DecryptText(string cipherText, string passPhrase = null) {
             if (string.IsNullOrEmpty(passPhrase)) {
                 passPhrase = _app.AppName;
             }
@@ -108,6 +116,24 @@ namespace bifeldy_sd3_lib_60.Services {
                         }
                     }
                 }
+            }
+        }
+
+        public string CalculateMD5(string filePath) {
+            using (MD5 md5 = MD5.Create()) {
+                byte[] hash = md5.ComputeHash(_stream.ReadFileAsBinaryByte(filePath));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        public string CalculateCRC32(string filePath) {
+            return new CRC32().GetCrc32(_stream.ReadFileAsBinaryByte(filePath)).ToString("x");
+        }
+
+        public string CalculateSHA1(string filePath) {
+            using (SHA1 sha1 = SHA1.Create()) {
+                var hash = sha1.ComputeHash(_stream.ReadFileAsBinaryByte(filePath));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
             }
         }
 
