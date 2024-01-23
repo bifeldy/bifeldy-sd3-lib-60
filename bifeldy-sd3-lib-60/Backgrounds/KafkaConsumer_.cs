@@ -20,7 +20,6 @@ using System.Reactive.Subjects;
 
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Repositories;
-using System.Reactive.Linq;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 

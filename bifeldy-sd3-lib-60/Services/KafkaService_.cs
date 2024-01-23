@@ -14,8 +14,6 @@
 using Microsoft.Extensions.Logging;
 
 using Confluent.Kafka;
-
-using bifeldy_sd3_lib_60.Repositories;
 using Confluent.Kafka.Admin;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -25,13 +23,13 @@ namespace bifeldy_sd3_lib_60.Services {
         ProducerConfig GenerateKafkaProducerConfig(string hostPort);
         IProducer<T1, T2> GenerateProducerBuilder<T1, T2>(ProducerConfig config);
         IProducer<T1, T2> CreateKafkaProducerInstance<T1, T2>(string hostPort);
-        Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topicName, Message<string, dynamic> data);
+        Task<List<DeliveryResult<string, string>>> ProduceSingleMultipleMessages(string hostPort, string topicName, List<Message<string, dynamic>> data);
         ConsumerConfig GenerateKafkaConsumerConfig(string hostPort, string groupId, AutoOffsetReset autoOffsetReset);
         IConsumer<T1, T2> GenerateConsumerBuilder<T1, T2>(ConsumerConfig config);
         IConsumer<T1, T2> CreateKafkaConsumerInstance<T1, T2>(string hostPort, string groupId);
         TopicPartition CreateKafkaConsumerTopicPartition(string topicName, int partition);
         TopicPartitionOffset CreateKafkaConsumerTopicPartitionOffset(TopicPartition topicPartition, long offset);
-        Task<Message<string, T>> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1);
+        Task<List<Message<string, T>>> ConsumeSingleMultipleMessages<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1, ulong nMessagesBlock = 1);
         string GetKeyProducerListener(string hostPort, string topicName, string pubSubName = null);
         string GetTopicNameProducerListener(string topicName, string suffixKodeDc = null);
         void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, CancellationToken stoppingToken = default, string pubSubName = null);
@@ -89,14 +87,18 @@ namespace bifeldy_sd3_lib_60.Services {
             return GenerateProducerBuilder<T1, T2>(GenerateKafkaProducerConfig(hostPort));
         }
 
-        public async Task<DeliveryResult<string, string>> ProduceSingleMessage(string hostPort, string topicName, Message<string, dynamic> data) {
+        public async Task<List<DeliveryResult<string, string>>> ProduceSingleMultipleMessages(string hostPort, string topicName, List<Message<string, dynamic>> data) {
             await CreateTopicIfNotExist(hostPort, topicName);
             using (IProducer<string, string> producer = CreateKafkaProducerInstance<string, string>(hostPort)) {
-                Message<string, string> msg = new Message<string, string> {
-                    Key = data.Key,
-                    Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
-                };
-                return await producer.ProduceAsync(topicName, msg);
+                List<DeliveryResult<string, string>> results = new List<DeliveryResult<string, string>>();
+                foreach (Message<string, dynamic> d in data) {
+                    Message<string, string> msg = new Message<string, string> {
+                        Key = d.Key,
+                        Value = typeof(string) == d.Value.GetType() ? d.Value : _converter.ObjectToJson(d.Value)
+                    };
+                    results.Add(await producer.ProduceAsync(topicName, msg));
+                }
+                return results;
             }
         }
 
@@ -125,7 +127,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return new TopicPartitionOffset(topicPartition, new Offset(offset));
         }
 
-        public async Task<Message<string, T>> ConsumeSingleMessage<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1) {
+        public async Task<List<Message<string, T>>> ConsumeSingleMultipleMessages<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1, ulong nMessagesBlock = 1) {
             await CreateTopicIfNotExist(hostPort, topicName);
             using (IConsumer<string, string> consumer = CreateKafkaConsumerInstance<string, string>(hostPort, groupId)) {
                 TopicPartition topicPartition = CreateKafkaConsumerTopicPartition(topicName, partition);
@@ -135,15 +137,19 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
                 TopicPartitionOffset topicPartitionOffset = CreateKafkaConsumerTopicPartitionOffset(topicPartition, offset);
                 consumer.Assign(topicPartitionOffset);
-                ConsumeResult<string, string> result = consumer.Consume(timeout);
-                Message<string, T> message = new Message<string, T> {
-                    Headers = result.Message.Headers,
-                    Key = result.Message.Key,
-                    Value = typeof(T) == typeof(string) ? (dynamic) result.Message.Value : _converter.JsonToObject<T>(result.Message.Value),
-                    Timestamp = result.Message.Timestamp
-                };
+                List<Message<string, T>> results = new List<Message<string, T>>();
+                for (ulong i = 0; i < nMessagesBlock; i++) {
+                    ConsumeResult<string, string> result = consumer.Consume(timeout);
+                    Message<string, T> message = new Message<string, T> {
+                        Headers = result.Message.Headers,
+                        Key = result.Message.Key,
+                        Value = typeof(T) == typeof(string) ? (dynamic)result.Message.Value : _converter.JsonToObject<T>(result.Message.Value),
+                        Timestamp = result.Message.Timestamp
+                    };
+                    results.Add(message);
+                }
                 consumer.Close();
-                return message;
+                return results;
             }
         }
 

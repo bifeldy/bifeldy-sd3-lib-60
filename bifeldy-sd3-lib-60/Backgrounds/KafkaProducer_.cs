@@ -108,17 +108,17 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                                 Key = data.Key,
                                 Value = typeof(string) == data.Value.GetType() ? data.Value : _converter.ObjectToJson(data.Value)
                             };
-                            await _locker.MutexGlobalApp.WaitAsync();
+                            await _locker.SemaphoreGlobalApp(KAFKA_NAME).WaitAsync();
                             msgs.Add(msg);
-                            _locker.MutexGlobalApp.Release();
+                            _locker.SemaphoreGlobalApp(KAFKA_NAME).Release();
                         }
                     });
                 }
                 while (!stoppingToken.IsCancellationRequested) {
-                    await _locker.MutexGlobalApp.WaitAsync();
+                    await _locker.SemaphoreGlobalApp(KAFKA_NAME).WaitAsync();
                     Message<string, string>[] cpMsgs = msgs.ToArray();
                     msgs.Clear();
-                    _locker.MutexGlobalApp.Release();
+                    _locker.SemaphoreGlobalApp(KAFKA_NAME).Release();
                     foreach (Message<string, string> msg in cpMsgs) {
                         try {
                             await producer.ProduceAsync(_topicName, msg, stoppingToken);
