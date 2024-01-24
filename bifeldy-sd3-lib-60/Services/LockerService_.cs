@@ -15,7 +15,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public interface ILockerService {
         SemaphoreSlim MutexGlobalApp { get; }
-        SemaphoreSlim SemaphoreGlobalApp(string name, int initialCount = 0, int maximumCount = 0);
+        SemaphoreSlim SemaphoreGlobalApp(string name, int initialCount = 1, int maximumCount = 1);
     }
 
     public sealed class CLockerService : ILockerService {
@@ -29,7 +29,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public SemaphoreSlim MutexGlobalApp => mutex_global_app;
 
-        public SemaphoreSlim SemaphoreGlobalApp(string name, int initialCount = 0, int maximumCount = 0) {
+        public SemaphoreSlim SemaphoreGlobalApp(string name, int initialCount = 1, int maximumCount = 1) {
             if (!semaphore_global_app.ContainsKey(name)) {
                 semaphore_global_app.Add(name, new SemaphoreSlim(initialCount, maximumCount));
             }

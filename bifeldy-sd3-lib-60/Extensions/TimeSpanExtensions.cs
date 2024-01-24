@@ -14,7 +14,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class TimeSpanExtensions {
 
-        public static string ToEta(this TimeSpan ts) {
+        public static string ToEtaString(this TimeSpan ts) {
             return ts.Days != 0 ? $"{ts.Days} days"
                  : ts.Hours != 0 ? $"{ts.Hours} hours"
                  : ts.Minutes != 0 ? $"{ts.Minutes} minutes"

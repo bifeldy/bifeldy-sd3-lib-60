@@ -11,37 +11,33 @@
  * 
  */
 
-using System.Data;
-
-using Microsoft.Extensions.Logging;
+using System.Drawing;
 
 using Newtonsoft.Json;
-
-using bifeldy_sd3_lib_60.Extensions;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IConverterService {
-        string TimeSpanToEta(TimeSpan ts);
+        byte[] ImageToByte(Image x);
+        Image ByteToImage(byte[] byteArray);
         T JsonToObject<T>(string j2o);
         string ObjectToJson(object body);
-        string ByteToString(byte[] bytes, bool removeHypens = true);
-        byte[] StringToByte(string hex, string separator = null);
-        List<T> DataTableToList<T>(DataTable dt);
-        DataTable ListToDataTable<T>(List<T> listData, string tableName = null, string arrayListSingleValueColumnName = null);
         T GetDefaultValueT<T>();
+        string FormatByteSizeHumanReadable(long bytes);
     }
 
     public sealed class CConverterService : IConverterService {
 
-        private readonly ILogger<CConverterService> _logger;
-
-        public CConverterService(ILogger<CConverterService> logger) {
-            _logger = logger;
+        public CConverterService() {
+            //
         }
 
-        public string TimeSpanToEta(TimeSpan ts) {
-            return ts.ToEta();
+        public byte[] ImageToByte(Image image) {
+            return (byte[]) new ImageConverter().ConvertTo(image, typeof(byte[]));
+        }
+
+        public Image ByteToImage(byte[] byteArray) {
+            return (Bitmap) new ImageConverter().ConvertFrom(byteArray);
         }
 
         public T JsonToObject<T>(string j2o) {
@@ -50,22 +46,6 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string ObjectToJson(object o2j) {
             return JsonConvert.SerializeObject(o2j);
-        }
-
-        public string ByteToString(byte[] bytes, bool removeHypens = true) {
-            return bytes.ToString(removeHypens);
-        }
-
-        public byte[] StringToByte(string hex, string separator = null) {
-            return hex.ToByte(separator);
-        }
-
-        public List<T> DataTableToList<T>(DataTable dt) {
-            return dt.ToList<T>();
-        }
-
-        public DataTable ListToDataTable<T>(List<T> listData, string tableName = null, string arrayListSingleValueColumnName = null) {
-            return listData.ToDataTable(tableName, arrayListSingleValueColumnName);
         }
 
         public T GetDefaultValueT<T>() {
@@ -90,7 +70,33 @@ namespace bifeldy_sd3_lib_60.Services {
                     x = false;
                     break;
             }
-            return (T) Convert.ChangeType(x, typeof(T));
+            return (T)Convert.ChangeType(x, typeof(T));
+        }
+
+        public string FormatByteSizeHumanReadable(long bytes) {
+            long digit = 1;
+            string ext = "B";
+            if (bytes > 1000000000000) {
+                digit = 1000000000000;
+                ext = "TB";
+            }
+            else if (bytes > 1000000000) {
+                digit = 1000000000;
+                ext = "GB";
+            }
+            else if (bytes > 1000000) {
+                digit = 1000000;
+                ext = "MB";
+            }
+            else if (bytes > 1000) {
+                digit = 1000;
+                ext = "KB";
+            }
+            else {
+                digit = 1;
+                ext = "B";
+            }
+            return $"{((decimal) bytes / digit):0.00} {ext}";
         }
 
     }

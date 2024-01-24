@@ -15,6 +15,7 @@ using System.Text;
 using System.Security.Cryptography;
 
 using Ionic.Crc;
+using System.Runtime.InteropServices;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -24,6 +25,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string CalculateMD5(string filePath);
         string CalculateCRC32(string filePath);
         string CalculateSHA1(string filePath);
+        string GetMimeFromFile(string filename);
     }
 
     public sealed class CChiperService : IChiperService {
@@ -102,7 +104,7 @@ namespace bifeldy_sd3_lib_60.Services {
             byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip((Keysize / 8) * 2).Take(cipherTextBytesWithSaltAndIv.Length - ((Keysize / 8) * 2)).ToArray();
             using (Rfc2898DeriveBytes password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (Aes symmetricKey = Aes.Create("AesManaged")) {
+                using (RijndaelManaged symmetricKey = new RijndaelManaged()) {
                     symmetricKey.BlockSize = 256;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
@@ -121,26 +123,77 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string CalculateMD5(string filePath) {
             using (MD5 md5 = MD5.Create()) {
-                byte[] hash = md5.ComputeHash(_stream.ReadFileAsBinaryByte(filePath).ToArray());
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                using (MemoryStream ms = _stream.ReadFileAsBinaryStream(filePath)) {
+                    byte[] hash = md5.ComputeHash(ms.ToArray());
+                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                }
             }
         }
 
         public string CalculateCRC32(string filePath) {
             CRC32 crc32 = new CRC32();
-            byte[] data = _stream.ReadFileAsBinaryByte(filePath).ToArray();
-            crc32.SlurpBlock(data, 0, data.Length);
-            return crc32.Crc32Result.ToString("x");
+            using (MemoryStream ms = _stream.ReadFileAsBinaryStream(filePath)) {
+                byte[] data = ms.ToArray();
+                crc32.SlurpBlock(data, 0, data.Length);
+                return crc32.Crc32Result.ToString("x");
+            }
         }
 
         public string CalculateSHA1(string filePath) {
             using (SHA1 sha1 = SHA1.Create()) {
-                byte[] hash = sha1.ComputeHash(_stream.ReadFileAsBinaryByte(filePath).ToArray());
-                StringBuilder sb = new StringBuilder(hash.Length * 2);
-                foreach (byte b in hash) {
-                    sb.Append(b.ToString("x"));
+                using (MemoryStream ms = _stream.ReadFileAsBinaryStream(filePath)) {
+                    byte[] hash = sha1.ComputeHash(ms.ToArray());
+                    StringBuilder sb = new StringBuilder(hash.Length * 2);
+                    foreach (byte b in hash) {
+                        sb.Append(b.ToString("x"));
+                    }
+                    return sb.ToString();
                 }
-                return sb.ToString();
+            }
+        }
+
+        [DllImport("urlmon.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = false)]
+        private static extern int FindMimeFromData(
+            IntPtr pBC,
+            [MarshalAs(UnmanagedType.LPWStr)] string pwzUrl,
+            [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.I1, SizeParamIndex = 3)] byte[] pBuffer,
+            int cbSize,
+            [MarshalAs(UnmanagedType.LPWStr)] string pwzMimeProposed,
+            int dwMimeFlags,
+            out IntPtr ppwzMimeOut,
+            int dwReserved
+        );
+
+        public string GetMimeFromFile(string filename) {
+            if (!File.Exists(filename)) {
+                throw new FileNotFoundException(filename + " Not Found");
+            }
+            const int maxContent = 256;
+            byte[] buffer = new byte[maxContent];
+            using (FileStream fs = new FileStream(filename, FileMode.Open)) {
+                if (fs.Length >= maxContent) {
+                    fs.Read(buffer, 0, maxContent);
+                }
+                else {
+                    fs.Read(buffer, 0, (int)fs.Length);
+                }
+            }
+            IntPtr mimeTypePtr = IntPtr.Zero;
+            try {
+                int result = FindMimeFromData(IntPtr.Zero, null, buffer, maxContent, null, 0, out mimeTypePtr, 0);
+                if (result != 0) {
+                    Marshal.FreeCoTaskMem(mimeTypePtr);
+                    throw Marshal.GetExceptionForHR(result);
+                }
+                string mime = Marshal.PtrToStringUni(mimeTypePtr);
+                Marshal.FreeCoTaskMem(mimeTypePtr);
+                return mime;
+            }
+            catch {
+                if (mimeTypePtr != IntPtr.Zero) {
+                    Marshal.FreeCoTaskMem(mimeTypePtr);
+                }
+                return "unknown/unknown";
             }
         }
 
