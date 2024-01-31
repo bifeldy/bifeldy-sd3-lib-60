@@ -12,10 +12,10 @@
  */
 
 using System.Text;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 using Ionic.Crc;
-using System.Runtime.InteropServices;
 
 namespace bifeldy_sd3_lib_60.Services {
 
