@@ -23,7 +23,7 @@ namespace bifeldy_sd3_lib_60.Services {
         T JsonToObject<T>(string j2o);
         string ObjectToJson(object body);
         T GetDefaultValueT<T>();
-        string FormatByteSizeHumanReadable(long bytes);
+        string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
     }
 
     public sealed class CConverterService : IConverterService {
@@ -73,30 +73,30 @@ namespace bifeldy_sd3_lib_60.Services {
             return (T)Convert.ChangeType(x, typeof(T));
         }
 
-        public string FormatByteSizeHumanReadable(long bytes) {
+        public string FormatByteSizeHumanReadable(long bytes, string forceUnit = null) {
+            IDictionary<string, long> dict = new Dictionary<string, long> {
+                { "TB", 1000000000000 },
+                { "GB", 1000000000 },
+                { "MB", 1000000 },
+                { "KB", 1000 },
+                { "B", 1 }
+            };
             long digit = 1;
             string ext = "B";
-            if (bytes > 1000000000000) {
-                digit = 1000000000000;
-                ext = "TB";
-            }
-            else if (bytes > 1000000000) {
-                digit = 1000000000;
-                ext = "GB";
-            }
-            else if (bytes > 1000000) {
-                digit = 1000000;
-                ext = "MB";
-            }
-            else if (bytes > 1000) {
-                digit = 1000;
-                ext = "KB";
+            if (!string.IsNullOrEmpty(forceUnit)) {
+                digit = dict[forceUnit];
+                ext = forceUnit;
             }
             else {
-                digit = 1;
-                ext = "B";
+                foreach (KeyValuePair<string, long> kvp in dict) {
+                    if (bytes > kvp.Value) {
+                        digit = kvp.Value;
+                        ext = kvp.Key;
+                        break;
+                    }
+                }
             }
-            return $"{((decimal) bytes / digit):0.00} {ext}";
+            return $"{((decimal)bytes / digit):0.00} {ext}";
         }
 
     }
