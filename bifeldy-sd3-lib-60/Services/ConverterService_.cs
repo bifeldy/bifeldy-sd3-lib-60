@@ -12,6 +12,7 @@
  */
 
 using System.Drawing;
+using System.Runtime.Versioning;
 
 using Newtonsoft.Json;
 
@@ -32,10 +33,12 @@ namespace bifeldy_sd3_lib_60.Services {
             //
         }
 
+        [SupportedOSPlatform("windows")]
         public byte[] ImageToByte(Image image) {
             return (byte[]) new ImageConverter().ConvertTo(image, typeof(byte[]));
         }
 
+        [SupportedOSPlatform("windows")]
         public Image ByteToImage(byte[] byteArray) {
             return (Bitmap) new ImageConverter().ConvertFrom(byteArray);
         }
@@ -70,7 +73,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     x = false;
                     break;
             }
-            return (T)Convert.ChangeType(x, typeof(T));
+            return (T) Convert.ChangeType(x, typeof(T));
         }
 
         public string FormatByteSizeHumanReadable(long bytes, string forceUnit = null) {
