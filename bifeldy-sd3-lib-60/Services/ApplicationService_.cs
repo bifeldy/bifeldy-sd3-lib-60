@@ -11,7 +11,7 @@
  * 
  */
 
-using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Extensions.Hosting;
 
@@ -30,7 +30,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public bool DebugMode => Bifeldy.App.Environment.IsDevelopment();
         public string AppName => Bifeldy.App.Environment.ApplicationName;
         public string AppLocation => AppDomain.CurrentDomain.BaseDirectory;
-        public string AppVersion => string.Join("", Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion.Split('.'));
+        public string AppVersion => string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
