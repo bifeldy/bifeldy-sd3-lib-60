@@ -26,6 +26,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
     public sealed class CKafkaConsumer : BackgroundService {
 
         private readonly ILogger<CKafkaConsumer> _logger;
+        private readonly IApplicationService _app;
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
         private readonly IKafkaService _kafka;
@@ -36,6 +37,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private string _groupId;
         private string _topicName;
 
+        private readonly string _logTableName;
         private readonly bool _suffixKodeDc;
         private readonly string _pubSubName;
 
@@ -53,9 +55,11 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public CKafkaConsumer(
             IServiceProvider serviceProvider,
-            string hostPort, string topicName, string groupId, bool suffixKodeDc = false, string pubSubName = null
+            string hostPort, string topicName, string logTableName,
+            string groupId = null, bool suffixKodeDc = false, string pubSubName = null
         ) {
             _logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
+            _app = serviceProvider.GetRequiredService<IApplicationService>();
             _converter = serviceProvider.GetRequiredService<IConverterService>();
             _pubSub = serviceProvider.GetRequiredService<IPubSubService>();
             _kafka = serviceProvider.GetRequiredService<IKafkaService>();
@@ -65,8 +69,9 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
             _hostPort = hostPort;
             _topicName = topicName;
-            _groupId = groupId;
+            _groupId = !string.IsNullOrEmpty(groupId) ? groupId : _app.AppName;
 
+            _logTableName = logTableName ?? "KAFKA_CONSUMER_AUTO_LOG";
             _suffixKodeDc = suffixKodeDc;
             _pubSubName = pubSubName;
         }
@@ -108,7 +113,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
                     _logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
                     try {
-                        await _generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message);
+                        await _generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, _logTableName);
                     }
                     catch (Exception e) {
                         _logger.LogError($"[KAFKA_CONSUMER_SAVEDB] 🏗 {e.Message}");

@@ -13,10 +13,11 @@
 namespace bifeldy_sd3_lib_60.Models {
 
     public sealed class KafkaInstance {
-        public string HOSTPORT { get; set; }
+        public string HOST_PORT { get; set; }
         public string TOPIC { get; set; }
-        public string GROUPID { get; set; }
-        public bool SUFFIXKODEDC { get; set; }
+        public string LOG_TABLE_NAME { get; set; }
+        public string GROUP_ID { get; set; }
+        public bool SUFFIX_KODE_DC { get; set; }
         public short REPLICATION { get; set; }
         public int PARTITION { get; set; }
     }

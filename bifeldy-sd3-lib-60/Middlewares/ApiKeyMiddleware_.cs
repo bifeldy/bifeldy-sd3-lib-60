@@ -48,6 +48,10 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
+            if (request.Path.Value.StartsWith("/api/swagger") && !request.Path.Value.StartsWith("/api/")) {
+                await _next(context);
+            }
+
             string ipDomainHost = request.Host.Host;
             if (!_gs.AllowedIpOrigin.Contains(ipDomainHost)) {
                 _gs.AllowedIpOrigin.Add(ipDomainHost);
@@ -60,13 +64,16 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             StreamReader reader = new StreamReader(request.Body);
             RequestJson reqBody = null;
 
-            string rbString = await reader.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(rbString)) {
-                try {
-                    reqBody = _cs.JsonToObject<RequestJson>(rbString);
-                }
-                catch (Exception ex) {
-                    _logger.LogError($"[API_KEY_BODY] 🌸 {ex.Message}");
+            string accept = request.Headers["accept"].ToString();
+            if (accept.Contains("application/xml") || accept.Contains("application/json")) {
+                string rbString = await reader.ReadToEndAsync();
+                if (!string.IsNullOrEmpty(rbString)) {
+                    try {
+                        reqBody = _cs.JsonToObject<RequestJson>(rbString);
+                    }
+                    catch (Exception ex) {
+                        _logger.LogError($"[API_KEY_BODY] 🌸 {ex.Message}");
+                    }
                 }
             }
 
@@ -102,7 +109,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             context.Items["api_key"] = apiKey;
             _logger.LogInformation($"[API_KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
 
-            if (!request.Path.Value.StartsWith("/api/") || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+            if (await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
                 await _next(context);
             }
             else {

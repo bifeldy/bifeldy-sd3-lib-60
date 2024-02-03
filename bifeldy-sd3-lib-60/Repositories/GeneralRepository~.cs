@@ -27,7 +27,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
     public interface IGeneralRepository : IRepository {
         string DbName { get; }
         Task<string> GetURLWebService(string webType);
-        Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T");
+        Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
         Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk);
     }
@@ -179,9 +179,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
             );
         }
 
-        public async Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string tabelName = "DC_KAFKALOG_T") {
+        public async Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName) {
             return await _orapg.ExecQueryAsync($@"
-                INSERT INTO {tabelName} (TPC, OFFS, PARTT, KEY, VAL, TMSTAMP)
+                INSERT INTO {logTableName} (TPC, OFFS, PARTT, KEY, VAL, TMSTAMP)
                 VALUES (:tpc, :offs, :partt, :key, :value, :tmstmp)
             ", new List<CDbQueryParamBind> {
                 new CDbQueryParamBind { NAME = "tpc", VALUE = topic },

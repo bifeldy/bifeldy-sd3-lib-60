@@ -21,12 +21,12 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
@@ -37,8 +37,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
         object Clone();
         Task<IDbContextTransaction> TransactionStart(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
-        Task TransactionCommit();
-        Task TransactionRollback();
+        Task TransactionCommit(DbTransaction useTrx = null);
+        Task TransactionRollback(DbTransaction useTrx = null);
         Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
@@ -74,16 +74,16 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);
-            Assembly entitiesAssembly = typeof(EntityTable).Assembly;
-            modelBuilder.RegisterAllEntities<EntityTable>(entitiesAssembly);
+            Assembly libAsm = Assembly.GetExecutingAssembly();
+            Assembly prgAsm = Assembly.GetEntryAssembly();
+            modelBuilder.RegisterAllEntities<EntityTable>(libAsm);
+            modelBuilder.RegisterAllEntities<EntityTable>(prgAsm);
             // DbSet<T> Case Sensitive ~
             foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
                 string tblName = entityType.GetTableName();
                 if (_envVar.IS_USING_POSTGRES) {
                     entityType.SetTableName(tblName.ToLower());
                 }
-            }
-            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
                 foreach (IMutableProperty property in entityType.GetProperties()) {
                     string colName = property.GetColumnBaseName();
                     if (_envVar.IS_USING_POSTGRES) {
@@ -130,13 +130,17 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return await Database.BeginTransactionAsync(isolationLevel);
         }
 
-        public async Task TransactionCommit() {
-            await Database.CurrentTransaction.CommitAsync();
+        public async Task TransactionCommit(DbTransaction useTrx = null) {
+            DbTransaction trx = useTrx ?? Database.CurrentTransaction.GetDbTransaction();
+            IDbContextTransaction ctx = await Database.UseTransactionAsync(trx);
+            await ctx.CommitAsync();
             await CloseConnection(true);
         }
 
-        public async Task TransactionRollback() {
-            await Database.CurrentTransaction.RollbackAsync();
+        public async Task TransactionRollback(DbTransaction useTrx = null) {
+            DbTransaction trx = useTrx ?? Database.CurrentTransaction.GetDbTransaction();
+            IDbContextTransaction ctx = await Database.UseTransactionAsync(trx);
+            await ctx.RollbackAsync();
             await CloseConnection(true);
         }
 

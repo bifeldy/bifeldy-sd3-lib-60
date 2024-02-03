@@ -7,13 +7,17 @@
  * Mail         :: bias@indomaret.co.id
  * 
  * Catatan      :: Sudah Otomatis Terpasang DbSet<T>
+ *              :: Keyless Tidak Bisa Pakai Insert, Update, Delete
  * 
  */
+
+using Microsoft.EntityFrameworkCore;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
 namespace bifeldy_sd3_lib_60.Tables {
 
+    [Keyless]
     public sealed class DC_LISTMAILSERVER_T : EntityTable {
         public string MAIL_DCKODE { set; get; }
         public string MAIL_DCNAME { set; get; }

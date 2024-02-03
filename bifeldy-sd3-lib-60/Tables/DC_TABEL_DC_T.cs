@@ -7,15 +7,18 @@
  * Mail         :: bias@indomaret.co.id
  * 
  * Catatan      :: Sudah Otomatis Terpasang DbSet<T>
+ *              :: Keyless Tidak Bisa Pakai Insert, Update, Delete
  * 
  */
+
+using System.ComponentModel.DataAnnotations;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
 namespace bifeldy_sd3_lib_60.Tables {
 
     public sealed class DC_TABEL_DC_T : EntityTable {
-        public decimal? TBL_DCID { get; set; }
+        [Key] public decimal? TBL_DCID { get; set; }
         public string TBL_DC_KODE { get; set; }
         public string TBL_DC_NAMA { get; set; }
         public string TBL_UPDREC_ID { get; set; }
@@ -41,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Tables {
         public string FLAG_CSV { get; set; }
         // public string TEMP_CSV { get; set; }
         // public string PO_CSV { get; set; }
-        // public decimal TBL_PROCESS { get; set; }
+        // public decimal? TBL_PROCESS { get; set; }
         // public string FLAG_JAWA { get; set; }
         // public string ZONA_WAKTU { get; set; }
     }
