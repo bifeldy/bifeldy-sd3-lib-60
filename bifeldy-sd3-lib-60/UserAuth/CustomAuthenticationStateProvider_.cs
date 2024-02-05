@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.Extensions.Logging;
 
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.UserAuth {
 
@@ -39,7 +38,6 @@ namespace bifeldy_sd3_lib_60.UserAuth {
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync() {
             try {
-                await Task.Delay(5000);
                 var userSessionStorage = await _protectedSessionStorage.GetAsync<UserSession>(SessionKey);
                 var userSession = userSessionStorage.Success ? userSessionStorage.Value : null;
                 if (userSession == null) {
