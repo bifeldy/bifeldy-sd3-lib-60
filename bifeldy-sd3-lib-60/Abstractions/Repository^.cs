@@ -54,7 +54,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 return "HO";
             }
             else {
-                return (await _orapg.Set<DC_TABEL_DC_T>().FirstOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
+                return (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
             }
         }
 
@@ -63,7 +63,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 return "DCHO";
             }
             else {
-                return (await _orapg.Set<DC_TABEL_DC_T>().FirstOrDefaultAsync()).TBL_DC_KODE.ToUpper();
+                return (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_KODE.ToUpper();
             }
         }
 
@@ -72,7 +72,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 return "DC HEAD OFFICE";
             }
             else {
-                return (await _orapg.Set<DC_TABEL_DC_T>().FirstOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
+                return (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
             }
         }
 

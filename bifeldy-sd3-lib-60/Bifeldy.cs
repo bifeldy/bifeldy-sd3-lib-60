@@ -15,6 +15,8 @@ using System.Reflection;
 using Helmet;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +36,7 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.UserAuth;
 
 namespace bifeldy_sd3_lib_60
 {
@@ -160,6 +163,8 @@ namespace bifeldy_sd3_lib_60
             Services.AddDbContext<CMsSQL>();
             // --
             // Setiap Request Cycle 1 Scope 1x New Object 1x Sesion Saja
+            Services.AddScoped<ProtectedSessionStorage>();
+            Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             // --
             Services.AddScoped<IOracle, COracle>();
             Services.AddScoped<IPostgres, CPostgres>();
@@ -172,6 +177,7 @@ namespace bifeldy_sd3_lib_60
             Services.AddScoped<IGeneralRepository, CGeneralRepository>();
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
             Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
+            Services.AddScoped<IUserRepository, CUserRepository>();
             // --
             // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
             // --
@@ -345,10 +351,6 @@ namespace bifeldy_sd3_lib_60
 
         public static void UseApiKeyMiddleware() {
             App.UseMiddleware<ApiKeyMiddleware>();
-        }
-
-        public static void UseJwtMiddleware() {
-            // App.UseMiddleware<JwtMiddleware>();
         }
 
     }

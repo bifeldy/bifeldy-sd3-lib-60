@@ -26,13 +26,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<bool> Create(DC_APIKEY_T apiKey);
         Task<List<DC_APIKEY_T>> GetAll(string key = null);
         Task<DC_APIKEY_T> GetById(string key);
-        Task<bool> Update(string key, DC_APIKEY_T apiKey);
         Task<bool> Delete(string key);
         Task<bool> CheckKeyOrigin(string ipOrigin, string apiKey);
     }
 
     public sealed class CApiKeyRepository : CRepository, IApiKeyRepository {
 
+        private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
 
         private readonly IOraPg _orapg;
@@ -40,10 +40,12 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public CApiKeyRepository(
             IOptions<EnvVar> envVar,
             IApplicationService @as,
+            IApplicationService app,
             IGlobalService gs,
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
+            _app = app;
             _gs = gs;
             _orapg = orapg;
         }
@@ -57,19 +59,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
             DbSet<DC_APIKEY_T> dbSet = _orapg.Set<DC_APIKEY_T>();
             IQueryable<DC_APIKEY_T> query = null;
             if (!string.IsNullOrEmpty(key)) {
-                query = dbSet.Where(ak => ak.KEY == key);
+                query = dbSet.Where(ak => ak.KEY.ToUpper() == key.ToUpper() && ak.APP_NAME.ToUpper() == _app.AppName.ToUpper());
             }
             return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
         public async Task<DC_APIKEY_T> GetById(string key) {
-            return (await GetAll(key)).FirstOrDefault();
-        }
-
-        public async Task<bool> Update(string key, DC_APIKEY_T newApiKey) {
-            DC_APIKEY_T oldApiKey = await GetById(key);
-            oldApiKey.APP_NAME = newApiKey.APP_NAME;
-            return await _orapg.SaveChangesAsync() > 0;
+            return await _orapg.Set<DC_APIKEY_T>()
+                .Where(ak => ak.KEY.ToUpper() == key.ToUpper() && ak.APP_NAME.ToUpper() == _app.AppName.ToUpper())
+                .SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string key) {

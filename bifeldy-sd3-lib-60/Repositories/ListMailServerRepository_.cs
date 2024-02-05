@@ -31,7 +31,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<bool> Create(DC_LISTMAILSERVER_T apiKey);
         Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null);
         Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode);
-        Task<bool> Update(string dckode, DC_LISTMAILSERVER_T newListMailServer);
         Task<bool> Delete(string dckode);
         MailAddress CreateEmailAddress(string address, string displayName = null);
         List<MailAddress> CreateEmailAddress(string[] address);
@@ -74,25 +73,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
             DbSet<DC_LISTMAILSERVER_T> dbSet = _orapg.Set<DC_LISTMAILSERVER_T>();
             IQueryable<DC_LISTMAILSERVER_T> query = null;
             if (!string.IsNullOrEmpty(dckode)) {
-                dbSet.Where(ms => ms.MAIL_DCKODE == dckode);
+                dbSet.Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper());
             }
             return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
         public async Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode) {
-            return (await GetAll(dckode)).FirstOrDefault();
-        }
-
-        public async Task<bool> Update(string dckode, DC_LISTMAILSERVER_T newListMailServer) {
-            DC_LISTMAILSERVER_T oldListMailServer = await GetByDcKode(dckode);
-            oldListMailServer.MAIL_DCNAME = newListMailServer.MAIL_DCNAME;
-            oldListMailServer.MAIL_IP = newListMailServer.MAIL_IP;
-            oldListMailServer.MAIL_HOSTNAME = newListMailServer.MAIL_HOSTNAME;
-            oldListMailServer.MAIL_PORT = newListMailServer.MAIL_PORT;
-            oldListMailServer.MAIL_USERNAME = newListMailServer.MAIL_USERNAME;
-            oldListMailServer.MAIL_PASSWORD = newListMailServer.MAIL_PASSWORD;
-            oldListMailServer.MAIL_SENDER = newListMailServer.MAIL_SENDER;
-            return await _orapg.SaveChangesAsync() > 0;
+            return await _orapg.Set<DC_LISTMAILSERVER_T>()
+                .Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper())
+                .SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string dckode) {
