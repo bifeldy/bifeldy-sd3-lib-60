@@ -157,7 +157,7 @@ namespace bifeldy_sd3_lib_60
             Services.Configure<EnvVar>(Config.GetSection("ENV"));
         }
 
-        public static void SetupDI() {
+        public static void AddDependencyInjection() {
             Services.AddDbContext<COracle>();
             Services.AddDbContext<CPostgres>();
             Services.AddDbContext<CMsSQL>();
