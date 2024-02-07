@@ -131,6 +131,20 @@ namespace bifeldy_sd3_lib_60.Models {
             }
         }
 
+        private string csvFolderPath = "csvs";
+        public string CSV_FOLDER_PATH {
+            get {
+                string csvFolderPathEnv = GetEnvVar("CSV_FOLDER_PATH");
+                if (!string.IsNullOrEmpty(csvFolderPathEnv)) {
+                    csvFolderPath = csvFolderPathEnv;
+                }
+                return csvFolderPath;
+            }
+            set {
+                csvFolderPath = value;
+            }
+        }
+
         private string zipFolderPath = "zips";
         public string ZIP_FOLDER_PATH {
             get {
