@@ -48,7 +48,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (request.Path.Value.StartsWith("/api/swagger") && !request.Path.Value.StartsWith("/api/")) {
+            if (request.Path.Value.StartsWith("/api/swagger") || !request.Path.Value.StartsWith("/api/")) {
                 await _next(context);
             }
 
