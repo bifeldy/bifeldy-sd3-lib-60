@@ -48,8 +48,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (request.Path.Value.StartsWith("/api/swagger") || !request.Path.Value.StartsWith("/api/")) {
+            if (!request.Path.Value.StartsWith("/api/") || request.Path.Value.StartsWith("/api/swagger")) {
                 await _next(context);
+                return;
             }
 
             string ipDomainHost = request.Host.Host;
