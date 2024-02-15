@@ -40,7 +40,7 @@ namespace bifeldy_sd3_lib_60.Services {
             _logger = logger;
             _as = @as;
 
-            CsvFolderPath = Path.Combine(_as.AppLocation, "_data", _envVar.CSV_FOLDER_PATH);
+            CsvFolderPath = Path.Combine(_as.AppLocation, _envVar.DEFAULT_DATA_FOLDER, _envVar.CSV_FOLDER_PATH);
             if (!Directory.Exists(CsvFolderPath)) {
                 Directory.CreateDirectory(CsvFolderPath);
             }

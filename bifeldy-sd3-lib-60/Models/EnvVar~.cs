@@ -15,6 +15,9 @@ namespace bifeldy_sd3_lib_60.Models {
 
     public class EnvVar {
 
+        // Hardcode Parent Folder Biar Gak Ngorotin Folder Exe
+        public string DEFAULT_DATA_FOLDER = "_data";
+
         private string GetEnvVar(string key) {
             return Environment.GetEnvironmentVariable(key);
         }
@@ -170,6 +173,20 @@ namespace bifeldy_sd3_lib_60.Models {
             }
             set {
                 downloadFolderPath = value;
+            }
+        }
+
+        private string imageFolderPath = "images";
+        public string IMAGE_FOLDER_PATH {
+            get {
+                string imageFolderPathEnv = GetEnvVar("IMAGE_FOLDER_PATH");
+                if (!string.IsNullOrEmpty(imageFolderPathEnv)) {
+                    imageFolderPath = imageFolderPathEnv;
+                }
+                return imageFolderPath;
+            }
+            set {
+                imageFolderPath = value;
             }
         }
 

@@ -184,6 +184,8 @@ namespace bifeldy_sd3_lib_60
             Services.AddSingleton<IApplicationService, CApplicationService>();
             Services.AddSingleton<IGlobalService, CGlobalService>();
             Services.AddSingleton<IConverterService, CConverterService>();
+            Services.AddSingleton<ICsvService, CCsvService>();
+            Services.AddSingleton<IZipService, CZipService>();
             Services.AddSingleton<IHttpService, CHttpService>();
             Services.AddSingleton<IFtpService, CFtpService>();
             Services.AddSingleton<IBerkasService, CBerkasService>();
