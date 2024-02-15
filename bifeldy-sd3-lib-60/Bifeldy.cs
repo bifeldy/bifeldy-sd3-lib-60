@@ -75,15 +75,15 @@ namespace bifeldy_sd3_lib_60
 
         public static void AddSwagger(
             string apiUrlPrefix = "api",
-            string docsTitle = "API Documentation",
-            string docsDescription = "// No Description",
+            string docsTitle = null,
+            string docsDescription = null,
             bool enableApiKey = true,
-            bool enableJwt = true
+            bool enableJwt = false
         ) {
             Services.AddSwaggerGen(c => {
                 c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo {
-                    Title = docsTitle,
-                    Description = docsDescription
+                    Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
+                    Description = docsDescription ?? "API Documentation ~"
                 });
                 if (enableApiKey) {
                     OpenApiSecurityScheme apiKey = new OpenApiSecurityScheme {
