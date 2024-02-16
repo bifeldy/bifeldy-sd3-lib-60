@@ -78,20 +78,18 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         public async Task<bool> CheckKeyOrigin(string ipOrigin, string apiKey) {
             DC_APIKEY_T ak = await GetById(apiKey);
-            List<string> allowed = new List<string>(_gs.AllowedIpOrigin);
             if (ak != null) {
-                if (!string.IsNullOrEmpty(ak.APP_NAME)) {
-                    if (ak.APP_NAME == "*") {
-                        return true;
-                    }
-                    return ak.APP_NAME.ToUpper() == _app.AppName.ToUpper();
+                bool IP_ORIGIN = ak.IP_ORIGIN.ToUpper() == ipOrigin.ToUpper();
+                if (string.IsNullOrEmpty(ak.APP_NAME) || ak.APP_NAME?.ToUpper() == "*") {
+                    return IP_ORIGIN;
                 }
+                bool APP_NAME = ak.APP_NAME.ToUpper() == _app.AppName.ToUpper();
                 if (ak.IP_ORIGIN == "*") {
-                    return true;
+                    return APP_NAME;
                 }
-                allowed.Add(ak.IP_ORIGIN);
+                return IP_ORIGIN && APP_NAME;
             }
-            return allowed.Contains(ipOrigin);
+            return _gs.AllowedIpOrigin.Contains(ipOrigin);
         }
 
     }
