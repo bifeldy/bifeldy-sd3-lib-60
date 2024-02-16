@@ -82,6 +82,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
             DC_APIKEY_T ak = await GetById(apiKey);
             List<string> allowed = new List<string>(_gs.AllowedIpOrigin);
             if (ak != null) {
+                if (ak.KEY.Split(";").Contains("*")) {
+                    return true;
+                }
                 allowed.Add(ak.IP_ORIGIN);
             }
             return allowed.Contains(ipOrigin);
