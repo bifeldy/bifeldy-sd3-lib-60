@@ -65,9 +65,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<DC_APIKEY_T> GetById(string key) {
-            return await _orapg.Set<DC_APIKEY_T>()
-                .Where(ak => ak.KEY.ToUpper() == key.ToUpper() && ak.APP_NAME.ToUpper() == _app.AppName.ToUpper())
-                .SingleOrDefaultAsync();
+            return await _orapg.Set<DC_APIKEY_T>().Where(ak => ak.KEY.ToUpper() == key.ToUpper()).SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string key) {
@@ -82,7 +80,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
             DC_APIKEY_T ak = await GetById(apiKey);
             List<string> allowed = new List<string>(_gs.AllowedIpOrigin);
             if (ak != null) {
-                if (ak.KEY.Split(";").Contains("*")) {
+                if (!string.IsNullOrEmpty(ak.APP_NAME)) {
+                    if (ak.APP_NAME == "*") {
+                        return true;
+                    }
+                    return ak.APP_NAME.ToUpper() == _app.AppName.ToUpper();
+                }
+                if (ak.IP_ORIGIN == "*") {
                     return true;
                 }
                 allowed.Add(ak.IP_ORIGIN);
