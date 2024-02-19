@@ -99,6 +99,7 @@ namespace bifeldy_sd3_lib_60.Services {
                         Value = typeof(string) == d.Value.GetType() ? d.Value : _converter.ObjectToJson(d.Value)
                     };
                     results.Add(await producer.ProduceAsync(topicName, msg));
+                    _logger.LogInformation($"[KAFKA_PRODUCE] 📝 {msg.Key} :: {msg.Value}");
                 }
                 return results;
             }
@@ -142,6 +143,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 List<Message<string, T>> results = new List<Message<string, T>>();
                 for (ulong i = 0; i < nMessagesBlock; i++) {
                     ConsumeResult<string, string> result = consumer.Consume(timeout);
+                    _logger.LogInformation($"[KAFKA_PRODUCE] 📝 {result.Message.Key} :: {result.Message.Value}");
                     Message<string, T> message = new Message<string, T> {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
