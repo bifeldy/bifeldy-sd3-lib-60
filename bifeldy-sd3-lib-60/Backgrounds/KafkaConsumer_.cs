@@ -55,7 +55,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         public CKafkaConsumer(
             IServiceProvider serviceProvider,
-            string hostPort, string topicName, string logTableName,
+            string hostPort, string topicName, string logTableName = null,
             string groupId = null, bool suffixKodeDc = false, string pubSubName = null
         ) {
             _logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
