@@ -1,15 +1,15 @@
 ﻿/**
-* 
-* Author       :: Basilius Bias Astho Christyono
-* Phone        :: (+62) 889 236 6466
-* 
-* Department   :: IT SD 03
-* Mail         :: bias@indomaret.co.id
-* 
-* Catatan      :: Model Hasil Up/Down FTP
-*              :: Tidak Untuk Didaftarkan Ke DI Container
-* 
-*/
+ * 
+ * Author       :: Basilius Bias Astho Christyono
+ * Phone        :: (+62) 889 236 6466
+ * 
+ * Department   :: IT SD 03
+ * Mail         :: bias@indomaret.co.id
+ * 
+ * Catatan      :: Model Hasil Up/Down FTP
+ *              :: Tidak Untuk Didaftarkan Ke DI Container
+ * 
+ */
 
 using FluentFTP;
 
