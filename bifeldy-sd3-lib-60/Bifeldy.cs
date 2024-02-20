@@ -50,6 +50,8 @@ namespace bifeldy_sd3_lib_60
 
         private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new();
 
+        private static string NginxPathName = "x-forwarded-prefix";
+
         /* ** */
 
         public static void InitBuilder(WebApplicationBuilder builder) {
@@ -124,8 +126,9 @@ namespace bifeldy_sd3_lib_60
 
         public static void UseSwagger(
             string apiUrlPrefix = "api",
-            string proxyHeaderName = "X-Forwarded-Prefix"
+            string proxyHeaderName = "x-forwarded-prefix"
         ) {
+            NginxPathName = proxyHeaderName;
             App.UseSwagger(c => {
                 c.RouteTemplate = "{documentName}/swagger.json";
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
@@ -205,7 +208,7 @@ namespace bifeldy_sd3_lib_60
             });
         }
 
-        public static void AddKafkaConsumerBackground(string hostPort, string topicName, string logTableName, string groupId = null, bool suffixKodeDc = false, string pubSubName = null) {
+        public static void AddKafkaConsumerBackground(string hostPort, string topicName, string logTableName = null, string groupId = null, bool suffixKodeDc = false, string pubSubName = null) {
             Services.AddHostedService(sp => {
                 return new CKafkaConsumer(sp, hostPort, topicName, logTableName, groupId, suffixKodeDc, pubSubName);
             });
@@ -295,7 +298,7 @@ namespace bifeldy_sd3_lib_60
 
         public static void UseNginxProxyPathSegment() {
             App.Use(async (context, next) => {
-                if (context.Request.Headers.TryGetValue("X-Forwarded-Prefix", out StringValues pathBase)) {
+                if (context.Request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
                     context.Request.PathBase = pathBase.Last();
                     if (context.Request.Path.StartsWithSegments(context.Request.PathBase, out PathString path)) {
                         context.Request.Path = path;
