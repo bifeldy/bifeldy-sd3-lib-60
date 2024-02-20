@@ -213,14 +213,16 @@ namespace bifeldy_sd3_lib_60
 
         public static void AddKafkaAutoProducerConsumerBackground() {
             IDictionary<string, KafkaInstance> kafkaSettings = Config.GetSection("KAFKA").Get<IDictionary<string, KafkaInstance>>();
-            foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
-                if (ks.Key.StartsWith("PRODUCER_")) {
-                    AddKafkaProducerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.REPLICATION, ks.Value.PARTITION, ks.Value.SUFFIX_KODE_DC, ks.Key);
+            if (kafkaSettings != null) {
+                foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
+                    if (ks.Key.StartsWith("PRODUCER_")) {
+                        AddKafkaProducerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.REPLICATION, ks.Value.PARTITION, ks.Value.SUFFIX_KODE_DC, ks.Key);
+                    }
                 }
-            }
-            foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
-                if (ks.Key.StartsWith("CONSUMER_")) {
-                    AddKafkaConsumerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.LOG_TABLE_NAME, ks.Value.GROUP_ID, ks.Value.SUFFIX_KODE_DC, ks.Key);
+                foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
+                    if (ks.Key.StartsWith("CONSUMER_")) {
+                        AddKafkaConsumerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.LOG_TABLE_NAME, ks.Value.GROUP_ID, ks.Value.SUFFIX_KODE_DC, ks.Key);
+                    }
                 }
             }
         }

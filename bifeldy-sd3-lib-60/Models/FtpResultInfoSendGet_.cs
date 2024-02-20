@@ -7,6 +7,7 @@
 * Mail         :: bias@indomaret.co.id
 * 
 * Catatan      :: Model Hasil Up/Down FTP
+*              :: Tidak Untuk Didaftarkan Ke DI Container
 * 
 */
 

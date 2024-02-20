@@ -7,6 +7,7 @@
 * Mail         :: bias@indomaret.co.id
 * 
 * Catatan      :: Model Kafka di `appsettings.json`
+*              :: Tidak Untuk Didaftarkan Ke DI Container
 * 
 */
 

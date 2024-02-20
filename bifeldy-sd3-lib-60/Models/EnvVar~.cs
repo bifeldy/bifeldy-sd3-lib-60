@@ -8,6 +8,7 @@
 * 
 * Catatan      :: Environment Variable Model
 *              :: Tidak Untuk Didaftarkan Ke DI Container
+*              :: Bisa Dipakai Untuk Inherit
 * 
 */
 
