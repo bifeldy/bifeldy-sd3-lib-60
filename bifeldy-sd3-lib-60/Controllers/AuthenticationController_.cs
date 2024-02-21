@@ -11,12 +11,15 @@
  * 
  */
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Repositories;
-using bifeldy_sd3_lib_60.Tables;
+using bifeldy_sd3_lib_60.AttributeFilterDecorator;
+using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Tables;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
@@ -29,34 +32,39 @@ namespace bifeldy_sd3_lib_60.Controllers {
     [Route("authentication")]
     public class AuthenticationController : ControllerBase {
 
+        private readonly IHttpContextAccessor _hca;
         private readonly IChiperService _chiper;
-        private readonly IAuthRepository _authRepo;
+        private readonly IApiTokenRepository _apiTokenRepo;
+        private readonly IOraPg _orapg;
 
-        public AuthenticationController(IChiperService chiper, IAuthRepository authRepo) {
+        public AuthenticationController(IHttpContextAccessor hca, IChiperService chiper, IApiTokenRepository apiTokenRepo, IOraPg orapg) {
+            _hca = hca;
             _chiper = chiper;
-            _authRepo = authRepo;
+            _apiTokenRepo = apiTokenRepo;
+            _orapg = orapg;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginInfo formData) {
             try {
                 string userName = formData?.user_name;
-                string pass = formData?.password;
+                string password = formData?.password;
 
-                if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(pass)) {
+                if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) {
                     throw new Exception("Data Tidak Lengkap!");
                 }
 
-                DC_AUTH_T dcAuthT = await _authRepo.GetByUserNamePass(userName, pass);
-                if (dcAuthT == null) {
+                DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.LoginBot(userName, password);
+                if (dcApiToken == null) {
                     throw new Exception("User Name / Password Salah!");
                 }
 
                 UserApiSession userSession = new UserApiSession {
-                    name = dcAuthT.USERNAME,
-                    dc_auth_t = dcAuthT
+                    name = dcApiToken.USER_NAME,
+                    dc_api_token_t = dcApiToken
                 };
                 string token = _chiper.EncodeJWT(userSession);
+
                 return Ok(new {
                     info = $"😅 200 - {GetType().Name} :: Login Berhasil 🤣",
                     result = userSession,
@@ -66,6 +74,34 @@ namespace bifeldy_sd3_lib_60.Controllers {
             catch (Exception ex) {
                 return BadRequest(new {
                     info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
+                    result = new {
+                        message = ex.Message
+                    }
+                });
+            }
+        }
+
+        [HttpDelete("logout")]
+        [MinRole(UserSessionRole.BOT)]
+        // [AllowedRoles(UserSessionRole.ADMIN, UserSessionRole.MODERATOR, UserSessionRole.USER, UserSessionRole.BOT)]
+        public async Task<IActionResult> Logout() {
+            try {
+                UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
+
+                DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userSession.name);
+                dcApiToken.TOKEN_SEKALI_PAKAI = null;
+                dcApiToken.LAST_LOGIN = null;
+                _orapg.Set<DC_API_TOKEN_T>().Update(dcApiToken);
+                await _orapg.SaveChangesAsync();
+
+                return Ok(new {
+                    info = $"😅 200 - {GetType().Name} :: Logout Berhasil 🤣",
+                    result = userSession
+                });
+            }
+            catch (Exception ex) {
+                return BadRequest(new {
+                    info = $"🙄 400 - {GetType().Name} :: Logout Gagal 😪",
                     result = new {
                         message = ex.Message
                     }

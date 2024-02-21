@@ -23,16 +23,16 @@ using bifeldy_sd3_lib_60.Tables;
 namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IApiKeyRepository {
-        Task<bool> Create(DC_APIKEY_T apiKey);
-        Task<List<DC_APIKEY_T>> GetAll(string key = null);
-        Task<DC_APIKEY_T> GetById(string key);
+        Task<bool> Create(DC_API_KEY_T apiKey);
+        Task<List<DC_API_KEY_T>> GetAll(string key = null);
+        Task<DC_API_KEY_T> GetByKey(string key);
         Task<bool> Delete(string key);
-        Task<bool> CheckKeyOrigin(string ipOrigin, string apiKey);
+        Task<bool> CheckKeyOrigin(string ipOrigin, string key);
     }
 
     public sealed class CApiKeyRepository : CRepository, IApiKeyRepository {
 
-        private readonly IApplicationService _app;
+        private readonly IApplicationService _as;
         private readonly IGlobalService _gs;
 
         private readonly IOraPg _orapg;
@@ -40,51 +40,52 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public CApiKeyRepository(
             IOptions<EnvVar> envVar,
             IApplicationService @as,
-            IApplicationService app,
             IGlobalService gs,
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            _app = app;
+            _as = @as;
             _gs = gs;
             _orapg = orapg;
         }
 
-        public async Task<bool> Create(DC_APIKEY_T apiKey) {
-            _orapg.Set<DC_APIKEY_T>().Add(apiKey);
+        public async Task<bool> Create(DC_API_KEY_T apiKey) {
+            apiKey.APP_NAME = _as.AppName.ToUpper();
+            _orapg.Set<DC_API_KEY_T>().Add(apiKey);
             return await _orapg.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<DC_APIKEY_T>> GetAll(string key = null) {
-            DbSet<DC_APIKEY_T> dbSet = _orapg.Set<DC_APIKEY_T>();
-            IQueryable<DC_APIKEY_T> query = null;
+        public async Task<List<DC_API_KEY_T>> GetAll(string key = null) {
+            DbSet<DC_API_KEY_T> dbSet = _orapg.Set<DC_API_KEY_T>();
+            IQueryable<DC_API_KEY_T> query = dbSet.Where(ak =>
+                ak.APP_NAME.ToUpper() == _as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*"
+            );
             if (!string.IsNullOrEmpty(key)) {
-                query = dbSet.Where(ak => ak.KEY.ToUpper() == key.ToUpper() && ak.APP_NAME.ToUpper() == _app.AppName.ToUpper());
+                query = dbSet.Where(ak => ak.KEY.ToUpper() == key.ToUpper());
             }
             return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
-        public async Task<DC_APIKEY_T> GetById(string key) {
-            return await _orapg.Set<DC_APIKEY_T>().Where(ak => ak.KEY.ToUpper() == key.ToUpper()).SingleOrDefaultAsync();
+        public async Task<DC_API_KEY_T> GetByKey(string key) {
+            return await _orapg.Set<DC_API_KEY_T>().Where(ak =>
+                ak.KEY.ToUpper() == key.ToUpper() && (
+                    ak.APP_NAME.ToUpper() == _as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*"
+                )
+            ).SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string key) {
-            DC_APIKEY_T apiKey = await GetById(key);
-            _orapg.Set<DC_APIKEY_T>().Remove(apiKey);
+            DC_API_KEY_T apiKey = await GetByKey(key);
+            _orapg.Set<DC_API_KEY_T>().Remove(apiKey);
             return await _orapg.SaveChangesAsync() > 0;
         }
 
         /* ** */
 
-        public async Task<bool> CheckKeyOrigin(string ipOrigin, string apiKey) {
-            DC_APIKEY_T ak = await GetById(apiKey);
+        public async Task<bool> CheckKeyOrigin(string ipOrigin, string key) {
+            DC_API_KEY_T ak = await GetByKey(key);
             if (ak != null) {
-                bool IP_ORIGIN = ak.IP_ORIGIN.ToUpper().Split(";").Select(io => io.Trim()).Contains(ipOrigin.ToUpper()) || ak.IP_ORIGIN == "*";
-                bool APP_NAME = ak.APP_NAME?.ToUpper() == _app.AppName.ToUpper() || ak.APP_NAME?.ToUpper() == "*";
-                if (string.IsNullOrEmpty(ak.APP_NAME)) {
-                    return IP_ORIGIN;
-                }
-                return IP_ORIGIN && APP_NAME;
+                return ak.IP_ORIGIN.ToUpper().Split(";").Select(io => io.Trim()).Contains(ipOrigin.ToUpper()) || ak.IP_ORIGIN == "*";
             }
             return _gs.AllowedIpOrigin.Contains(ipOrigin);
         }

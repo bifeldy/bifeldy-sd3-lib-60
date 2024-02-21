@@ -42,7 +42,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             _chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context, IAuthRepository _authRepo) {
+        public async Task Invoke(HttpContext context, IApiTokenRepository _apiTokenRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -90,11 +90,14 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
             try {
                 string userName = _chiper.DecodeJWT(token, ClaimTypes.Name);
-                DC_AUTH_T dcAuthT = await _authRepo.GetByUserName(userName);
+                DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userName);
+                if (dcApiToken == null) {
+                    throw new Exception("JWT Tidak Valid!");
+                }
 
                 context.Items["user"] = new UserApiSession() {
-                    name = dcAuthT.USERNAME,
-                    dc_auth_t = dcAuthT
+                    name = dcApiToken.USER_NAME,
+                    dc_api_token_t = dcApiToken
                 };
             }
             catch {

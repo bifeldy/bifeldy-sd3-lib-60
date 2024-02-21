@@ -180,7 +180,7 @@ namespace bifeldy_sd3_lib_60
             // --
             Services.AddScoped<IGeneralRepository, CGeneralRepository>();
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
-            Services.AddScoped<IAuthRepository, CAuthRepository>();
+            Services.AddScoped<IApiTokenRepository, CApiTokenRepository>();
             Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
             Services.AddScoped<IUserRepository, CUserRepository>();
             // --

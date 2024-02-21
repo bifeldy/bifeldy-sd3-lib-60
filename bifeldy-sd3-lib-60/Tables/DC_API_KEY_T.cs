@@ -12,16 +12,16 @@
  */
 
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
 namespace bifeldy_sd3_lib_60.Tables {
 
-    public sealed class DC_AUTH_T : EntityTable {
-        [Key] public string USERNAME { set; get; }
-        public string PASS { set; get; }
-        public string TOKEN { set; get; }
-        public string NOTES { set; get; }
+    public sealed class DC_API_KEY_T : EntityTable {
+        [Key][JsonIgnore] public string KEY { set; get; }
+        public string IP_ORIGIN { set; get; }
+        [Key] public string APP_NAME { set; get; }
     }
 
 }
