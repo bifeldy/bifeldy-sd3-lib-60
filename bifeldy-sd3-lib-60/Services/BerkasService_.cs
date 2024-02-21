@@ -24,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string DownloadFolderPath { get; }
         void DeleteSingleFileInFolder(string fileName, string folderPath = null);
         void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false);
-        void CleanUp();
+        void CleanUp(bool clearPendingFileForZip = true);
         void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false);
         void BackupAllFilesInFolder(string folderPath);
     }
@@ -109,14 +109,16 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public void CleanUp() {
+        public void CleanUp(bool clearPendingFileForZip = true) {
             DeleteOldFilesInFolder(Path.Combine(_as.AppLocation, "logs"), _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(BackupFolderPath, _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(TempFolderPath, _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(DownloadFolderPath, _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(_csv.CsvFolderPath, _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(_zip.ZipFolderPath, _envVar.MAX_RETENTIONS_DAYS);
-            _zip.ListFileForZip.Clear();
+            if (clearPendingFileForZip) {
+                _zip.ListFileForZip.Clear();
+            }
         }
 
         public void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false) {
