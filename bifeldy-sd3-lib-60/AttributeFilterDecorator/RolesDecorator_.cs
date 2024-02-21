@@ -24,7 +24,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
     public class RolesDecorator : Attribute, IAuthorizationFilter {
 
         protected readonly IList<UserSessionRole> _roles = new List<UserSessionRole>() {
-            UserSessionRole.USER_SD3
+            UserSessionRole.USER_SD_SSD_3
         };
 
         protected UserApiSession user = null;

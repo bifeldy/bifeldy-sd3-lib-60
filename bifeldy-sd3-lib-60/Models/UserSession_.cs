@@ -18,14 +18,14 @@ using bifeldy_sd3_lib_60.Tables;
 namespace bifeldy_sd3_lib_60.Models {
 
     public enum UserSessionRole {
-        USER_SD3 = 0,
+        USER_SD_SSD_3 = 0,
         EXTERNAL_BOT
     }
 
     public sealed class UserWebSession {
         public string nik { get; set; }
         public string name { get; set; }
-        public UserSessionRole role { get; set; } = UserSessionRole.USER_SD3;
+        public UserSessionRole role { get; set; } = UserSessionRole.USER_SD_SSD_3;
         [JsonIgnore] public DC_USER_T dc_user_t { get; set; } = null;
     }
 
