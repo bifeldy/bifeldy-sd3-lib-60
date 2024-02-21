@@ -55,9 +55,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         public async Task<List<DC_API_TOKEN_T>> GetAll(string userName = null) {
             DbSet<DC_API_TOKEN_T> dbSet = _orapg.Set<DC_API_TOKEN_T>();
-            IQueryable<DC_API_TOKEN_T> query = dbSet.Where(at =>
-                at.APP_NAME.ToUpper() == _as.AppName.ToUpper()
-            );
+            IQueryable<DC_API_TOKEN_T> query = dbSet.Where(at => at.APP_NAME.ToUpper() == _as.AppName.ToUpper());
             if (!string.IsNullOrEmpty(userName)) {
                 query = dbSet.Where(at => at.USER_NAME.ToUpper() == userName.ToUpper());
             }

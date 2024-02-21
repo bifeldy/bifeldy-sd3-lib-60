@@ -18,22 +18,20 @@ using bifeldy_sd3_lib_60.Tables;
 namespace bifeldy_sd3_lib_60.Models {
 
     public enum UserSessionRole {
-        ADMIN = 0,
-        MODERATOR,
-        USER,
-        BOT
+        USER_SD3 = 0,
+        EXTERNAL_BOT
     }
 
     public sealed class UserWebSession {
         public string nik { get; set; }
         public string name { get; set; }
-        public UserSessionRole role { get; set; } = UserSessionRole.USER;
+        public UserSessionRole role { get; set; } = UserSessionRole.USER_SD3;
         [JsonIgnore] public DC_USER_T dc_user_t { get; set; } = null;
     }
 
     public sealed class UserApiSession {
         public string name { get; set; }
-        public UserSessionRole role { get; set; } = UserSessionRole.BOT;
+        public UserSessionRole role { get; set; } = UserSessionRole.EXTERNAL_BOT;
         [JsonIgnore] public DC_API_TOKEN_T dc_api_token_t { get; set; } = null;
     }
 

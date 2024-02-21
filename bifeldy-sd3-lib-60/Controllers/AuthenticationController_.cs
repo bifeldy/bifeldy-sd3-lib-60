@@ -82,8 +82,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
         }
 
         [HttpDelete("logout")]
-        [MinRole(UserSessionRole.BOT)]
-        // [AllowedRoles(UserSessionRole.ADMIN, UserSessionRole.MODERATOR, UserSessionRole.USER, UserSessionRole.BOT)]
+        [MinRole(UserSessionRole.EXTERNAL_BOT)]
+        // [AllowedRoles(UserSessionRole.USER_SD3, UserSessionRole.EXTERNAL_BOT)]
         public async Task<IActionResult> Logout() {
             try {
                 UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
