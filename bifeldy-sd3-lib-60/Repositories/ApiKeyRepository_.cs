@@ -58,7 +58,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<List<DC_API_KEY_T>> GetAll(string key = null) {
             DbSet<DC_API_KEY_T> dbSet = _orapg.Set<DC_API_KEY_T>();
             IQueryable<DC_API_KEY_T> query = dbSet.Where(ak =>
-                ak.APP_NAME.ToUpper() == _as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*"
+                ak.APP_NAME.ToUpper() == _as.AppName.ToUpper()
             );
             if (!string.IsNullOrEmpty(key)) {
                 query = dbSet.Where(ak => ak.KEY.ToUpper() == key.ToUpper());
