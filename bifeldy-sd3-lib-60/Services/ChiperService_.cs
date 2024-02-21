@@ -34,6 +34,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string CalculateCRC32(string filePath);
         string CalculateSHA1(string filePath);
         string GetMimeFromFile(string filename);
+        string HashText(string text);
         string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1);
         string DecodeJWT(string token, string claimType = ClaimTypes.Name);
     }
@@ -210,7 +211,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        private string HashText(string text) {
+        public string HashText(string text) {
             using (SHA1Managed sha1 = new SHA1Managed()) {
                 var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(text));
                 var sb = new StringBuilder(hash.Length * 2);
