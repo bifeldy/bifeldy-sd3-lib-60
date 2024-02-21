@@ -90,7 +90,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                 DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userSession.name);
                 dcApiToken.TOKEN_SEKALI_PAKAI = null;
-                dcApiToken.LAST_LOGIN = null;
                 _orapg.Set<DC_API_TOKEN_T>().Update(dcApiToken);
                 await _orapg.SaveChangesAsync();
 
