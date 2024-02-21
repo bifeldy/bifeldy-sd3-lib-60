@@ -13,7 +13,6 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
@@ -24,20 +23,17 @@ namespace bifeldy_sd3_lib_60.Middlewares {
     public sealed class ApiKeyMiddleware {
 
         private readonly RequestDelegate _next;
-        private readonly EnvVar _envVar;
         private readonly ILogger<ApiKeyMiddleware> _logger;
         private readonly IGlobalService _gs;
         private readonly IConverterService _cs;
 
         public ApiKeyMiddleware(
             RequestDelegate next,
-            IOptions<EnvVar> envVar,
             ILogger<ApiKeyMiddleware> logger,
             IGlobalService gs,
             IConverterService cs
         ) {
             _next = next;
-            _envVar = envVar.Value;
             _logger = logger;
             _gs = gs;
             _cs = cs;
@@ -57,32 +53,29 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             if (!_gs.AllowedIpOrigin.Contains(ipDomainHost)) {
                 _gs.AllowedIpOrigin.Add(ipDomainHost);
             }
-            string ipDomainProxy = request.Headers["X-Forwarded-Host"];
+            string ipDomainProxy = request.Headers["x-forwarded-host"];
             if (!string.IsNullOrEmpty(ipDomainProxy) && !_gs.AllowedIpOrigin.Contains(ipDomainProxy)) {
                 _gs.AllowedIpOrigin.Add(ipDomainProxy);
             }
 
-            StreamReader reader = new StreamReader(request.Body);
             RequestJson reqBody = null;
-
             string accept = request.Headers["accept"].ToString();
             if (accept.Contains("application/xml") || accept.Contains("application/json")) {
-                string rbString = await reader.ReadToEndAsync();
-                if (!string.IsNullOrEmpty(rbString)) {
-                    try {
-                        reqBody = _cs.JsonToObject<RequestJson>(rbString);
-                    }
-                    catch (Exception ex) {
-                        _logger.LogError($"[API_KEY_BODY] 🌸 {ex.Message}");
+                using (StreamReader reader = new StreamReader(request.Body)) {
+                    string rbString = await reader.ReadToEndAsync();
+                    if (!string.IsNullOrEmpty(rbString)) {
+                        try {
+                            reqBody = _cs.JsonToObject<RequestJson>(rbString);
+                        }
+                        catch (Exception ex) {
+                            _logger.LogError($"[JSON_BODY] 🌸 {ex.Message}");
+                        }
                     }
                 }
             }
 
             string apiKey = string.Empty;
-            if (!string.IsNullOrEmpty(request.Cookies[_envVar.API_KEY_NAME])) {
-                apiKey = request.Cookies[_envVar.API_KEY_NAME];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
+            if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
                 apiKey = request.Headers["x-api-key"];
             }
             else if (!string.IsNullOrEmpty(reqBody?.key)) {
@@ -102,32 +95,28 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             else if (!string.IsNullOrEmpty(request.Headers["cf-connecting-ip"])) {
                 ipOrigin = request.Headers["cf-connecting-ip"];
             }
-            else if (!string.IsNullOrEmpty(request.Headers["X-Forwarded-For"])) {
-                ipOrigin = request.Headers["X-Forwarded-For"];
+            else if (!string.IsNullOrEmpty(request.Headers["x-forwarded-for"])) {
+                ipOrigin = request.Headers["x-forwarded-for"];
             }
             ipOrigin = _gs.CleanIpOrigin(ipOrigin);
 
             context.Items["api_key"] = apiKey;
-            _logger.LogInformation($"[API_KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
+            _logger.LogInformation($"[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
 
             if (await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
                 await _next(context);
             }
             else {
                 response.Clear();
-                response.StatusCode = 401;
-                response.ContentType = "application/json";
-
-                object resBody = new {
+                response.StatusCode = StatusCodes.Status401Unauthorized;
+                await response.WriteAsJsonAsync(new {
                     info = "🙄 401 - API Key :: Tidak Dapat Digunakan 😪",
                     result = new {
                         message = "💩 Api Key Salah / Tidak Terdaftar! 🤬",
                         api_key = apiKey,
                         ip_origin = ipOrigin
                     }
-                };
-
-                await response.WriteAsync(_cs.ObjectToJson(resBody));
+                });
             }
         }
 

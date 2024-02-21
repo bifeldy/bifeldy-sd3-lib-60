@@ -1,4 +1,17 @@
-﻿using System.Security.Claims;
+﻿/**
+ * 
+ * Author       :: Basilius Bias Astho Christyono
+ * Phone        :: (+62) 889 236 6466
+ * 
+ * Department   :: IT SD 03
+ * Mail         :: bias@indomaret.co.id
+ * 
+ * Catatan      :: Authentication Browser Session Storage
+ *              :: Harap Didaftarkan Ke DI Container
+ * 
+ */
+
+using System.Security.Claims;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -16,7 +29,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
         private static readonly ClaimsIdentity _anonymousClaimsIdentity = new ClaimsIdentity();
         private static readonly ClaimsPrincipal _anonymousPrincipal = new ClaimsPrincipal(_anonymousClaimsIdentity);
 
-        public string SessionKey { get; } = "UserSession";
+        public string SessionKey { get; } = "user-session";
 
         public CustomAuthenticationStateProvider(
             ILogger<CustomAuthenticationStateProvider> logger,
@@ -26,11 +39,11 @@ namespace bifeldy_sd3_lib_60.UserAuth {
             _protectedSessionStorage = protectedSessionStorage;
         }
 
-        public ClaimsPrincipal GetUserClaimPrincipal(UserSession userSession) {
+        public ClaimsPrincipal GetUserClaimPrincipal(UserWebSession userSession) {
             List<Claim> userClaim = new List<Claim> {
-                new Claim(ClaimTypes.Sid, userSession.Nik),
-                new Claim(ClaimTypes.Role, userSession.Role),
-                new Claim(ClaimTypes.Name, userSession.Name)
+                new Claim(ClaimTypes.Sid, userSession.nik),
+                new Claim(ClaimTypes.Name, userSession.name),
+                new Claim(ClaimTypes.Role, userSession.role.ToString())
             };
             ClaimsIdentity userClaimIdentity = new ClaimsIdentity(userClaim, SessionKey);
             return new ClaimsPrincipal(userClaimIdentity);
@@ -38,7 +51,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync() {
             try {
-                var userSessionStorage = await _protectedSessionStorage.GetAsync<UserSession>(SessionKey);
+                var userSessionStorage = await _protectedSessionStorage.GetAsync<UserWebSession>(SessionKey);
                 var userSession = userSessionStorage.Success ? userSessionStorage.Value : null;
                 if (userSession == null) {
                     throw new Exception("User Not Login");
@@ -52,7 +65,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
             }
         }
 
-        public async Task UpdateAuthenticationState(UserSession userSession) {
+        public async Task UpdateAuthenticationState(UserWebSession userSession) {
             ClaimsPrincipal userClaimPrincipal = null;
             if (userSession == null) {
                 userClaimPrincipal = _anonymousPrincipal;

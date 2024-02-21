@@ -151,6 +151,7 @@ namespace bifeldy_sd3_lib_60
             App.UseSwaggerUI(c => {
                 c.RoutePrefix = apiUrlPrefix;
                 c.SwaggerEndpoint("swagger.json", apiUrlPrefix);
+                c.DefaultModelsExpandDepth(-1);
             });
         }
 
@@ -179,6 +180,7 @@ namespace bifeldy_sd3_lib_60
             // --
             Services.AddScoped<IGeneralRepository, CGeneralRepository>();
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
+            Services.AddScoped<IAuthRepository, CAuthRepository>();
             Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
             Services.AddScoped<IUserRepository, CUserRepository>();
             // --
@@ -277,21 +279,16 @@ namespace bifeldy_sd3_lib_60
         /* ** */
 
         public static async void Handle404ApiNotFound(HttpContext context) {
-            IConverterService _cs = App.Services.GetRequiredService<IConverterService>();
             HttpResponse response = context.Response;
 
             response.Clear();
-            response.StatusCode = 404;
-            response.ContentType = "application/json";
-
-            object resBody = new {
+            response.StatusCode = StatusCodes.Status404NotFound;
+            await response.WriteAsJsonAsync(new {
                 info = "🙄 404 - Whoops :: API Tidak Ditemukan 😪",
                 result = new {
                     message = $"💩 Silahkan Periksa Kembali Dokumentasi API 🤬"
                 }
-            };
-
-            await response.WriteAsync(_cs.ObjectToJson(resBody));
+            });
         }
 
         /* ** */
@@ -331,26 +328,16 @@ namespace bifeldy_sd3_lib_60
                         await next();
                     }
                     catch (Exception ex) {
-                        IConverterService _cs = App.Services.GetRequiredService<IConverterService>();
                         HttpResponse response = context.Response;
 
                         response.Clear();
-                        response.StatusCode = 500;
-                        response.ContentType = "application/json";
-
-                        string errMsg = "Gagal Memproses Data";
-                        if (App.Environment.IsDevelopment()) {
-                            errMsg = ex.Message;
-                        }
-
-                        object resBody = new {
+                        response.StatusCode = StatusCodes.Status500InternalServerError;
+                        await response.WriteAsJsonAsync(new {
                             info = "🙄 500 - Whoops :: Terjadi Kesalahan 😪",
                             result = new {
-                                message = $"💩 {errMsg} 🤬"
+                                message = $"💩 {(App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data")} 🤬"
                             }
-                        };
-
-                        await response.WriteAsync(_cs.ObjectToJson(resBody));
+                        });
                     }
                 }
             });
@@ -358,6 +345,10 @@ namespace bifeldy_sd3_lib_60
 
         public static void UseApiKeyMiddleware() {
             App.UseMiddleware<ApiKeyMiddleware>();
+        }
+
+        public static void UseJwtMiddleware() {
+            App.UseMiddleware<JwtMiddleware>();
         }
 
     }

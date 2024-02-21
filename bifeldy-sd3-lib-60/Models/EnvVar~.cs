@@ -1,16 +1,16 @@
 ﻿/**
-* 
-* Author       :: Basilius Bias Astho Christyono
-* Phone        :: (+62) 889 236 6466
-* 
-* Department   :: IT SD 03
-* Mail         :: bias@indomaret.co.id
-* 
-* Catatan      :: Environment Variable Model
-*              :: Tidak Untuk Didaftarkan Ke DI Container
-*              :: Bisa Dipakai Untuk Inherit
-* 
-*/
+ * 
+ * Author       :: Basilius Bias Astho Christyono
+ * Phone        :: (+62) 889 236 6466
+ * 
+ * Department   :: IT SD 03
+ * Mail         :: bias@indomaret.co.id
+ * 
+ * Catatan      :: Environment Variable Model
+ *              :: Tidak Untuk Didaftarkan Ke DI Container
+ *              :: Bisa Dipakai Untuk Inherit
+ * 
+ */
 
 namespace bifeldy_sd3_lib_60.Models {
 
@@ -65,35 +65,21 @@ namespace bifeldy_sd3_lib_60.Models {
             }
         }
 
-        private string apiKeyName = "api_key";
-        public string API_KEY_NAME {
+        private string jwtAudience = "jwt_audience";
+        public string JWT_AUDIENCE {
             get {
-                string apiKeyNameEnv = GetEnvVar("API_KEY_NAME");
-                if (!string.IsNullOrEmpty(apiKeyNameEnv)) {
-                    apiKeyName = apiKeyNameEnv;
+                string jwtAudienceEnv = GetEnvVar("JWT_AUDIENCE");
+                if (!string.IsNullOrEmpty(jwtAudienceEnv)) {
+                    jwtAudience = jwtAudienceEnv;
                 }
-                return apiKeyName;
+                return jwtAudience;
             }
             set {
-                apiKeyName = value;
+                jwtAudience = value;
             }
         }
 
-        private string jwtName = "jwt";
-        public string JWT_NAME {
-            get {
-                string jwtEnv = GetEnvVar("API_KEY_NAME");
-                if (!string.IsNullOrEmpty(jwtEnv)) {
-                    jwtName = jwtEnv;
-                }
-                return jwtName;
-            }
-            set {
-                jwtName = value;
-            }
-        }
-
-        private string jwtSecret = "secret_rahasia";
+        private string jwtSecret = "jwt_secret";
         public string JWT_SECRET {
             get {
                 string jwtSecretEnv = GetEnvVar("JWT_SECRET");

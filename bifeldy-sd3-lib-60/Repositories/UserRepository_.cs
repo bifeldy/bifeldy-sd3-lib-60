@@ -27,8 +27,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
     public interface IUserRepository {
         Task<bool> Create(DC_USER_T user);
         Task<List<DC_USER_T>> GetAll(string userNameNik = null);
-        Task<DC_USER_T> GetByUsernameNik(string userNameNik);
-        Task<bool> Delete(string userNameNik);
+        Task<DC_USER_T> GetByUserNik(string userNik);
+        Task<DC_USER_T> GetByUserName(string userName);
+        Task<DC_USER_T> GetByUserNameNikPassword(string userNameNik, string password);
+        Task<bool> Delete(string userNik);
         Task<string> LoginUser(string userNameNik, string password);
         Task LogoutUser();
     }
@@ -36,7 +38,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
     public sealed class CUserRepository : CRepository, IUserRepository {
 
         private readonly AuthenticationStateProvider _asp;
-        private readonly IGlobalService _gs;
 
         private readonly IOraPg _orapg;
 
@@ -44,12 +45,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
             AuthenticationStateProvider asp,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
-            IGlobalService gs,
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
             _asp = asp;
-            _gs = gs;
             _orapg = orapg;
         }
 
@@ -67,14 +66,30 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
-        public async Task<DC_USER_T> GetByUsernameNik(string userNameNik) {
+        public async Task<DC_USER_T> GetByUserNik(string userNik) {
             return await _orapg.Set<DC_USER_T>()
-                .Where(u => u.USER_NAME.ToUpper() == userNameNik.ToUpper() || u.USER_NIK.ToUpper() == userNameNik.ToUpper())
+                .Where(u => u.USER_NIK.ToUpper() == userNik.ToUpper())
                 .SingleOrDefaultAsync();
         }
 
-        public async Task<bool> Delete(string userNameNik) {
-            DC_USER_T user = await GetByUsernameNik(userNameNik);
+        public async Task<DC_USER_T> GetByUserName(string userName) {
+            return await _orapg.Set<DC_USER_T>()
+                .Where(u => u.USER_NAME.ToUpper() == userName.ToUpper())
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<DC_USER_T> GetByUserNameNikPassword(string userNameNik, string password) {
+            return await _orapg.Set<DC_USER_T>()
+                .Where(u => (
+                        u.USER_NAME.ToUpper() == userNameNik.ToUpper() ||
+                        u.USER_NIK.ToUpper() == userNameNik.ToUpper()
+                    ) && u.USER_PASSWORD.ToUpper() == password.ToUpper()
+                )
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<bool> Delete(string userNik) {
+            DC_USER_T user = await GetByUserNik(userNik);
             _orapg.Set<DC_USER_T>().Remove(user);
             return await _orapg.SaveChangesAsync() > 0;
         }
@@ -82,12 +97,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
         /* ** */
 
         public async Task<string> LoginUser(string userNameNik, string password) {
-            var user = await GetByUsernameNik(userNameNik);
-            if (user?.USER_PASSWORD.ToUpper() == password.ToUpper()) {
-                var casp = (CustomAuthenticationStateProvider) _asp;
-                await casp.UpdateAuthenticationState(new UserSession {
-                    Name = user.USER_NAME,
-                    Nik = user.USER_NIK
+            DC_USER_T dcUserT = await GetByUserNameNikPassword(userNameNik, password);
+            if (dcUserT != null) {
+                CustomAuthenticationStateProvider casp = (CustomAuthenticationStateProvider) _asp;
+                await casp.UpdateAuthenticationState(new UserWebSession {
+                    name = dcUserT.USER_NAME,
+                    nik = dcUserT.USER_NIK,
+                    dc_user_t = dcUserT
                 });
                 return null;
             }
@@ -95,7 +111,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task LogoutUser() {
-            var casp = (CustomAuthenticationStateProvider) _asp;
+            CustomAuthenticationStateProvider casp = (CustomAuthenticationStateProvider) _asp;
             await casp.UpdateAuthenticationState(null);
         }
 

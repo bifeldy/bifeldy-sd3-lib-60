@@ -11,11 +11,19 @@
  * 
  */
 
-using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
+using System.Text;
+
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 using Ionic.Crc;
+
+using bifeldy_sd3_lib_60.Models;
+using System.Security.Claims;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -26,10 +34,13 @@ namespace bifeldy_sd3_lib_60.Services {
         string CalculateCRC32(string filePath);
         string CalculateSHA1(string filePath);
         string GetMimeFromFile(string filename);
+        string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1);
+        string DecodeJWT(string token, string claimType = ClaimTypes.Name);
     }
 
     public sealed class CChiperService : IChiperService {
 
+        private readonly EnvVar _envVar;
         private readonly IApplicationService _app;
 
         private readonly IStreamService _stream;
@@ -41,7 +52,8 @@ namespace bifeldy_sd3_lib_60.Services {
         // This constant determines the number of iterations for the password bytes generation function.
         private const int DerivationIterations = 1000;
 
-        public CChiperService(IApplicationService app, IStreamService stream) {
+        public CChiperService(IOptions<EnvVar> envVar, IApplicationService app, IStreamService stream) {
+            _envVar = envVar.Value;
             _app = app;
             _stream = stream;
         }
@@ -66,7 +78,7 @@ namespace bifeldy_sd3_lib_60.Services {
             byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
             using (Rfc2898DeriveBytes password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (Aes symmetricKey = Aes.Create()) {
+                using (RijndaelManaged symmetricKey = new RijndaelManaged()) {
                     symmetricKey.BlockSize = 256;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
@@ -152,6 +164,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
+        [SupportedOSPlatform("windows")]
         [DllImport("urlmon.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = false)]
         private static extern int FindMimeFromData(
             IntPtr pBC,
@@ -195,6 +208,51 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
                 return "unknown/unknown";
             }
+        }
+
+        private string HashText(string text) {
+            using (SHA1Managed sha1 = new SHA1Managed()) {
+                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(text));
+                var sb = new StringBuilder(hash.Length * 2);
+                foreach (byte b in hash) {
+                    sb.Append(b.ToString("x2"));
+                }
+                return sb.ToString();
+            }
+        }
+
+        public string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1) {
+            SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(HashText(_envVar.JWT_SECRET)));
+            SigningCredentials credetial = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            List<Claim> userClaim = new List<Claim> {
+                new Claim(ClaimTypes.Name, userSession.name),
+                new Claim(ClaimTypes.Role, userSession.role.ToString())
+            };
+            JwtSecurityToken token = new JwtSecurityToken(
+                _app.AppName,
+                _envVar.JWT_AUDIENCE,
+                userClaim,
+                expires: DateTime.Now.AddMilliseconds(expiredNextMilliSeconds),
+                signingCredentials: credetial
+            );
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public string DecodeJWT(string token, string claimType = ClaimTypes.Name) {
+            SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(HashText(_envVar.JWT_SECRET)));
+            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+            tokenHandler.ValidateToken(token, new TokenValidationParameters {
+                ValidateAudience = true,
+                ValidateIssuer = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.Zero,
+                ValidIssuer = _app.AppName,
+                ValidAudience = _envVar.JWT_AUDIENCE
+            }, out SecurityToken validateToken);
+
+            JwtSecurityToken jwtToken = (JwtSecurityToken) validateToken;
+            return jwtToken.Claims.Where(c => c.Type == claimType).First().Value;
         }
 
     }
