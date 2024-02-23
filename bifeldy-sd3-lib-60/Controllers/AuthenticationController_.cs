@@ -54,7 +54,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     throw new Exception("Data Tidak Lengkap!");
                 }
 
-                DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.LoginBot(userName, password);
+                API_TOKEN_T dcApiToken = await _apiTokenRepo.LoginBot(userName, password);
                 if (dcApiToken == null) {
                     throw new Exception("User Name / Password Salah!");
                 }
@@ -88,9 +88,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
             try {
                 UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
 
-                DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userSession.name);
+                API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userSession.name);
                 dcApiToken.TOKEN_SEKALI_PAKAI = null;
-                _orapg.Set<DC_API_TOKEN_T>().Update(dcApiToken);
+                _orapg.Set<API_TOKEN_T>().Update(dcApiToken);
                 await _orapg.SaveChangesAsync();
 
                 return Ok(new {

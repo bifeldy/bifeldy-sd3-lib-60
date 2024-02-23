@@ -18,12 +18,10 @@ using bifeldy_sd3_lib_60.Abstractions;
 
 namespace bifeldy_sd3_lib_60.Tables {
 
-    public sealed class DC_API_TOKEN_T : EntityTable {
-        [Key] public string USER_NAME { set; get; }
-        [JsonIgnore] public string PASSWORD { set; get; }
+    public sealed class API_KEY_T : EntityTable {
+        [Key][JsonIgnore] public string KEY { set; get; }
+        public string IP_ORIGIN { set; get; }
         [Key] public string APP_NAME { set; get; }
-        public DateTime? LAST_LOGIN { set; get; }
-        [JsonIgnore] public string TOKEN_SEKALI_PAKAI { set; get; }
     }
 
 }

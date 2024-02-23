@@ -32,7 +32,7 @@ namespace bifeldy_sd3_lib_60.Models {
     public sealed class UserApiSession {
         public string name { get; set; }
         public UserSessionRole role { get; set; } = UserSessionRole.EXTERNAL_BOT;
-        [JsonIgnore] public DC_API_TOKEN_T dc_api_token_t { get; set; } = null;
+        [JsonIgnore] public API_TOKEN_T dc_api_token_t { get; set; } = null;
     }
 
 }

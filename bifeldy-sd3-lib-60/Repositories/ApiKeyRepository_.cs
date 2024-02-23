@@ -23,9 +23,9 @@ using bifeldy_sd3_lib_60.Tables;
 namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IApiKeyRepository {
-        Task<bool> Create(DC_API_KEY_T apiKey);
-        Task<List<DC_API_KEY_T>> GetAll(string key = null);
-        Task<DC_API_KEY_T> GetByKey(string key);
+        Task<bool> Create(API_KEY_T apiKey);
+        Task<List<API_KEY_T>> GetAll(string key = null);
+        Task<API_KEY_T> GetByKey(string key);
         Task<bool> Delete(string key);
         Task<bool> CheckKeyOrigin(string ipOrigin, string key);
     }
@@ -49,23 +49,23 @@ namespace bifeldy_sd3_lib_60.Repositories {
             _orapg = orapg;
         }
 
-        public async Task<bool> Create(DC_API_KEY_T apiKey) {
+        public async Task<bool> Create(API_KEY_T apiKey) {
             apiKey.APP_NAME = _as.AppName.ToUpper();
-            _orapg.Set<DC_API_KEY_T>().Add(apiKey);
+            _orapg.Set<API_KEY_T>().Add(apiKey);
             return await _orapg.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<DC_API_KEY_T>> GetAll(string key = null) {
-            DbSet<DC_API_KEY_T> dbSet = _orapg.Set<DC_API_KEY_T>();
-            IQueryable<DC_API_KEY_T> query = dbSet.Where(ak => ak.APP_NAME.ToUpper() == _as.AppName.ToUpper());
+        public async Task<List<API_KEY_T>> GetAll(string key = null) {
+            DbSet<API_KEY_T> dbSet = _orapg.Set<API_KEY_T>();
+            IQueryable<API_KEY_T> query = dbSet.Where(ak => ak.APP_NAME.ToUpper() == _as.AppName.ToUpper());
             if (!string.IsNullOrEmpty(key)) {
                 query = dbSet.Where(ak => ak.KEY.ToUpper() == key.ToUpper());
             }
             return await ((query == null) ? dbSet : query).ToListAsync();
         }
 
-        public async Task<DC_API_KEY_T> GetByKey(string key) {
-            return await _orapg.Set<DC_API_KEY_T>().Where(ak =>
+        public async Task<API_KEY_T> GetByKey(string key) {
+            return await _orapg.Set<API_KEY_T>().Where(ak =>
                 ak.KEY.ToUpper() == key.ToUpper() && (
                     ak.APP_NAME.ToUpper() == _as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*"
                 )
@@ -73,15 +73,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<bool> Delete(string key) {
-            DC_API_KEY_T apiKey = await GetByKey(key);
-            _orapg.Set<DC_API_KEY_T>().Remove(apiKey);
+            API_KEY_T apiKey = await GetByKey(key);
+            _orapg.Set<API_KEY_T>().Remove(apiKey);
             return await _orapg.SaveChangesAsync() > 0;
         }
 
         /* ** */
 
         public async Task<bool> CheckKeyOrigin(string ipOrigin, string key) {
-            DC_API_KEY_T ak = await GetByKey(key);
+            API_KEY_T ak = await GetByKey(key);
             if (ak != null) {
                 return ak.IP_ORIGIN.ToUpper().Split(";").Select(io => io.Trim()).Contains(ipOrigin.ToUpper()) || ak.IP_ORIGIN == "*";
             }

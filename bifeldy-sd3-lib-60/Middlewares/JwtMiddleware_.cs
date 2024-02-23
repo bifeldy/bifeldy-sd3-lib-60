@@ -90,7 +90,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
             try {
                 string userName = _chiper.DecodeJWT(token, ClaimTypes.Name);
-                DC_API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userName);
+                API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userName);
                 if (dcApiToken == null) {
                     throw new Exception("JWT Tidak Valid!");
                 }
