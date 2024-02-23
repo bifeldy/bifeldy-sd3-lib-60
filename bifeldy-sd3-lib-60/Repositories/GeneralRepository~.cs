@@ -233,23 +233,29 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<(bool, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
-            CDatabase dbCon = null;
+            CDatabase dbConHo = null;
+            CDatabase dbConDc = null;
 
             string kodeDcSekarang = await GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
-                throw new Exception("Khusus DCHO");
-            }
-
-            DC_TABEL_IP_T dbi = _orapg.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
-            bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
-            if (isPostgre) {
-                dbCon = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                List<DC_TABEL_V> dbInfo = await GetListBranchDbInformation("DCHO");
+                DC_TABEL_V dcho = dbInfo.FirstOrDefault();
+                dbConHo = _oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
             }
             else {
-                dbCon = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                dbConHo = (CDatabase) _orapg;
             }
 
-            return (isPostgre, dbCon);
+            DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
+            bool isDcPg = dbi.FLAG_DBPG?.ToUpper() == "Y";
+            if (isDcPg) {
+                dbConDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+            }
+            else {
+                dbConDc = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+            }
+
+            return (isDcPg, dbConDc);
         }
 
     }
