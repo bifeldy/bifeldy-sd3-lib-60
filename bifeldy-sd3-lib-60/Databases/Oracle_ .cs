@@ -29,7 +29,6 @@ using bifeldy_sd3_lib_60.Services;
 namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IOracle : IOraPg {
-        void InitializeConnection(string dbTnsOdp = null, string dbUsername = null, string dbPassword = null);
         COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid);
     }
 
@@ -64,7 +63,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 .EnableSensitiveDataLogging(_as.DebugMode);
         }
 
-        public void InitializeConnection(string dbTnsOdp = null, string dbUsername = null, string dbPassword = null) {
+        public void InitializeConnection(string dbUsername = null, string dbPassword = null, string dbTnsOdp = null) {
             string _dbTnsOdp = dbTnsOdp ?? _as.GetVariabel("ODPOrcl", _envVar.KUNCI_GXXX);
             if (!string.IsNullOrEmpty(_dbTnsOdp)) {
                 _dbTnsOdp = Regex.Replace(_dbTnsOdp, @"\s+", "");
@@ -77,7 +76,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             DbName = _dbName;
             DbUsername = dbUsername ?? _as.GetVariabel("UserOrcl", _envVar.KUNCI_GXXX);
             DbPassword = dbPassword ?? _as.GetVariabel("PasswordOrcl", _envVar.KUNCI_GXXX);
-            DbConnectionString = $"Data Source={DbTnsOdp};User ID={DbUsername};Password={DbPassword};";
+            DbConnectionString = $"Data Source={DbTnsOdp};User ID={DbUsername};Password={DbPassword};Connection Timeout=180;"; // 3 menit
         }
 
         protected override DbCommand CreateCommand() {

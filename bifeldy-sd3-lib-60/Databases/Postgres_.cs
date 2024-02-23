@@ -33,7 +33,6 @@ using bifeldy_sd3_lib_60.Services;
 namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IPostgres : IOraPg {
-        void InitializeConnection(string dbIpAddress = null, string dbPort = null, string dbUsername = null, string dbPassword = null, string dbName = null);
         CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName);
     }
 
@@ -66,13 +65,13 @@ namespace bifeldy_sd3_lib_60.Databases {
                 .EnableSensitiveDataLogging(_as.DebugMode);
         }
 
-        public void InitializeConnection(string dbIpAddress = null, string dbPort = null, string dbUsername = null, string dbPassword = null, string dbName = null) {
-            DbIpAddrss = dbIpAddress ?? _as.GetVariabel("IPPostgres", _envVar.KUNCI_GXXX);
+        public void InitializeConnection(string dbIpAddrss = null, string dbPort = null, string dbUsername = null, string dbPassword = null, string dbName = null) {
+            DbIpAddrss = dbIpAddrss ?? _as.GetVariabel("IPPostgres", _envVar.KUNCI_GXXX);
             DbPort = dbPort ?? _as.GetVariabel("PortPostgres", _envVar.KUNCI_GXXX);
             DbUsername = dbUsername ?? _as.GetVariabel("UserPostgres", _envVar.KUNCI_GXXX);
             DbPassword = dbPassword ?? _as.GetVariabel("PasswordPostgres", _envVar.KUNCI_GXXX);
             DbName = dbName ?? _as.GetVariabel("DatabasePostgres", _envVar.KUNCI_GXXX);
-            DbConnectionString = $"Host={DbIpAddrss};Port={DbPort};Username={DbUsername};Password={DbPassword};Database={DbName};";
+            DbConnectionString = $"Host={DbIpAddrss};Port={DbPort};Username={DbUsername};Password={DbPassword};Database={DbName};Timeout=180;"; // 3 menit
         }
 
         protected override void BindQueryParameter(DbCommand cmd, List<CDbQueryParamBind> parameters) {

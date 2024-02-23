@@ -28,7 +28,6 @@ using bifeldy_sd3_lib_60.Services;
 namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IMsSQL : IDatabase {
-        void InitializeConnection(string dbIpAddrss = null, string dbName = null, string dbUsername = null, string dbPassword = null);
         CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName);
     }
 
@@ -66,7 +65,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             DbName = dbName ?? _as.GetVariabel("DatabaseSql", _envVar.KUNCI_GXXX);
             DbUsername = dbUsername ?? _as.GetVariabel("UserSql", _envVar.KUNCI_GXXX);
             DbPassword = dbPassword ?? _as.GetVariabel("PasswordSql", _envVar.KUNCI_GXXX);
-            DbConnectionString = $"Data Source={DbIpAddrss};Initial Catalog={DbName};User ID={DbUsername};Password={DbPassword};";
+            DbConnectionString = $"Data Source={DbIpAddrss};Initial Catalog={DbName};User ID={DbUsername};Password={DbPassword};Connection Timeout=180;"; // 3 menit
         }
 
         protected override void BindQueryParameter(DbCommand cmd, List<CDbQueryParamBind> parameters) {

@@ -32,8 +32,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<string> GetURLWebService(string webType);
         Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
-        Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk);
-        Task<CDatabase> OpenConnectionToDcFromHo(string kodeDcTarget);
+        Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
+        Task<(bool, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
     }
 
     public class CGeneralRepository : CRepository, IGeneralRepository {
@@ -207,11 +207,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // IDictionary<string, CDatabase> dbCon = await GetListBranchDbConnection("G001");
         // var res = dbCon["G055"].ExecScalarAsync<...>(...);
         //
-        public async Task<IDictionary<string, CDatabase>> GetListBranchDbConnection(string kodeDcInduk) {
-            IDictionary<string, CDatabase> dbCons = new Dictionary<string, CDatabase>();
+        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
+            IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
 
             string kodeDc = await GetKodeDc();
-            DC_TABEL_DC_T dc = await _orapg.Set<DC_TABEL_DC_T>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper()).FirstOrDefaultAsync();
+            DC_TABEL_V dc = await _orapg.Set<DC_TABEL_V>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper()).FirstOrDefaultAsync();
             if (kodeDc.ToUpper() == "DCHO" || dc.TBL_JENIS_DC.ToUpper() != "INDUK") {
                 throw new Exception("Khusus DC Induk");
             }
@@ -219,19 +219,20 @@ namespace bifeldy_sd3_lib_60.Repositories {
             List<DC_TABEL_V> dbInfo = await GetListBranchDbInformation(kodeDcInduk);
             foreach (DC_TABEL_V dbi in dbInfo) {
                 CDatabase dbCon = null;
-                if (dbi.FLAG_DBPG.ToUpper() == "Y") {
+                bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
+                if (isPostgre) {
                     dbCon = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                 }
                 else {
                     dbCon = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                 }
-                dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), dbCon);
+                dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
             }
 
             return dbCons;
         }
 
-        public async Task<CDatabase> OpenConnectionToDcFromHo(string kodeDcTarget) {
+        public async Task<(bool, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
             CDatabase dbCon = null;
 
             string kodeDcSekarang = await GetKodeDc();
@@ -239,15 +240,16 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 throw new Exception("Khusus DCHO");
             }
 
-            DC_TABEL_V dbi = _orapg.Set<DC_TABEL_V>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
-            if (dbi.FLAG_DBPG == "Y") {
+            DC_TABEL_IP_T dbi = _orapg.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
+            bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
+            if (isPostgre) {
                 dbCon = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
             }
             else {
-                dbCon = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                dbCon = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
             }
 
-            return dbCon;
+            return (isPostgre, dbCon);
         }
 
     }
