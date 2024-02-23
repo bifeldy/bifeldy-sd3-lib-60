@@ -218,6 +218,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             COracle oracle = (COracle) Clone();
             string dbTnsOdp = $"(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={dbIpAddrss})(PORT={dbPort})))(CONNECT_DATA=(SERVICE_NAME={dbNameSid})))";
             oracle.InitializeConnection(dbUsername, dbPassword, dbTnsOdp);
+            oracle.ReSetConnectionString();
             return oracle;
         }
 

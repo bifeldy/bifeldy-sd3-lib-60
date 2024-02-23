@@ -343,6 +343,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {
             CPostgres postgres = (CPostgres) Clone();
             postgres.InitializeConnection(dbIpAddrss, dbPort, dbUsername, dbPassword, dbName);
+            postgres.ReSetConnectionString();
             return postgres;
         }
 

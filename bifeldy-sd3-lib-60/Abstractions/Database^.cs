@@ -97,6 +97,10 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return MemberwiseClone();
         }
 
+        protected void ReSetConnectionString() {
+            Database.SetConnectionString(DbConnectionString);
+        }
+
         protected virtual DbConnection GetConnection() {
             return Database.GetDbConnection();
         }

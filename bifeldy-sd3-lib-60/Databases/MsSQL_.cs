@@ -24,6 +24,7 @@ using Microsoft.Extensions.Options;
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using System.Diagnostics;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -198,6 +199,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {
             CMsSQL mssql = (CMsSQL) Clone();
             mssql.InitializeConnection(dbIpAddrss, dbUsername, dbPassword, dbName);
+            mssql.ReSetConnectionString();
             return mssql;
         }
 
