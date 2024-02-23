@@ -45,7 +45,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginInfo formData) {
+        public async Task<IActionResult> Login([FromBody] LoginInfo formData) {
             try {
                 string userName = formData?.user_name;
                 string password = formData?.password;
@@ -65,8 +65,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 };
                 string token = _chiper.EncodeJWT(userSession);
 
-                return Ok(new {
-                    info = $"😅 200 - {GetType().Name} :: Login Berhasil 🤣",
+                return StatusCode(StatusCodes.Status201Created, new {
+                    info = $"😅 201 - {GetType().Name} :: Login Berhasil 🤣",
                     result = userSession,
                     token
                 });
@@ -93,8 +93,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 _orapg.Set<API_TOKEN_T>().Update(dcApiToken);
                 await _orapg.SaveChangesAsync();
 
-                return Ok(new {
-                    info = $"😅 200 - {GetType().Name} :: Logout Berhasil 🤣",
+                return Accepted(new {
+                    info = $"😅 204 - {GetType().Name} :: Logout Berhasil 🤣",
                     result = userSession
                 });
             }
@@ -107,6 +107,29 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
         }
+
+        [HttpPatch("verify")]
+        [MinRole(UserSessionRole.EXTERNAL_BOT)]
+        // [AllowedRoles(UserSessionRole.USER_SD_SSD_3, UserSessionRole.EXTERNAL_BOT)]
+        public IActionResult Verify() {
+            try {
+                UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
+
+                return Accepted(new {
+                    info = $"😅 202 - {GetType().Name} :: Verifikasi Berhasil 🤣",
+                    result = userSession
+                });
+            }
+            catch (Exception ex) {
+                return BadRequest(new {
+                    info = $"🙄 400 - {GetType().Name} :: Verifikasi Gagal 😪",
+                    result = new {
+                        message = ex.Message
+                    }
+                });
+            }
+        }
+
     }
 
 }
