@@ -33,7 +33,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
         Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
-        Task<(bool, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
+        Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
     }
 
     public class CGeneralRepository : CRepository, IGeneralRepository {
@@ -232,9 +232,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return dbCons;
         }
 
-        public async Task<(bool, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
+        public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
             CDatabase dbConHo = null;
-            CDatabase dbConDc = null;
+            CDatabase dbOraPgDc = null;
+            CDatabase dbSqlDc = null;
             bool isDcPg = false;
 
             string kodeDcSekarang = await GetKodeDc();
@@ -251,14 +252,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
             if (dbi != null) {
                 isDcPg = dbi.FLAG_DBPG?.ToUpper() == "Y";
                 if (isDcPg) {
-                    dbConDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                    dbOraPgDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                 }
                 else {
-                    dbConDc = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                    dbOraPgDc = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                 }
+                dbSqlDc = _mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
             }
 
-            return (isDcPg, dbConDc);
+            return (isDcPg, dbOraPgDc, dbSqlDc);
         }
 
     }
