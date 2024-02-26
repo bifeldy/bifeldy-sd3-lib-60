@@ -235,6 +235,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<(bool, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
             CDatabase dbConHo = null;
             CDatabase dbConDc = null;
+            bool isDcPg = false;
 
             string kodeDcSekarang = await GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
@@ -247,12 +248,14 @@ namespace bifeldy_sd3_lib_60.Repositories {
             }
 
             DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
-            bool isDcPg = dbi.FLAG_DBPG?.ToUpper() == "Y";
-            if (isDcPg) {
-                dbConDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
-            }
-            else {
-                dbConDc = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+            if (dbi != null) {
+                isDcPg = dbi.FLAG_DBPG?.ToUpper() == "Y";
+                if (isDcPg) {
+                    dbConDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                }
+                else {
+                    dbConDc = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                }
             }
 
             return (isDcPg, dbConDc);

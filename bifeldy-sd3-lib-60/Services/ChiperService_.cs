@@ -36,7 +36,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string GetMimeFromFile(string filename);
         string HashText(string text);
         string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1);
-        string DecodeJWT(string token, string claimType = ClaimTypes.Name);
+        IEnumerable<Claim> DecodeJWT(string token);
     }
 
     public sealed class CChiperService : IChiperService {
@@ -239,7 +239,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public string DecodeJWT(string token, string claimType = ClaimTypes.Name) {
+        public IEnumerable<Claim> DecodeJWT(string token) {
             SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(HashText(_envVar.JWT_SECRET)));
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
             tokenHandler.ValidateToken(token, new TokenValidationParameters {
@@ -253,7 +253,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }, out SecurityToken validateToken);
 
             JwtSecurityToken jwtToken = (JwtSecurityToken) validateToken;
-            return jwtToken.Claims.Where(c => c.Type == claimType).First().Value;
+            return jwtToken.Claims;
         }
 
     }

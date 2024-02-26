@@ -20,6 +20,7 @@ using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Tables;
+using Newtonsoft.Json.Linq;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
@@ -89,15 +90,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             _logger.LogInformation($"[JWT_MIDDLEWARE] 🔐 {token}");
 
             try {
-                string userName = _chiper.DecodeJWT(token, ClaimTypes.Name);
-                API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userName);
-                if (dcApiToken == null) {
-                    throw new Exception("JWT Tidak Valid!");
-                }
+                IEnumerable<Claim> claims = _chiper.DecodeJWT(token);
 
                 context.Items["user"] = new UserApiSession() {
-                    name = dcApiToken.USER_NAME,
-                    dc_api_token_t = dcApiToken
+                    name = claims.Where(c => c.Type == ClaimTypes.Name).First().Value,
+                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), claims.Where(c => c.Type == ClaimTypes.Role).First().Value)
                 };
             }
             catch {
