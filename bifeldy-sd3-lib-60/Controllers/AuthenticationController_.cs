@@ -20,6 +20,7 @@ using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Tables;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
@@ -45,6 +46,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         }
 
         [HttpPost("login")]
+        [SwaggerOperation(Summary = "Login untuk generate token pengguna di luar / selain IT S/SD 03 (ex. BOT / Departemen lain)")]
         public async Task<IActionResult> Login([FromBody] LoginInfo formData) {
             try {
                 string userName = formData?.user_name;
@@ -84,6 +86,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [HttpDelete("logout")]
         [MinRole(UserSessionRole.EXTERNAL_BOT)]
         // [AllowedRoles(UserSessionRole.USER_SD_SSD_3, UserSessionRole.EXTERNAL_BOT)]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
             try {
                 UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
@@ -111,6 +115,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [HttpPatch("verify")]
         [MinRole(UserSessionRole.EXTERNAL_BOT)]
         // [AllowedRoles(UserSessionRole.USER_SD_SSD_3, UserSessionRole.EXTERNAL_BOT)]
+        [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
             try {
                 UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];

@@ -83,6 +83,7 @@ namespace bifeldy_sd3_lib_60
             bool enableJwt = false
         ) {
             Services.AddSwaggerGen(c => {
+                c.EnableAnnotations();
                 c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo {
                     Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
                     Description = docsDescription ?? "API Documentation ~"
