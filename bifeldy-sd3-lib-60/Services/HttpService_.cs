@@ -82,7 +82,12 @@ namespace bifeldy_sd3_lib_60.Services {
             }
             if (httpHeaders != null) {
                 foreach (Tuple<string, string> hdr in httpHeaders) {
-                    httpRequestMessage.Headers.Add(hdr.Item1, hdr.Item2);
+                    try {
+                        httpRequestMessage.Headers.Add(hdr.Item1, hdr.Item2);
+                    }
+                    catch (Exception ex) {
+                        // Skip Invalid Header ~
+                    }
                 }
             }
             return httpRequestMessage;
