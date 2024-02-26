@@ -107,7 +107,7 @@ namespace bifeldy_sd3_lib_60
                 }
                 if (enableJwt) {
                     OpenApiSecurityScheme jwt = new OpenApiSecurityScheme {
-                        Description = @"JWT Information. Example: 'Bearer eyj...'",
+                        Description = @"Authorization Header. Example: 'Bearer eyj...'",
                         Name = "Authorization",
                         In = ParameterLocation.Header,
                         Type = SecuritySchemeType.Http,
