@@ -24,17 +24,20 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
         private readonly RequestDelegate _next;
         private readonly ILogger<ApiKeyMiddleware> _logger;
+        private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
         private readonly IConverterService _cs;
 
         public ApiKeyMiddleware(
             RequestDelegate next,
             ILogger<ApiKeyMiddleware> logger,
+            IApplicationService app,
             IGlobalService gs,
             IConverterService cs
         ) {
             _next = next;
             _logger = logger;
+            _app = app;
             _gs = gs;
             _cs = cs;
         }
@@ -75,13 +78,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
 
             string apiKey = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
+            /* if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
                 apiKey = request.Headers["x-api-key"];
             }
             else if (!string.IsNullOrEmpty(reqBody?.key)) {
                 apiKey = reqBody.key;
             }
-            else if (!string.IsNullOrEmpty(request.Query["key"])) {
+            else */ if (!string.IsNullOrEmpty(request.Query["key"])) {
                 apiKey = request.Query["key"];
             }
 
@@ -103,7 +106,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             context.Items["api_key"] = apiKey;
             _logger.LogInformation($"[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
 
-            if (await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+            // API Key Khusus Bypass ~ Case Sensitive
+            if (apiKey == _app.AppName || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
                 await _next(context);
             }
             else {

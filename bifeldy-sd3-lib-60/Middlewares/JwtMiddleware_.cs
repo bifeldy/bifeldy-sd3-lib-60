@@ -73,7 +73,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             if (!string.IsNullOrEmpty(request.Headers.Authorization)) {
                 token = request.Headers.Authorization;
             }
-            else if (!string.IsNullOrEmpty(request.Headers["x-access-token"])) {
+            /* else if (!string.IsNullOrEmpty(request.Headers["x-access-token"])) {
                 token = request.Headers["x-access-token"];
             }
             else if (!string.IsNullOrEmpty(reqBody?.token)) {
@@ -81,7 +81,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
             else if (!string.IsNullOrEmpty(request.Query["token"])) {
                 token = request.Query["token"];
-            }
+            } */
 
             if (token.StartsWith("Bearer ")) {
                 token = token[7..];

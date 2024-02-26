@@ -16,6 +16,9 @@ using System.Net.Http.Headers;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
+        string[] ProhibitedHeaders { get; }
+        string[] RequestHeadersToRemove { get; }
+        string[] ResponseHeadersToRemove { get; }
         Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null);
@@ -30,6 +33,22 @@ namespace bifeldy_sd3_lib_60.Services {
     public sealed class CHttpService : IHttpService {
 
         private readonly IConverterService _cs;
+
+        public string[] ProhibitedHeaders { get; } = new string[] {
+            "accept-charset", "accept-encoding", "access-control-request-headers", "access-control-request-method",
+            "connection", "content-length", "cookie", "date", "dnt", "expect", "feature-policy", "host", "via",
+            "keep-alive", "origin", "proxy-*", "sec-*", "referer", "te", "trailer", "transfer-encoding", "upgrade"
+        };
+
+        public string[] RequestHeadersToRemove { get; } = new string [] {
+            "host", "user-agent", "accept", "accept-encoding", "content-type", "content-length", "x-real-ip",
+            "cf-connecting-ip", "forwarded", "x-forwarded-proto", "x-forwarded-for", "x-cloud-trace-context"
+        };
+
+        public string[] ResponseHeadersToRemove { get; } = new string [] {
+            "accept-ranges", "content-length", "keep-alive", "connection",
+            "content-encoding", "set-cookie"
+        };
 
         public CHttpService(IConverterService cs) {
             _cs = cs;
