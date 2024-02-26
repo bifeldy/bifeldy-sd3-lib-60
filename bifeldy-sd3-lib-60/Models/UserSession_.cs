@@ -22,16 +22,18 @@ namespace bifeldy_sd3_lib_60.Models {
         EXTERNAL_BOT
     }
 
-    public sealed class UserWebSession {
-        public string nik { get; set; }
+    public abstract class UserSession {
         public string name { get; set; }
-        public UserSessionRole role { get; set; } = UserSessionRole.USER_SD_SSD_3;
+        public UserSessionRole role { get; set; }
+    }
+
+    public sealed class UserWebSession : UserSession {
+        public string nik { get; set; }
         [JsonIgnore] public DC_USER_T dc_user_t { get; set; } = null;
     }
 
-    public sealed class UserApiSession {
-        public string name { get; set; }
-        public UserSessionRole role { get; set; } = UserSessionRole.EXTERNAL_BOT;
+    public sealed class UserApiSession : UserSession {
+        // [JsonIgnore] public API_TOKEN_T dc_api_token_t { get; set; } = null;
     }
 
 }

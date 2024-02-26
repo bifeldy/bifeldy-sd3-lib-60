@@ -92,9 +92,15 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             try {
                 IEnumerable<Claim> claims = _chiper.DecodeJWT(token);
 
+                // API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(claims.Where(c => c.Type == ClaimTypes.Name).First().Value);
+                // if (dcApiToken == null) {
+                //     throw new Exception("JWT Tidak Valid!");
+                // }
+
                 context.Items["user"] = new UserApiSession() {
                     name = claims.Where(c => c.Type == ClaimTypes.Name).First().Value,
-                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), claims.Where(c => c.Type == ClaimTypes.Role).First().Value)
+                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), claims.Where(c => c.Type == ClaimTypes.Role).First().Value),
+                    // dc_api_token_t = dcApiToken
                 };
             }
             catch {

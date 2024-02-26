@@ -62,7 +62,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 }
 
                 UserApiSession userSession = new UserApiSession {
-                    name = dcApiToken.USER_NAME
+                    name = dcApiToken.USER_NAME,
+                    role = UserSessionRole.EXTERNAL_BOT,
+                    // dc_api_token_t = dcApiToken
                 };
                 string token = _chiper.EncodeJWT(userSession);
 

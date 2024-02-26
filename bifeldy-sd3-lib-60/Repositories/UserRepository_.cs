@@ -103,6 +103,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 await casp.UpdateAuthenticationState(new UserWebSession {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
+                    role = UserSessionRole.USER_SD_SSD_3,
                     dc_user_t = dcUserT
                 });
                 return null;
