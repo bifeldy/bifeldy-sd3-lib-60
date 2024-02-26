@@ -87,6 +87,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             else */ if (!string.IsNullOrEmpty(request.Query["key"])) {
                 apiKey = request.Query["key"];
             }
+            context.Items["api_key"] = apiKey;
 
             string ipOrigin = connection.RemoteIpAddress.ToString();
             if (!string.IsNullOrEmpty(request.Headers["origin"])) {
@@ -102,8 +103,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 ipOrigin = request.Headers["x-forwarded-for"];
             }
             ipOrigin = _gs.CleanIpOrigin(ipOrigin);
+            context.Items["ip_origin"] = ipOrigin;
 
-            context.Items["api_key"] = apiKey;
             _logger.LogInformation($"[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
 
             // API Key Khusus Bypass ~ Case Sensitive

@@ -14,13 +14,14 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using Swashbuckle.AspNetCore.Annotations;
+
 using bifeldy_sd3_lib_60.AttributeFilterDecorator;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Tables;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
@@ -34,12 +35,20 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public class AuthenticationController : ControllerBase {
 
         private readonly IHttpContextAccessor _hca;
+        private readonly IApplicationService _app;
         private readonly IChiperService _chiper;
         private readonly IApiTokenRepository _apiTokenRepo;
         private readonly IOraPg _orapg;
 
-        public AuthenticationController(IHttpContextAccessor hca, IChiperService chiper, IApiTokenRepository apiTokenRepo, IOraPg orapg) {
+        public AuthenticationController(
+            IHttpContextAccessor hca,
+            IApplicationService app,
+            IChiperService chiper,
+            IApiTokenRepository apiTokenRepo,
+            IOraPg orapg
+        ) {
             _hca = hca;
+            _app = app;
             _chiper = chiper;
             _apiTokenRepo = apiTokenRepo;
             _orapg = orapg;
@@ -53,12 +62,22 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 string password = formData?.password;
 
                 if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) {
-                    throw new Exception("Data Tidak Lengkap!");
+                    return BadRequest(new ResponseJsonSingle<dynamic> {
+                        info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
+                        result = new {
+                            message = "Data tidak lengkap!"
+                        }
+                    });
                 }
 
                 API_TOKEN_T dcApiToken = await _apiTokenRepo.LoginBot(userName, password);
                 if (dcApiToken == null) {
-                    throw new Exception("User Name / Password Salah!");
+                    return BadRequest(new ResponseJsonSingle<dynamic> {
+                        info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
+                        result = new {
+                            message = "User name / password salah!"
+                        }
+                    });
                 }
 
                 UserApiSession userSession = new UserApiSession {
@@ -75,10 +94,10 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
             catch (Exception ex) {
-                return BadRequest(new {
+                return BadRequest(new ResponseJsonSingle<dynamic> {
                     info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
                     result = new {
-                        message = ex.Message
+                        message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
                 });
             }
@@ -98,16 +117,16 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 _orapg.Set<API_TOKEN_T>().Update(dcApiToken);
                 await _orapg.SaveChangesAsync();
 
-                return Accepted(new {
+                return Accepted(new ResponseJsonSingle<dynamic> {
                     info = $"😅 204 - {GetType().Name} :: Logout Berhasil 🤣",
                     result = userSession
                 });
             }
             catch (Exception ex) {
-                return BadRequest(new {
-                    info = $"🙄 400 - {GetType().Name} :: Logout Gagal 😪",
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
+                    info = $"🙄 500 - {GetType().Name} :: BPB Supplier 😪",
                     result = new {
-                        message = ex.Message
+                        message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
                 });
             }
@@ -121,16 +140,16 @@ namespace bifeldy_sd3_lib_60.Controllers {
             try {
                 UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
 
-                return Accepted(new {
+                return Accepted(new ResponseJsonSingle<dynamic> {
                     info = $"😅 202 - {GetType().Name} :: Verifikasi Berhasil 🤣",
                     result = userSession
                 });
             }
             catch (Exception ex) {
-                return BadRequest(new {
-                    info = $"🙄 400 - {GetType().Name} :: Verifikasi Gagal 😪",
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
+                    info = $"🙄 500 - {GetType().Name} :: BPB Supplier 😪",
                     result = new {
-                        message = ex.Message
+                        message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
                 });
             }
