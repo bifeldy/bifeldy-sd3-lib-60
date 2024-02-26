@@ -85,7 +85,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     try {
                         httpRequestMessage.Headers.Add(hdr.Item1, hdr.Item2);
                     }
-                    catch (Exception ex) {
+                    catch {
                         // Skip Invalid Header ~
                     }
                 }
