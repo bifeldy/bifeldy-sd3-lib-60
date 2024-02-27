@@ -46,7 +46,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
             ListFileForZip = new List<string>();
 
-            ZipFolderPath = Path.Combine(_as.AppLocation, _envVar.DEFAULT_DATA_FOLDER, _envVar.ZIP_FOLDER_PATH);
+            ZipFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.ZIP_FOLDER_PATH);
             if (!Directory.Exists(ZipFolderPath)) {
                 Directory.CreateDirectory(ZipFolderPath);
             }

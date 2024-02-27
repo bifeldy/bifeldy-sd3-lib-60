@@ -55,17 +55,17 @@ namespace bifeldy_sd3_lib_60.Services {
             _csv = csv;
             _zip = zip;
 
-            BackupFolderPath = Path.Combine(_as.AppLocation, _envVar.DEFAULT_DATA_FOLDER, _envVar.BACKUP_FOLDER_PATH);
+            BackupFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.BACKUP_FOLDER_PATH);
             if (!Directory.Exists(BackupFolderPath)) {
                 Directory.CreateDirectory(BackupFolderPath);
             }
 
-            TempFolderPath = Path.Combine(_as.AppLocation, _envVar.DEFAULT_DATA_FOLDER, _envVar.TEMP_FOLDER_PATH);
+            TempFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.TEMP_FOLDER_PATH);
             if (!Directory.Exists(TempFolderPath)) {
                 Directory.CreateDirectory(TempFolderPath);
             }
 
-            DownloadFolderPath = Path.Combine(_as.AppLocation, _envVar.DEFAULT_DATA_FOLDER, _envVar.DOWNLOAD_FOLDER_PATH);
+            DownloadFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.DOWNLOAD_FOLDER_PATH);
             if (!Directory.Exists(DownloadFolderPath)) {
                 Directory.CreateDirectory(DownloadFolderPath);
             }

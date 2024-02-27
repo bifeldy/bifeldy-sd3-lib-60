@@ -43,6 +43,8 @@ namespace bifeldy_sd3_lib_60
 
     public static class Bifeldy {
 
+        public static string DEFAULT_DATA_FOLDER = "_data";
+
         public static WebApplicationBuilder Builder = null;
         public static IServiceCollection Services = null;
         public static IConfiguration Config = null;
@@ -69,7 +71,7 @@ namespace bifeldy_sd3_lib_60
         public static void SetupSerilog() {
             Builder.Host.UseSerilog((hostContext, services, configuration) => {
                 string appPathDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-                configuration.WriteTo.File(appPathDir + $"/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
+                configuration.WriteTo.File(appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
             });
         }
 

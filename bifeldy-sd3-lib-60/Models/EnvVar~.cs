@@ -16,9 +16,6 @@ namespace bifeldy_sd3_lib_60.Models {
 
     public class EnvVar {
 
-        // Hardcode Parent Folder Biar Gak Ngorotin Folder Exe
-        public string DEFAULT_DATA_FOLDER = "_data";
-
         private string GetEnvVar(string key) {
             return Environment.GetEnvironmentVariable(key);
         }
