@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Models;
+using Serilog;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -110,7 +111,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public void CleanUp(bool clearPendingFileForZip = true) {
-            DeleteOldFilesInFolder(Path.Combine(_as.AppLocation, "logs"), _envVar.MAX_RETENTIONS_DAYS);
+            DeleteOldFilesInFolder(Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(BackupFolderPath, _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(TempFolderPath, _envVar.MAX_RETENTIONS_DAYS);
             DeleteOldFilesInFolder(DownloadFolderPath, _envVar.MAX_RETENTIONS_DAYS);
