@@ -329,16 +329,21 @@ namespace bifeldy_sd3_lib_60
                         await next();
                     }
                     catch (Exception ex) {
-                        HttpResponse response = context.Response;
+                        try {
+                            HttpResponse response = context.Response;
 
-                        response.Clear();
-                        response.StatusCode = StatusCodes.Status500InternalServerError;
-                        await response.WriteAsJsonAsync(new {
-                            info = "🙄 500 - Whoops :: Terjadi Kesalahan 😪",
-                            result = new {
-                                message = $"💩 {(App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data")} 🤬"
-                            }
-                        });
+                            response.Clear();
+                            response.StatusCode = StatusCodes.Status500InternalServerError;
+                            await response.WriteAsJsonAsync(new {
+                                info = "🙄 500 - Whoops :: Terjadi Kesalahan 😪",
+                                result = new {
+                                    message = $"💩 {(App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data")} 🤬"
+                                }
+                            });
+                        }
+                        catch {
+                            // Response has been sent ~
+                        }
                     }
                 }
             });

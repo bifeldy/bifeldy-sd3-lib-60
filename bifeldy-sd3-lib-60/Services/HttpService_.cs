@@ -41,7 +41,7 @@ namespace bifeldy_sd3_lib_60.Services {
         };
 
         public string[] RequestHeadersToRemove { get; } = new string [] {
-            "host", "user-agent", "accept", "accept-encoding", "content-type", "content-length", "x-real-ip",
+            "host", "user-agent", "accept", "accept-encoding", "content-length", "x-real-ip",
             "cf-connecting-ip", "forwarded", "x-forwarded-proto", "x-forwarded-for", "x-cloud-trace-context"
         };
 
