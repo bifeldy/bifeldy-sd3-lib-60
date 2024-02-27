@@ -84,6 +84,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         u.USER_NAME.ToUpper() == userNameNik.ToUpper() ||
                         u.USER_NIK.ToUpper() == userNameNik.ToUpper()
                     ) && u.USER_PASSWORD.ToUpper() == password.ToUpper()
+                    && u.USER_NAME.ToUpper() != null && u.USER_NIK.ToUpper() != null
                 )
                 .SingleOrDefaultAsync();
         }
