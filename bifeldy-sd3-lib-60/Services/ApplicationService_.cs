@@ -11,6 +11,7 @@
  * 
  */
 
+using System.Dynamic;
 using System.Reflection;
 
 using Microsoft.Extensions.Hosting;
@@ -34,6 +35,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
+        private IDictionary<string, dynamic> DbConfig = new ExpandoObject();
+
         public CApplicationService() {
             _SettingLibb = new SettingLibb.Class1();
         }
@@ -45,11 +48,16 @@ namespace bifeldy_sd3_lib_60.Services {
                 if (result.ToUpper().Contains("ERROR")) {
                     throw new Exception("SettingLibb Gagal");
                 }
-                return result;
+                if (!DbConfig.ContainsKey(key)) {
+                    DbConfig[key] = null;
+                }
+                DbConfig[key] = result;
             }
             catch {
-                return null;
+                // Gagal ambil kunci
+                // Lanjut pakai yang udah kesimpen aja
             }
+            return DbConfig[key];
         }
 
     }
