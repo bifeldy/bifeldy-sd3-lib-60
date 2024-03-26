@@ -57,7 +57,10 @@ namespace bifeldy_sd3_lib_60.Services {
                 // Gagal ambil kunci
                 // Lanjut pakai yang udah kesimpen aja
             }
-            return DbConfig[key];
+            if (!DbConfig.ContainsKey(key)) {
+                return DbConfig[key];
+            }
+            return null;
         }
 
     }
