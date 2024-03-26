@@ -43,24 +43,22 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string GetVariabel(string key, string kunci) {
             try {
+                if (DbConfig.ContainsKey(key)) {
+                    if (!string.IsNullOrEmpty(DbConfig[key])) {
+                        return DbConfig[key];
+                    }
+                }
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
                 string result = _SettingLibb.GetVariabel(key, kunci);
                 if (result.ToUpper().Contains("ERROR")) {
                     throw new Exception("SettingLibb Gagal");
                 }
-                if (!DbConfig.ContainsKey(key)) {
-                    DbConfig[key] = null;
-                }
-                DbConfig[key] = result;
-            }
-            catch {
-                // Gagal ambil kunci
-                // Lanjut pakai yang udah kesimpen aja
-            }
-            if (!DbConfig.ContainsKey(key)) {
+                DbConfig.Add(key, result);
                 return DbConfig[key];
             }
-            return null;
+            catch {
+                return null;
+            }
         }
 
     }
