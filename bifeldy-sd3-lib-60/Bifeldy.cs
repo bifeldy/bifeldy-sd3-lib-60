@@ -54,6 +54,11 @@ namespace bifeldy_sd3_lib_60
 
         private static string NginxPathName = "x-forwarded-prefix";
 
+        public static void AppContextOverride() {
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+            // AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+        }
+
         /* ** */
 
         public static void InitBuilder(WebApplicationBuilder builder) {
