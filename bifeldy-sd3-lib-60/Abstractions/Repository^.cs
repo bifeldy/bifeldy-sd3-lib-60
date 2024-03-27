@@ -42,6 +42,10 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         private readonly IOraPg _orapg;
         private readonly IMsSQL _mssql;
 
+        private string JenisDc = null;
+        private string KodeDc = null;
+        private string NamaDc = null;
+
         public CRepository(IOptions<EnvVar> envVar, IApplicationService @as, IOraPg orapg, IMsSQL mssql) {
             _envVar = envVar.Value;
             _as = @as;
@@ -50,30 +54,39 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         public async Task<string> GetJenisDc() {
-            if (_orapg.DbUsername.ToUpper().Contains("DCHO")) {
-                return "HO";
+            if (string.IsNullOrEmpty(JenisDc)) {
+                if (_orapg.DbUsername.ToUpper().Contains("DCHO")) {
+                    JenisDc = "HO";
+                }
+                else {
+                    JenisDc = (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
+                }
             }
-            else {
-                return (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
-            }
+            return JenisDc;
         }
 
         public async Task<string> GetKodeDc() {
-            if (_orapg.DbUsername.ToUpper().Contains("DCHO")) {
-                return "DCHO";
+            if (string.IsNullOrEmpty(KodeDc)) {
+                if (_orapg.DbUsername.ToUpper().Contains("DCHO")) {
+                    KodeDc = "DCHO";
+                }
+                else {
+                    KodeDc = (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_KODE?.ToUpper();
+                }
             }
-            else {
-                return (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_KODE.ToUpper();
-            }
+            return KodeDc;
         }
 
         public async Task<string> GetNamaDc() {
-            if (_orapg.DbUsername.ToUpper().Contains("DCHO")) {
-                return "DC HEAD OFFICE";
+            if (string.IsNullOrEmpty(NamaDc)) {
+                if (_orapg.DbUsername.ToUpper().Contains("DCHO")) {
+                    NamaDc = "DC HEAD OFFICE";
+                }
+                else {
+                    NamaDc = (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
+                }
             }
-            else {
-                return (await _orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
-            }
+            return NamaDc;
         }
 
         public async Task<DateTime> OraPg_DateYesterdayOrTommorow(int lastDay) {
