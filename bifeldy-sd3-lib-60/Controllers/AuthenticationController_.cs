@@ -124,7 +124,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             }
             catch (Exception ex) {
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 500 - {GetType().Name} :: BPB Supplier 😪",
+                    info = $"🙄 500 - {GetType().Name} :: Logout Gagal 😪",
                     result = new {
                         message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
@@ -147,7 +147,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             }
             catch (Exception ex) {
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 500 - {GetType().Name} :: BPB Supplier 😪",
+                    info = $"🙄 500 - {GetType().Name} :: Verifikasi Gagal 😪",
                     result = new {
                         message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }

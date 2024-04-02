@@ -57,6 +57,7 @@ namespace bifeldy_sd3_lib_60
         public static void AppContextOverride() {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             // AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
         }
 
         /* ** */
