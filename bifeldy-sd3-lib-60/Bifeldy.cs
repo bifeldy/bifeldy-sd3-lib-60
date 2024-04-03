@@ -171,22 +171,18 @@ namespace bifeldy_sd3_lib_60
         }
 
         public static void AddDependencyInjection() {
-            Services.AddDbContext<COracle>();
-            Services.AddDbContext<CPostgres>();
-            Services.AddDbContext<CMsSQL>();
+            Services.AddDbContext<IOracle, COracle>();
+            Services.AddDbContext<IPostgres, CPostgres>();
+            Services.AddDbContext<IMsSQL, CMsSQL>();
             // --
             // Setiap Request Cycle 1 Scope 1x New Object 1x Sesion Saja
-            Services.AddScoped<ProtectedSessionStorage>();
-            Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             // --
-            Services.AddScoped<IOracle, COracle>();
-            Services.AddScoped<IPostgres, CPostgres>();
-            Services.AddScoped<IMsSQL, CMsSQL>();
             Services.AddScoped<IOraPg>(sp => {
                 EnvVar _envVar = sp.GetRequiredService<IOptions<EnvVar>>().Value;
-                return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<CPostgres>() : sp.GetRequiredService<COracle>();
+                return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<IPostgres>() : sp.GetRequiredService<IOracle>();
             });
-            // --
+            Services.AddScoped<ProtectedSessionStorage>();
+            Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             Services.AddScoped<IGeneralRepository, CGeneralRepository>();
             Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
             Services.AddScoped<IApiTokenRepository, CApiTokenRepository>();
