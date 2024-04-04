@@ -12,21 +12,23 @@
  */
 
 using System.Net.Http.Headers;
+using System.Text;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
-        string[] ProhibitedHeaders { get; }
-        string[] RequestHeadersToRemove { get; }
-        string[] ResponseHeadersToRemove { get; }
+        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response);
         Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null);
-        Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null);
-        Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null);
+        Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null);
+        Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null);
         Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null);
-        Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null);
+        Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null);
         Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null);
     }
 
@@ -34,18 +36,18 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IConverterService _cs;
 
-        public string[] ProhibitedHeaders { get; } = new string[] {
+        private string[] ProhibitedHeaders { get; } = new string[] {
             "accept-charset", "accept-encoding", "access-control-request-headers", "access-control-request-method",
             "connection", "content-length", "cookie", "date", "dnt", "expect", "feature-policy", "host", "via",
             "keep-alive", "origin", "proxy-*", "sec-*", "referer", "te", "trailer", "transfer-encoding", "upgrade"
         };
 
-        public string[] RequestHeadersToRemove { get; } = new string [] {
+        private string[] RequestHeadersToRemove { get; } = new string [] {
             "host", "user-agent", "accept", "accept-encoding", "content-length", "x-real-ip",
             "cf-connecting-ip", "forwarded", "x-forwarded-proto", "x-forwarded-for", "x-cloud-trace-context"
         };
 
-        public string[] ResponseHeadersToRemove { get; } = new string [] {
+        private string[] ResponseHeadersToRemove { get; } = new string [] {
             "accept-ranges", "content-length", "keep-alive", "connection",
             "content-encoding", "set-cookie"
         };
@@ -54,32 +56,78 @@ namespace bifeldy_sd3_lib_60.Services {
             _cs = cs;
         }
 
-        private HttpRequestMessage FetchApi(
+        private async Task<HttpContent> GetHttpContent(dynamic httpContent, string contentType) {
+            HttpContent content = null;
+
+            if (httpContent.GetType() == typeof(string)) {
+                content = new StringContent(httpContent, Encoding.UTF8, contentType);
+            }
+            else if (typeof(HttpRequest).IsAssignableFrom(httpContent.GetType())) {
+                using (MemoryStream ms = new MemoryStream()) {
+                    await httpContent.Body.CopyToAsync(ms);
+                    await ms.FlushAsync();
+                    byte[] arr = ms.ToArray();
+                    content = new ByteArrayContent(arr);
+                }
+            }
+            else if (typeof(Stream).IsAssignableFrom(httpContent.GetType())) {
+                content = new StreamContent(httpContent);
+            }
+            else if (httpContent.GetType() == typeof(byte[])) {
+                content = new ByteArrayContent(httpContent);
+            }
+            else {
+                content = new StringContent(_cs.ObjectToJson(httpContent), Encoding.UTF8, contentType);
+            }
+
+            content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+            return content;
+        }
+
+        private async Task<HttpRequestMessage> FetchApi(
             string httpUri, HttpMethod httpMethod,
-            dynamic httpContent = null, bool multipart = false, List<Tuple<string, string>> httpHeaders = null
+            dynamic httpContent = null, bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
+            string[] contentKeyName = null, string[] contentType = null
         ) {
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage {
                 Method = httpMethod,
                 RequestUri = new Uri(httpUri)
             };
+
             if (httpContent != null) {
                 if (multipart) {
                     // Send binary form data with key value
                     // file=...binary...;
-                    ByteArrayContent byteArrayContent = new ByteArrayContent(httpContent);
-                    byteArrayContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
+                    List<HttpContent> lsContent = new List<HttpContent>();
+
+                    if (httpContent.GetType().IsArray) {
+                        for (int i = 0; i < httpContent.Length; i++) {
+                            lsContent.Add(
+                                await GetHttpContent(
+                                    httpContent[i],
+                                    contentType?.Length > 0 ? contentType[i] : "application/octet-stream"
+                                )
+                            );
+                        }
+                    }
+                    else {
+                        lsContent.Add(await GetHttpContent(httpContent, "application/octet-stream"));
+                    }
+
                     httpContent = new MultipartFormDataContent();
-                    httpContent.Add(byteArrayContent, "file");
+                    for (int i = 0; i < lsContent.Count; i++) {
+                        httpContent.Add(lsContent[i], contentKeyName?.Length > 0 ? contentKeyName[i] : "file");
+                    }
                 }
                 else {
-                    // Send normal json key value
-                    if (httpContent.GetType() != typeof(string)) {
-                        httpContent = _cs.ObjectToJson(httpContent);
-                    }
-                    httpContent = new StringContent(httpContent, System.Text.Encoding.UTF8, "application/json");
+                    httpContent = await GetHttpContent(
+                        httpContent,
+                        contentType?.Length > 0 ? contentType[0] : "application/json"
+                    );
                 }
                 httpRequestMessage.Content = httpContent;
             }
+
             if (httpHeaders != null) {
                 foreach (Tuple<string, string> hdr in httpHeaders) {
                     try {
@@ -90,43 +138,107 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 }
             }
+
             return httpRequestMessage;
         }
 
+        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response) {
+            string[] hdrListReq = ProhibitedHeaders.Union(RequestHeadersToRemove).ToArray();
+            List<Tuple<string, string>> lsHeader = new List<Tuple<string, string>>();
+            foreach (var header in request.Headers) {
+                bool isOk = true;
+                foreach (var hl in hdrListReq) {
+                    string h = hl.ToLower();
+                    string hdrKey = header.Key.ToLower();
+                    if (h.EndsWith("*")) {
+                        if (hdrKey.StartsWith(h.Split("*")[0])) {
+                            isOk = false;
+                        }
+                    }
+                    else if (hdrKey == h) {
+                        isOk = false;
+                    }
+                }
+                if (isOk) {
+                    lsHeader.Add(new Tuple<string, string>(header.Key, header.Value));
+                }
+            }
+
+            HttpResponseMessage res = await new HttpClient().SendAsync(
+                await FetchApi(
+                    urlTarget,
+                    new HttpMethod(request.Method),
+                    request,
+                    httpHeaders: lsHeader,
+                    contentType: new string[] {
+                        request.ContentType
+                    }
+                )
+            );
+
+            response.Clear();
+            var hdrContentListRes = res.Headers.Union(res.Content.Headers).ToArray();
+            string[] hdrListRes = ProhibitedHeaders.Union(ResponseHeadersToRemove).ToArray();
+            foreach (var header in hdrContentListRes) {
+                bool isOk = true;
+                foreach (var hl in hdrListRes) {
+                    string h = hl.ToLower();
+                    string hdrKey = header.Key.ToLower();
+                    if (h.EndsWith("*")) {
+                        if (hdrKey.StartsWith(h.Split("*")[0])) {
+                            isOk = false;
+                        }
+                    }
+                    else if (hdrKey == h) {
+                        isOk = false;
+                    }
+                }
+                if (isOk) {
+                    response.Headers[header.Key] = header.Value.ToArray();
+                }
+            }
+
+            response.StatusCode = (int) res.StatusCode;
+            await res.Content.CopyToAsync(response.Body);
+
+            // Soalnya Stream Body ~
+            return null;
+        }
+
         public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, HttpMethod.Head, httpHeaders: headerOpts));
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, HttpMethod.Head, httpHeaders: headerOpts));
         }
 
         public async Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, HttpMethod.Get, httpHeaders: headerOpts));
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, HttpMethod.Get, httpHeaders: headerOpts));
         }
 
         public async Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, HttpMethod.Delete, httpHeaders: headerOpts));
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, HttpMethod.Delete, httpHeaders: headerOpts));
         }
 
-        public async Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, HttpMethod.Post, objBody, multipart, headerOpts));
+        public async Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null) {
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, HttpMethod.Post, objBody, multipart, headerOpts, contentKeyName, contentType));
         }
 
-        public async Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, HttpMethod.Put, objBody, multipart, headerOpts));
+        public async Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null) {
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, HttpMethod.Put, objBody, multipart, headerOpts, contentKeyName, contentType));
         }
 
         public async Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, new HttpMethod("CONNECT"), httpHeaders: headerOpts));
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, new HttpMethod("CONNECT"), httpHeaders: headerOpts));
         }
 
         public async Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, new HttpMethod("OPTIONS"), httpHeaders: headerOpts));
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, new HttpMethod("OPTIONS"), httpHeaders: headerOpts));
         }
 
-        public async Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, new HttpMethod("PATCH"), objBody, multipart, headerOpts));
+        public async Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null) {
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, new HttpMethod("PATCH"), objBody, multipart, headerOpts, contentKeyName, contentType));
         }
 
         public async Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null) {
-            return await new HttpClient().SendAsync(FetchApi(urlPath, HttpMethod.Trace, httpHeaders: headerOpts));
+            return await new HttpClient().SendAsync(await FetchApi(urlPath, HttpMethod.Trace, httpHeaders: headerOpts));
         }
 
     }
