@@ -295,7 +295,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             ListApiDc dbi = listApiDcs.FirstOrDefault();
             if (dbi == null || string.IsNullOrEmpty(dbi?.IP_NGINX)) {
                 Callback(new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 400 - {GetType().Name} :: BPB Supplier 😪",
+                    info = $"🙄 400 - {GetType().Name} :: List Gudang 😪",
                     result = new {
                         message = $"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!"
                     }
