@@ -82,7 +82,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 });
                 FtpStatus ftpStatus = await ftpConnection.UploadFileAsync(fi.FullName, fn, progress: ftpProgress);
-                CFtpResultSendGet resultSend = new CFtpResultSendGet() {
+                CFtpResultSendGet resultSend = new CFtpResultSendGet {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = fi
                 };
@@ -113,7 +113,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 List<FtpResult> ftpResult = await ftpConnection.DownloadDirectoryAsync(saveDownloadTo, localDirFilePath, FtpFolderSyncMode.Update, FtpLocalExists.Overwrite, progress: ftpProgress);
                 foreach (FtpResult fr in ftpResult) {
                     string fileGet = "Fail";
-                    CFtpResultSendGet resultGet = new CFtpResultSendGet() {
+                    CFtpResultSendGet resultGet = new CFtpResultSendGet {
                         FtpStatusSendGet = fr.IsSuccess,
                         FileInformation = new FileInfo(Path.Combine(saveDownloadTo, fr.Name))
                     };
@@ -130,7 +130,7 @@ namespace bifeldy_sd3_lib_60.Services {
             else {
                 string fileGet = "Fail";
                 FtpStatus ftpStatus = await ftpConnection.DownloadFileAsync(_bs.DownloadFolderPath, localDirFilePath, FtpLocalExists.Overwrite, progress: ftpProgress);
-                CFtpResultSendGet resultGet = new CFtpResultSendGet() {
+                CFtpResultSendGet resultGet = new CFtpResultSendGet {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = new FileInfo(saveDownloadTo)
                 };

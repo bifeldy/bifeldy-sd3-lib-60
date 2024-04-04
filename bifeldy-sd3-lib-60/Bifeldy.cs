@@ -142,14 +142,14 @@ namespace bifeldy_sd3_lib_60
                 c.RouteTemplate = "{documentName}/swagger.json";
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
                     List<OpenApiServer> openApiServers = new List<OpenApiServer>() {
-                        new OpenApiServer() {
+                        new OpenApiServer {
                             Description = "Direct IP Server",
                             Url = "/"
                         }
                     };
                     string proxyPath = request.Headers[proxyHeaderName];
                     if (!string.IsNullOrEmpty(proxyPath)) {
-                        openApiServers.Add(new OpenApiServer() {
+                        openApiServers.Add(new OpenApiServer {
                             Description = "Reverse Proxy Path",
                             Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
                         });

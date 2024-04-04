@@ -16,6 +16,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
@@ -54,15 +55,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             RequestJson reqBody = null;
             string accept = request.Headers["accept"].ToString();
             if (accept.Contains("application/xml") || accept.Contains("application/json")) {
-                using (StreamReader reader = new StreamReader(request.Body)) {
-                    string rbString = await reader.ReadToEndAsync();
-                    if (!string.IsNullOrEmpty(rbString)) {
-                        try {
-                            reqBody = _converter.JsonToObject<RequestJson>(rbString);
-                        }
-                        catch (Exception ex) {
-                            _logger.LogError($"[JSON_BODY] 🔐 {ex.Message}");
-                        }
+                string rbString = await request.GetRequestBodyStringAsync();
+                if (!string.IsNullOrEmpty(rbString)) {
+                    try {
+                        reqBody = _converter.JsonToObject<RequestJson>(rbString);
+                    }
+                    catch (Exception ex) {
+                        _logger.LogError($"[JSON_BODY] 🔐 {ex.Message}");
                     }
                 }
             }
@@ -95,7 +94,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 //     throw new Exception("JWT Tidak Valid!");
                 // }
 
-                context.Items["user"] = new UserApiSession() {
+                context.Items["user"] = new UserApiSession {
                     name = claims.Where(c => c.Type == ClaimTypes.Name).First().Value,
                     role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), claims.Where(c => c.Type == ClaimTypes.Role).First().Value),
                     // dc_api_token_t = dcApiToken
