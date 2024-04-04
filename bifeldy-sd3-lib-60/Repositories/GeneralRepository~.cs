@@ -24,6 +24,9 @@ using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Tables;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Extensions;
+using System.Web;
+using Microsoft.AspNetCore.Http;
 
 namespace bifeldy_sd3_lib_60.Repositories {
 
@@ -34,6 +37,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
         Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
         Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
+        Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<ResponseJsonSingle<dynamic>, Uri> Callback);
     }
 
     public class CGeneralRepository : CRepository, IGeneralRepository {
@@ -261,6 +265,60 @@ namespace bifeldy_sd3_lib_60.Repositories {
             }
 
             return (isDcPg, dbOraPgDc, dbSqlDc);
+        }
+
+        public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<ResponseJsonSingle<dynamic>, Uri> Callback) {
+            string kodeDcSekarang = await GetKodeDc();
+            if (kodeDcSekarang.ToUpper() != "DCHO") {
+                throw new Exception("Khusus HO!");
+            }
+
+            DataTable dt = await _orapg.GetDataTableAsync($@"
+                SELECT
+                    a.dc_kode,
+                    a.ip_nginx,
+                    b.api_path
+                FROM
+                    dc_tabel_ip_t a
+                    LEFT JOIN api_dc_t b ON (
+                        a.dc_kode = b.dc_kode
+                        AND UPPER(b.app_name) = :app_name
+                    )
+                WHERE
+                    a.dc_kode = :kode_dc
+            ", new List<CDbQueryParamBind>() {
+                new CDbQueryParamBind { NAME = "app_name", VALUE = _as.AppName.ToUpper() },
+                new CDbQueryParamBind { NAME = "kode_dc", VALUE = dcKode.ToUpper() }
+            });
+            List<ListApiDc> listApiDcs = dt.ToList<ListApiDc>();
+
+            ListApiDc dbi = listApiDcs.FirstOrDefault();
+            if (dbi == null || string.IsNullOrEmpty(dbi?.IP_NGINX)) {
+                Callback(new ResponseJsonSingle<dynamic> {
+                    info = $"🙄 400 - {GetType().Name} :: BPB Supplier 😪",
+                    result = new {
+                        message = $"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!"
+                    }
+                }, null);
+            }
+            else {
+                string reqPathDc = request.Path;
+                // Pola URL :: /{AppName}{G001}{SIM}{/api/blablabla-controler}
+                if (!reqPathDc.ToLower().StartsWith($"/{_as.AppName.ToLower()}")) {
+                    reqPathDc = $"/{_as.AppName}{dcKode.ToUpper()}{(_as.DebugMode ? "SIM" : "")}{request.Path}";
+                }
+                string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? reqPathDc : dbi.API_PATH;
+                var urlApiDc = new Uri($"http://{dbi.IP_NGINX}{pathApiDc}{request.QueryString.Value}");
+
+                // API Key Khusus Bypass ~ Case Sensitive
+                var queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
+                queryApiDc.Set("key", _as.AppName);
+
+                var uriBuilder = new UriBuilder(urlApiDc);
+                uriBuilder.Query = queryApiDc.ToString();
+
+                Callback(null, uriBuilder.Uri);
+            }
         }
 
     }
