@@ -37,7 +37,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
         Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
         Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
-        Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<ResponseJsonSingle<dynamic>, Uri> Callback);
+        Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback);
     }
 
     public class CGeneralRepository : CRepository, IGeneralRepository {
@@ -267,7 +267,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return (isDcPg, dbOraPgDc, dbSqlDc);
         }
 
-        public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<ResponseJsonSingle<dynamic>, Uri> Callback) {
+        public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback) {
             string kodeDcSekarang = await GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
                 throw new Exception("Khusus HO!");
@@ -294,12 +294,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
             ListApiDc dbi = listApiDcs.FirstOrDefault();
             if (dbi == null || string.IsNullOrEmpty(dbi?.IP_NGINX)) {
-                Callback(new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 400 - {GetType().Name} :: List Gudang 😪",
-                    result = new {
-                        message = $"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!"
-                    }
-                }, null);
+                Callback($"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!", null);
             }
             else {
                 string reqPathDc = request.Path;
