@@ -8,11 +8,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="libwkhtmltox.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="libwkhtmltox.dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="libwkhtmltox.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
     <PackageReference Include="Costura.Fody" Version="5.7.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="DotNetZip" Version="1.16.0" />
     <PackageReference Include="FluentFTP" Version="39.4.0" />
     <PackageReference Include="Fody" Version="6.8.0">
@@ -25,6 +38,7 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.22" />
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="6.21.130" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.8.0" />
+    <PackageReference Include="ReportViewerCore.NETCore" Version="15.1.19" />
     <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
     <PackageReference Include="SSH.NET" Version="2023.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />

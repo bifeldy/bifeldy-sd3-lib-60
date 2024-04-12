@@ -15,11 +15,15 @@ using System.Drawing;
 using System.Reflection;
 using System.Runtime.Versioning;
 
+using DinkToPdf;
+using DinkToPdf.Contracts;
+
 using Newtonsoft.Json;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IConverterService {
+        byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument);
         byte[] ImageToByte(Image x);
         Image ByteToImage(byte[] byteArray);
         T JsonToObject<T>(string j2o);
@@ -31,8 +35,14 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public sealed class CConverterService : IConverterService {
 
-        public CConverterService() {
-            //
+        private readonly IConverter _converter;
+
+        public CConverterService(IConverter converter) {
+            _converter = converter;
+        }
+
+        public byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument) {
+            return _converter.Convert(htmlToPdfDocument);
         }
 
         [SupportedOSPlatform("windows")]

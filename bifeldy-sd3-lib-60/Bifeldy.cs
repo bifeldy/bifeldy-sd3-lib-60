@@ -25,6 +25,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
 
+using DinkToPdf;
+using DinkToPdf.Contracts;
+
 using Quartz;
 
 using Serilog;
@@ -171,6 +174,8 @@ namespace bifeldy_sd3_lib_60
         }
 
         public static void AddDependencyInjection() {
+            Services.AddHttpContextAccessor();
+            // --
             Services.AddDbContext<IOracle, COracle>();
             Services.AddDbContext<IPostgres, CPostgres>();
             Services.AddDbContext<IMsSQL, CMsSQL>();
@@ -191,6 +196,9 @@ namespace bifeldy_sd3_lib_60
             // --
             // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
             // --
+            Services.AddSingleton<IConverter>(sp => {
+                return new SynchronizedConverter(new PdfTools());
+            });
             Services.AddSingleton<IApplicationService, CApplicationService>();
             Services.AddSingleton<IGlobalService, CGlobalService>();
             Services.AddSingleton<IConverterService, CConverterService>();
@@ -205,6 +213,7 @@ namespace bifeldy_sd3_lib_60
             Services.AddSingleton<ILockerService, CLockerService>();
             Services.AddSingleton<IPubSubService, CPubSubService>();
             Services.AddSingleton<IKafkaService, CKafkaService>();
+            Services.AddSingleton<IRdlcService, CRdlcService>();
         }
 
         /* ** */
