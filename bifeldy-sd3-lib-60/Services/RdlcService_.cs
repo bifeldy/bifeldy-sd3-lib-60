@@ -12,6 +12,7 @@
  */
 
 using System.Data;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.AspNetCore.Hosting;
@@ -124,6 +125,9 @@ namespace bifeldy_sd3_lib_60.Services {
             Orientation pageOrientation = Orientation.Portrait,
             PaperKind paperType = PaperKind.Custom
         ) {
+            if (saveAs == "PDF" && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                throw new Exception("PDF Asli Hanya Dapat Dijalankan Pada OS Windows");
+            }
             if (margin == null) {
                 margin = new MarginSettings {
                     Top = 1,
