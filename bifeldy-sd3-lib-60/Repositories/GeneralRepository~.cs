@@ -240,7 +240,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             CDatabase dbConHo = null;
             CDatabase dbOraPgDc = null;
             CDatabase dbSqlDc = null;
-            bool isDcPg = false;
+            bool dbIsPostgre = false;
 
             string kodeDcSekarang = await GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
@@ -254,8 +254,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
             DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
             if (dbi != null) {
-                isDcPg = dbi.FLAG_DBPG?.ToUpper() == "Y";
-                if (isDcPg) {
+                dbIsPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
+                if (dbIsPostgre) {
                     dbOraPgDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                 }
                 else {
@@ -264,7 +264,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 dbSqlDc = _mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
             }
 
-            return (isDcPg, dbOraPgDc, dbSqlDc);
+            return (dbIsPostgre, dbOraPgDc, dbSqlDc);
         }
 
         public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback) {
