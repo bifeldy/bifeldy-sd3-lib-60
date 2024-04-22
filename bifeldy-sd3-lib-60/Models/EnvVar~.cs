@@ -16,7 +16,7 @@ namespace bifeldy_sd3_lib_60.Models {
 
     public class EnvVar {
 
-        private string GetEnvVar(string key) {
+        protected string GetEnvVar(string key) {
             return Environment.GetEnvironmentVariable(key);
         }
 
