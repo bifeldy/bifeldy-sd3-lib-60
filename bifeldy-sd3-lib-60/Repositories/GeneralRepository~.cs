@@ -297,12 +297,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 Callback($"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!", null);
             }
             else {
-                string reqPathDc = request.Path;
-                // Pola URL :: /{AppName}{G001}{SIM}{/api/blablabla-controler}
-                if (!reqPathDc.ToLower().StartsWith($"/{_as.AppName.ToLower()}")) {
-                    reqPathDc = $"/{_as.AppName}{dcKode.ToUpper()}{(_as.DebugMode ? "SIM" : "")}{request.Path}";
-                }
-                string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? reqPathDc : dbi.API_PATH;
+                string separator = "/api/";
+                string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? request.Path.Value : $"{dbi.API_PATH}{request.Path.Value?.Split(separator).Last()}";
                 var urlApiDc = new Uri($"http://{dbi.IP_NGINX}{pathApiDc}{request.QueryString.Value}");
 
                 // API Key Khusus Bypass ~ Case Sensitive
