@@ -53,6 +53,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 return;
             }
 
+            string[] serverIps = _app.GetAllIpAddress();
+            foreach (var ip in serverIps) {
+                if (!_gs.AllowedIpOrigin.Contains(ip)) {
+                    _gs.AllowedIpOrigin.Add(ip);
+                }
+            }
+
             string ipDomainHost = request.Host.Host;
             if (!_gs.AllowedIpOrigin.Contains(ipDomainHost)) {
                 _gs.AllowedIpOrigin.Add(ipDomainHost);
