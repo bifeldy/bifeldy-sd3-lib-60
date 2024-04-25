@@ -31,7 +31,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     }
 
     [ApiController]
-    [Route("authentication")]
+    [Route("")]
     public class AuthenticationController : ControllerBase {
 
         private readonly IHttpContextAccessor _hca;
@@ -106,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [HttpDelete("logout")]
         [MinRole(UserSessionRole.EXTERNAL_BOT)]
         // [AllowedRoles(UserSessionRole.USER_SD_SSD_3, UserSessionRole.EXTERNAL_BOT)]
-        [ApiExplorerSettings(IgnoreApi = true)]
+        [ApiExplorerSettings(IgnoreApi = false)]
         [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
             try {
