@@ -290,13 +290,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     long startIndex = 0;
                     int bufferSize = 8192;
                     byte[] outbyte = new byte[bufferSize - 1];
-                    int retval = (int)rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
+                    int retval = (int) rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
                     while (retval != bufferSize) {
                         bw.Write(outbyte);
                         bw.Flush();
                         Array.Clear(outbyte, 0, bufferSize);
                         startIndex += bufferSize;
-                        retval = (int)rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
+                        retval = (int) rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
                     }
 
                     bw.Write(outbyte, 0, (retval > 0 ? retval : 1) - 1);

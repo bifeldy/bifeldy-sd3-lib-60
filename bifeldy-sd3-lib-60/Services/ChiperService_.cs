@@ -192,7 +192,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     _ = fs.Read(buffer, 0, maxContent);
                 }
                 else {
-                    _ = fs.Read(buffer, 0, (int)fs.Length);
+                    _ = fs.Read(buffer, 0, (int) fs.Length);
                 }
             }
 

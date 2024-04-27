@@ -142,14 +142,14 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = $@"SELECT * FROM {tableName} WHERE ROWNUM <= 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -157,7 +157,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -165,7 +165,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -173,7 +173,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = procedureName;
             cmd.CommandType = CommandType.StoredProcedure;
             this.BindQueryParameter(cmd, bindParam);
@@ -186,7 +186,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             OracleBulkCopy dbBulkCopy = null;
             try {
                 await this.OpenConnection();
-                dbBulkCopy = new OracleBulkCopy((OracleConnection)this.GetConnection()) {
+                dbBulkCopy = new OracleBulkCopy((OracleConnection) this.GetConnection()) {
                     DestinationTableName = tableName
                 };
                 dbBulkCopy.WriteToServer(dataTable);
@@ -206,7 +206,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -214,7 +214,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand)this.CreateCommand();
+            var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -222,7 +222,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid) {
-            var oracle = (COracle)this.Clone();
+            var oracle = (COracle) this.Clone();
             string dbTnsOdp = $"(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={dbIpAddrss})(PORT={dbPort})))(CONNECT_DATA=(SERVICE_NAME={dbNameSid})))";
             oracle.InitializeConnection(dbUsername, dbPassword, dbTnsOdp);
             oracle.ReSetConnectionString();

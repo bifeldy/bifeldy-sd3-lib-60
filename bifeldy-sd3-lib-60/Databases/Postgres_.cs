@@ -127,14 +127,14 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -142,7 +142,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -150,7 +150,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -158,7 +158,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             string sqlTextQueryParameters = "(";
             if (bindParam != null) {
                 for (int i = 0; i < bindParam.Count; i++) {
@@ -191,7 +191,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 int[] lengths = new int[colCount];
                 string[] fieldNames = new string[colCount];
 
-                var cmd = (NpgsqlCommand)this.CreateCommand();
+                var cmd = (NpgsqlCommand) this.CreateCommand();
                 cmd.CommandText = $"SELECT * FROM {tableName} LIMIT 1";
                 using (var rdr = (NpgsqlDataReader) await cmd.ExecuteReaderAsync()) {
                     if (rdr.FieldCount != colCount) {
@@ -200,8 +200,8 @@ namespace bifeldy_sd3_lib_60.Databases {
 
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
                     for (int i = 0; i < colCount; i++) {
-                        types[i] = (NpgsqlDbType)columns[i].NpgsqlDbType;
-                        lengths[i] = columns[i].ColumnSize == null ? 0 : (int)columns[i].ColumnSize;
+                        types[i] = (NpgsqlDbType) columns[i].NpgsqlDbType;
+                        lengths[i] = columns[i].ColumnSize == null ? 0 : (int) columns[i].ColumnSize;
                         fieldNames[i] = columns[i].ColumnName;
                     }
                 }
@@ -211,7 +211,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                     _ = sB.Append(", " + fieldNames[p]);
                 }
 
-                using (NpgsqlBinaryImporter writer = ((NpgsqlConnection)this.GetConnection()).BeginBinaryImport($"COPY {tableName} ({sB}) FROM STDIN (FORMAT BINARY)")) {
+                using (NpgsqlBinaryImporter writer = ((NpgsqlConnection) this.GetConnection()).BeginBinaryImport($"COPY {tableName} ({sB}) FROM STDIN (FORMAT BINARY)")) {
                     for (int j = 0; j < dataTable.Rows.Count; j++) {
                         DataRow dR = dataTable.Rows[j];
                         writer.StartRow();
@@ -303,7 +303,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                                                 break;
                                             }
 
-                                            writer.Write((short)dR[i], types[i]);
+                                            writer.Write((short) dR[i], types[i]);
                                         }
                                         catch (Exception ex) {
                                             this._logger.LogError("[PG_DBTYPE_SMALLINT] {ex}", ex.Message);
@@ -341,7 +341,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -349,7 +349,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand)this.CreateCommand();
+            var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -357,7 +357,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {
-            var postgres = (CPostgres)this.Clone();
+            var postgres = (CPostgres) this.Clone();
             postgres.InitializeConnection(dbIpAddrss, dbPort, dbUsername, dbPassword, dbName);
             postgres.ReSetConnectionString();
             return postgres;

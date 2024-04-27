@@ -121,14 +121,14 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -136,7 +136,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -144,7 +144,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -152,7 +152,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = procedureName;
             cmd.CommandType = CommandType.StoredProcedure;
             this.BindQueryParameter(cmd, bindParam);
@@ -165,7 +165,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             SqlBulkCopy dbBulkCopy = null;
             try {
                 await this.OpenConnection();
-                dbBulkCopy = new SqlBulkCopy((SqlConnection)this.GetConnection()) {
+                dbBulkCopy = new SqlBulkCopy((SqlConnection) this.GetConnection()) {
                     DestinationTableName = tableName
                 };
                 await dbBulkCopy.WriteToServerAsync(dataTable);
@@ -185,7 +185,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -193,7 +193,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand)this.CreateCommand();
+            var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -201,7 +201,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {
-            var mssql = (CMsSQL)this.Clone();
+            var mssql = (CMsSQL) this.Clone();
             mssql.InitializeConnection(dbIpAddrss, dbUsername, dbPassword, dbName);
             mssql.ReSetConnectionString();
             return mssql;

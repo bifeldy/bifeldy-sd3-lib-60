@@ -101,7 +101,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<string> LoginUser(string userNameNik, string password) {
             DC_USER_T dcUserT = await this.GetByUserNameNikPassword(userNameNik, password);
             if (dcUserT != null) {
-                var casp = (CustomAuthenticationStateProvider)this._asp;
+                var casp = (CustomAuthenticationStateProvider) this._asp;
                 await casp.UpdateAuthenticationState(new UserWebSession {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
@@ -115,7 +115,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task LogoutUser() {
-            var casp = (CustomAuthenticationStateProvider)this._asp;
+            var casp = (CustomAuthenticationStateProvider) this._asp;
             await casp.UpdateAuthenticationState(null);
         }
 

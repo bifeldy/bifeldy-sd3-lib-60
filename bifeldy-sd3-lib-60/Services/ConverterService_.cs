@@ -44,10 +44,10 @@ namespace bifeldy_sd3_lib_60.Services {
         public byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument) => this._converter.Convert(htmlToPdfDocument);
 
         [SupportedOSPlatform("windows")]
-        public byte[] ImageToByte(Image image) => (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
+        public byte[] ImageToByte(Image image) => (byte[]) new ImageConverter().ConvertTo(image, typeof(byte[]));
 
         [SupportedOSPlatform("windows")]
-        public Image ByteToImage(byte[] byteArray) => (Bitmap)new ImageConverter().ConvertFrom(byteArray);
+        public Image ByteToImage(byte[] byteArray) => (Bitmap) new ImageConverter().ConvertFrom(byteArray);
 
         public T JsonToObject<T>(string j2o) => JsonConvert.DeserializeObject<T>(j2o);
 

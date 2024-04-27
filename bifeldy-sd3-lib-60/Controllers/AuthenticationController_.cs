@@ -110,7 +110,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
             try {
-                var userSession = (UserApiSession)this._hca.HttpContext.Items["user"];
+                var userSession = (UserApiSession) this._hca.HttpContext.Items["user"];
 
                 API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(userSession.name);
                 dcApiToken.TOKEN_SEKALI_PAKAI = null;
@@ -138,7 +138,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
             try {
-                var userSession = (UserApiSession)this._hca.HttpContext.Items["user"];
+                var userSession = (UserApiSession) this._hca.HttpContext.Items["user"];
 
                 return this.Accepted(new ResponseJsonSingle<dynamic> {
                     info = $"😅 202 - {this.GetType().Name} :: Verifikasi Berhasil 🤣",

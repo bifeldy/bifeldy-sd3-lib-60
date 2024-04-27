@@ -250,7 +250,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 dbConHo = this._oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
             }
             else {
-                dbConHo = (CDatabase)this._orapg;
+                dbConHo = (CDatabase) this._orapg;
             }
 
             DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
