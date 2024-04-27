@@ -48,38 +48,39 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            _asp = asp;
-            _orapg = orapg;
+            this._asp = asp;
+            this._orapg = orapg;
         }
 
         public async Task<bool> Create(DC_USER_T user) {
-            _orapg.Set<DC_USER_T>().Add(user);
-            return await _orapg.SaveChangesAsync() > 0;
+            _ = this._orapg.Set<DC_USER_T>().Add(user);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         public async Task<List<DC_USER_T>> GetAll(string userNameNik = null) {
-            DbSet<DC_USER_T> dbSet = _orapg.Set<DC_USER_T>();
+            DbSet<DC_USER_T> dbSet = this._orapg.Set<DC_USER_T>();
             IQueryable<DC_USER_T> query = null;
             if (!string.IsNullOrEmpty(userNameNik)) {
                 query = dbSet.Where(u => u.USER_NAME.ToUpper() == userNameNik.ToUpper() || u.USER_NIK.ToUpper() == userNameNik.ToUpper());
             }
-            return await ((query == null) ? dbSet : query).ToListAsync();
+
+            return await (query ?? dbSet).ToListAsync();
         }
 
         public async Task<DC_USER_T> GetByUserNik(string userNik) {
-            return await _orapg.Set<DC_USER_T>()
+            return await this._orapg.Set<DC_USER_T>()
                 .Where(u => u.USER_NIK.ToUpper() == userNik.ToUpper())
                 .SingleOrDefaultAsync();
         }
 
         public async Task<DC_USER_T> GetByUserName(string userName) {
-            return await _orapg.Set<DC_USER_T>()
+            return await this._orapg.Set<DC_USER_T>()
                 .Where(u => u.USER_NAME.ToUpper() == userName.ToUpper())
                 .SingleOrDefaultAsync();
         }
 
         public async Task<DC_USER_T> GetByUserNameNikPassword(string userNameNik, string password) {
-            return await _orapg.Set<DC_USER_T>()
+            return await this._orapg.Set<DC_USER_T>()
                 .Where(u => (
                         u.USER_NAME.ToUpper() == userNameNik.ToUpper() ||
                         u.USER_NIK.ToUpper() == userNameNik.ToUpper()
@@ -90,17 +91,17 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<bool> Delete(string userNik) {
-            DC_USER_T user = await GetByUserNik(userNik);
-            _orapg.Set<DC_USER_T>().Remove(user);
-            return await _orapg.SaveChangesAsync() > 0;
+            DC_USER_T user = await this.GetByUserNik(userNik);
+            _ = this._orapg.Set<DC_USER_T>().Remove(user);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         /* ** */
 
         public async Task<string> LoginUser(string userNameNik, string password) {
-            DC_USER_T dcUserT = await GetByUserNameNikPassword(userNameNik, password);
+            DC_USER_T dcUserT = await this.GetByUserNameNikPassword(userNameNik, password);
             if (dcUserT != null) {
-                CustomAuthenticationStateProvider casp = (CustomAuthenticationStateProvider) _asp;
+                var casp = (CustomAuthenticationStateProvider)this._asp;
                 await casp.UpdateAuthenticationState(new UserWebSession {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
@@ -109,11 +110,12 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 });
                 return null;
             }
+
             return "Username / Password Salah";
         }
 
         public async Task LogoutUser() {
-            CustomAuthenticationStateProvider casp = (CustomAuthenticationStateProvider) _asp;
+            var casp = (CustomAuthenticationStateProvider)this._asp;
             await casp.UpdateAuthenticationState(null);
         }
 

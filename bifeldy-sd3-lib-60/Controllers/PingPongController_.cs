@@ -27,9 +27,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         [HttpHead]
         [SwaggerOperation(Summary = "Untuk test Ping-Pong saja")]
-        public IActionResult PingPong() {
-            return Ok();
-        }
+        public IActionResult PingPong() => this.Ok();
 
     }
 

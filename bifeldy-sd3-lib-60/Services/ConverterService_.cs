@@ -38,30 +38,20 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IConverter _converter;
 
         public CConverterService(IConverter converter) {
-            _converter = converter;
+            this._converter = converter;
         }
 
-        public byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument) {
-            return _converter.Convert(htmlToPdfDocument);
-        }
+        public byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument) => this._converter.Convert(htmlToPdfDocument);
 
         [SupportedOSPlatform("windows")]
-        public byte[] ImageToByte(Image image) {
-            return (byte[]) new ImageConverter().ConvertTo(image, typeof(byte[]));
-        }
+        public byte[] ImageToByte(Image image) => (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
 
         [SupportedOSPlatform("windows")]
-        public Image ByteToImage(byte[] byteArray) {
-            return (Bitmap) new ImageConverter().ConvertFrom(byteArray);
-        }
+        public Image ByteToImage(byte[] byteArray) => (Bitmap)new ImageConverter().ConvertFrom(byteArray);
 
-        public T JsonToObject<T>(string j2o) {
-            return JsonConvert.DeserializeObject<T>(j2o);
-        }
+        public T JsonToObject<T>(string j2o) => JsonConvert.DeserializeObject<T>(j2o);
 
-        public string ObjectToJson(object o2j) {
-            return JsonConvert.SerializeObject(o2j);
-        }
+        public string ObjectToJson(object o2j) => JsonConvert.SerializeObject(o2j);
 
         public T GetDefaultValueT<T>() {
             dynamic x = null;
@@ -85,6 +75,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     x = false;
                     break;
             }
+
             return (T) Convert.ChangeType(x, typeof(T));
         }
 
@@ -111,7 +102,8 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 }
             }
-            return $"{((decimal)bytes / digit):0.00} {ext}";
+
+            return $"{(decimal) bytes / digit:0.00} {ext}";
         }
 
         public Dictionary<string, T> ClassToDictionary<T>(object obj) {
@@ -124,6 +116,7 @@ namespace bifeldy_sd3_lib_60.Services {
                                 if (data.GetType() == typeof(DateTime)) {
                                     data = ((DateTime) data).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
                                 }
+
                                 if (typeof(T) == typeof(object)) {
                                     data = ObjectToJson(data);
                                 }
@@ -131,10 +124,11 @@ namespace bifeldy_sd3_lib_60.Services {
                                     data = $"{data}";
                                 }
                             }
+
                             return (T) data;
                         }
                         catch {
-                            return GetDefaultValueT<T>();
+                            return this.GetDefaultValueT<T>();
                         }
                     });
         }

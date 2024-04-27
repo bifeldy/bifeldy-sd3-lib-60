@@ -36,19 +36,19 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             IConverterService converter,
             IChiperService chiper
         ) {
-            _next = next;
-            _logger = logger;
-            _converter = converter;
-            _chiper = chiper;
+            this._next = next;
+            this._logger = logger;
+            this._converter = converter;
+            this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context, IApiTokenRepository _apiTokenRepo) {
+        public async Task Invoke(HttpContext context) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
             if (!request.Path.Value.StartsWith("/api/") || request.Path.Value.StartsWith("/api/swagger")) {
-                await _next(context);
+                await this._next(context);
                 return;
             }
 
@@ -58,10 +58,10 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 string rbString = await request.GetRequestBodyStringAsync();
                 if (!string.IsNullOrEmpty(rbString)) {
                     try {
-                        reqBody = _converter.JsonToObject<RequestJson>(rbString);
+                        reqBody = this._converter.JsonToObject<RequestJson>(rbString);
                     }
                     catch (Exception ex) {
-                        _logger.LogError($"[JSON_BODY] 🔐 {ex.Message}");
+                        this._logger.LogError("[JSON_BODY] 🔐 {ex}", ex.Message);
                     }
                 }
             }
@@ -83,11 +83,12 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             if (token.StartsWith("Bearer ")) {
                 token = token[7..];
             }
+
             context.Items["token"] = token;
-            _logger.LogInformation($"[JWT_MIDDLEWARE] 🔐 {token}");
+            this._logger.LogInformation("[JWT_MIDDLEWARE] 🔐 {token}", token);
 
             try {
-                IEnumerable<Claim> claims = _chiper.DecodeJWT(token);
+                IEnumerable<Claim> claims = this._chiper.DecodeJWT(token);
 
                 // API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(claims.Where(c => c.Type == ClaimTypes.Name).First().Value);
                 // if (dcApiToken == null) {
@@ -116,7 +117,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 }
             }
 
-            await _next(context);
+            await this._next(context);
         }
 
     }

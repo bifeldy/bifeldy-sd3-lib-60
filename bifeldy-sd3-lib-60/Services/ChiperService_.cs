@@ -54,38 +54,39 @@ namespace bifeldy_sd3_lib_60.Services {
         private const int DerivationIterations = 1000;
 
         public CChiperService(IOptions<EnvVar> envVar, IApplicationService app, IStreamService stream) {
-            _envVar = envVar.Value;
-            _app = app;
-            _stream = stream;
+            this._envVar = envVar.Value;
+            this._app = app;
+            this._stream = stream;
         }
 
         private byte[] Generate256BitsOfRandomEntropy() {
             byte[] randomBytes = new byte[32]; // 32 Bytes will give us 256 bits.
-            using (RandomNumberGenerator rngCsp = RandomNumberGenerator.Create()) {
+            using (var rngCsp = RandomNumberGenerator.Create()) {
                 // Fill the array with cryptographically secure random bytes.
                 rngCsp.GetBytes(randomBytes);
             }
+
             return randomBytes;
         }
 
         public string EncryptText(string plainText, string passPhrase = null) {
             if (string.IsNullOrEmpty(passPhrase)) {
-                passPhrase = _app.AppName;
+                passPhrase = this._app.AppName;
             }
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
-            byte[] saltStringBytes = Generate256BitsOfRandomEntropy();
-            byte[] ivStringBytes = Generate256BitsOfRandomEntropy();
+            byte[] saltStringBytes = this.Generate256BitsOfRandomEntropy();
+            byte[] ivStringBytes = this.Generate256BitsOfRandomEntropy();
             byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            using (Rfc2898DeriveBytes password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
+            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (RijndaelManaged symmetricKey = new RijndaelManaged()) {
+                using (var symmetricKey = new RijndaelManaged()) {
                     symmetricKey.BlockSize = 256;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform encryptor = symmetricKey.CreateEncryptor(keyBytes, ivStringBytes)) {
-                        using (MemoryStream memoryStream = new MemoryStream()) {
-                            using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write)) {
+                        using (var memoryStream = new MemoryStream()) {
+                            using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write)) {
                                 cryptoStream.Write(plainTextBytes, 0, plainTextBytes.Length);
                                 cryptoStream.FlushFinalBlock();
                                 // Create the final bytes as a concatenation of the random salt bytes, the random iv bytes and the cipher bytes.
@@ -104,7 +105,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string DecryptText(string cipherText, string passPhrase = null) {
             if (string.IsNullOrEmpty(passPhrase)) {
-                passPhrase = _app.AppName;
+                passPhrase = this._app.AppName;
             }
             // Get the complete stream of bytes that represent:
             // [32 bytes of Salt] + [32 bytes of IV] + [n bytes of CipherText]
@@ -114,17 +115,17 @@ namespace bifeldy_sd3_lib_60.Services {
             // Get the IV bytes by extracting the next 32 bytes from the supplied cipherText bytes.
             byte[] ivStringBytes = cipherTextBytesWithSaltAndIv.Skip(Keysize / 8).Take(Keysize / 8).ToArray();
             // Get the actual cipher text bytes by removing the first 64 bytes from the cipherText string.
-            byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip((Keysize / 8) * 2).Take(cipherTextBytesWithSaltAndIv.Length - ((Keysize / 8) * 2)).ToArray();
-            using (Rfc2898DeriveBytes password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
+            byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip(Keysize / 8 * 2).Take(cipherTextBytesWithSaltAndIv.Length - (Keysize / 8 * 2)).ToArray();
+            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (RijndaelManaged symmetricKey = new RijndaelManaged()) {
+                using (var symmetricKey = new RijndaelManaged()) {
                     symmetricKey.BlockSize = 256;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes)) {
-                        using (MemoryStream memoryStream = new MemoryStream(cipherTextBytes)) {
-                            using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read)) {
-                                using (StreamReader streamReader = new StreamReader(cryptoStream, Encoding.UTF8)) {
+                        using (var memoryStream = new MemoryStream(cipherTextBytes)) {
+                            using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read)) {
+                                using (var streamReader = new StreamReader(cryptoStream, Encoding.UTF8)) {
                                     return streamReader.ReadToEnd();
                                 }
                             }
@@ -135,8 +136,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string CalculateMD5(string filePath) {
-            using (MD5 md5 = MD5.Create()) {
-                using (MemoryStream ms = _stream.ReadFileAsBinaryStream(filePath)) {
+            using (var md5 = MD5.Create()) {
+                using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                     byte[] hash = md5.ComputeHash(ms.ToArray());
                     return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
                 }
@@ -144,8 +145,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string CalculateCRC32(string filePath) {
-            CRC32 crc32 = new CRC32();
-            using (MemoryStream ms = _stream.ReadFileAsBinaryStream(filePath)) {
+            var crc32 = new CRC32();
+            using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                 byte[] data = ms.ToArray();
                 crc32.SlurpBlock(data, 0, data.Length);
                 return crc32.Crc32Result.ToString("x");
@@ -153,13 +154,14 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string CalculateSHA1(string filePath) {
-            using (SHA1 sha1 = SHA1.Create()) {
-                using (MemoryStream ms = _stream.ReadFileAsBinaryStream(filePath)) {
+            using (var sha1 = SHA1.Create()) {
+                using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                     byte[] hash = sha1.ComputeHash(ms.ToArray());
-                    StringBuilder sb = new StringBuilder(hash.Length * 2);
+                    var sb = new StringBuilder(hash.Length * 2);
                     foreach (byte b in hash) {
-                        sb.Append(b.ToString("x"));
+                        _ = sb.Append(b.ToString("x"));
                     }
+
                     return sb.ToString();
                 }
             }
@@ -182,16 +184,18 @@ namespace bifeldy_sd3_lib_60.Services {
             if (!File.Exists(filename)) {
                 throw new FileNotFoundException(filename + " Not Found");
             }
+
             const int maxContent = 256;
             byte[] buffer = new byte[maxContent];
-            using (FileStream fs = new FileStream(filename, FileMode.Open)) {
+            using (var fs = new FileStream(filename, FileMode.Open)) {
                 if (fs.Length >= maxContent) {
-                    fs.Read(buffer, 0, maxContent);
+                    _ = fs.Read(buffer, 0, maxContent);
                 }
                 else {
-                    fs.Read(buffer, 0, (int)fs.Length);
+                    _ = fs.Read(buffer, 0, (int)fs.Length);
                 }
             }
+
             IntPtr mimeTypePtr = IntPtr.Zero;
             try {
                 int result = FindMimeFromData(IntPtr.Zero, null, buffer, maxContent, null, 0, out mimeTypePtr, 0);
@@ -199,6 +203,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     Marshal.FreeCoTaskMem(mimeTypePtr);
                     throw Marshal.GetExceptionForHR(result);
                 }
+
                 string mime = Marshal.PtrToStringUni(mimeTypePtr);
                 Marshal.FreeCoTaskMem(mimeTypePtr);
                 return mime;
@@ -207,31 +212,33 @@ namespace bifeldy_sd3_lib_60.Services {
                 if (mimeTypePtr != IntPtr.Zero) {
                     Marshal.FreeCoTaskMem(mimeTypePtr);
                 }
+
                 return "unknown/unknown";
             }
         }
 
         public string HashText(string text) {
-            using (SHA1Managed sha1 = new SHA1Managed()) {
-                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(text));
+            using (var sha1 = new SHA1Managed()) {
+                byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(text));
                 var sb = new StringBuilder(hash.Length * 2);
                 foreach (byte b in hash) {
-                    sb.Append(b.ToString("x2"));
+                    _ = sb.Append(b.ToString("x2"));
                 }
+
                 return sb.ToString();
             }
         }
 
         public string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1) {
-            SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(HashText(_envVar.JWT_SECRET)));
-            SigningCredentials credetial = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            List<Claim> userClaim = new List<Claim> {
-                new Claim(ClaimTypes.Name, userSession.name),
-                new Claim(ClaimTypes.Role, userSession.role.ToString())
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.HashText(this._envVar.JWT_SECRET)));
+            var credetial = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var userClaim = new List<Claim> {
+                new(ClaimTypes.Name, userSession.name),
+                new(ClaimTypes.Role, userSession.role.ToString())
             };
-            JwtSecurityToken token = new JwtSecurityToken(
-                _app.AppName,
-                _envVar.JWT_AUDIENCE,
+            var token = new JwtSecurityToken(
+                this._app.AppName,
+                this._envVar.JWT_AUDIENCE,
                 userClaim,
                 expires: DateTime.Now.AddMilliseconds(expiredNextMilliSeconds),
                 signingCredentials: credetial
@@ -240,19 +247,19 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public IEnumerable<Claim> DecodeJWT(string token) {
-            SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(HashText(_envVar.JWT_SECRET)));
-            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-            tokenHandler.ValidateToken(token, new TokenValidationParameters {
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.HashText(this._envVar.JWT_SECRET)));
+            var tokenHandler = new JwtSecurityTokenHandler();
+            _ = tokenHandler.ValidateToken(token, new TokenValidationParameters {
                 ValidateAudience = true,
                 ValidateIssuer = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = key,
                 ClockSkew = TimeSpan.Zero,
-                ValidIssuer = _app.AppName,
-                ValidAudience = _envVar.JWT_AUDIENCE
+                ValidIssuer = this._app.AppName,
+                ValidAudience = this._envVar.JWT_AUDIENCE
             }, out SecurityToken validateToken);
 
-            JwtSecurityToken jwtToken = (JwtSecurityToken) validateToken;
+            var jwtToken = (JwtSecurityToken) validateToken;
             return jwtToken.Claims;
         }
 

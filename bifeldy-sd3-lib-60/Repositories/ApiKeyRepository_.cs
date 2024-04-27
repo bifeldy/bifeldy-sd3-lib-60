@@ -44,48 +44,48 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            _as = @as;
-            _gs = gs;
-            _orapg = orapg;
+            this._as = @as;
+            this._gs = gs;
+            this._orapg = orapg;
         }
 
         public async Task<bool> Create(API_KEY_T apiKey) {
-            apiKey.APP_NAME = _as.AppName.ToUpper();
-            _orapg.Set<API_KEY_T>().Add(apiKey);
-            return await _orapg.SaveChangesAsync() > 0;
+            apiKey.APP_NAME = this._as.AppName.ToUpper();
+            _ = this._orapg.Set<API_KEY_T>().Add(apiKey);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         public async Task<List<API_KEY_T>> GetAll(string key = null) {
-            DbSet<API_KEY_T> dbSet = _orapg.Set<API_KEY_T>();
-            IQueryable<API_KEY_T> query = dbSet.Where(ak => ak.APP_NAME.ToUpper() == _as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*");
+            DbSet<API_KEY_T> dbSet = this._orapg.Set<API_KEY_T>();
+            IQueryable<API_KEY_T> query = dbSet.Where(ak => ak.APP_NAME.ToUpper() == this._as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*");
             if (!string.IsNullOrEmpty(key)) {
                 query = dbSet.Where(ak => ak.KEY.ToUpper() == key.ToUpper());
             }
-            return await ((query == null) ? dbSet : query).ToListAsync();
+
+            return await (query ?? dbSet).ToListAsync();
         }
 
         public async Task<API_KEY_T> GetByKey(string key) {
-            return await _orapg.Set<API_KEY_T>().Where(ak =>
+            return await this._orapg.Set<API_KEY_T>().Where(ak =>
                 ak.KEY.ToUpper() == key.ToUpper() && (
-                    ak.APP_NAME.ToUpper() == _as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*"
+                    ak.APP_NAME.ToUpper() == this._as.AppName.ToUpper() || ak.APP_NAME.ToUpper() == "*"
                 )
             ).SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string key) {
-            API_KEY_T apiKey = await GetByKey(key);
-            _orapg.Set<API_KEY_T>().Remove(apiKey);
-            return await _orapg.SaveChangesAsync() > 0;
+            API_KEY_T apiKey = await this.GetByKey(key);
+            _ = this._orapg.Set<API_KEY_T>().Remove(apiKey);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         /* ** */
 
         public async Task<bool> CheckKeyOrigin(string ipOrigin, string key) {
-            API_KEY_T ak = await GetByKey(key);
-            if (ak != null) {
-                return ak.IP_ORIGIN.ToUpper().Split(";").Select(io => io.Trim()).Contains(ipOrigin.ToUpper()) || ak.IP_ORIGIN == "*";
-            }
-            return _gs.AllowedIpOrigin.Contains(ipOrigin);
+            API_KEY_T ak = await this.GetByKey(key);
+            return ak != null
+                ? ak.IP_ORIGIN.ToUpper().Split(";").Select(io => io.Trim()).Contains(ipOrigin.ToUpper()) || ak.IP_ORIGIN == "*"
+                : this._gs.AllowedIpOrigin.Contains(ipOrigin);
         }
 
     }

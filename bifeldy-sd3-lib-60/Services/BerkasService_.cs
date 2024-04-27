@@ -50,94 +50,97 @@ namespace bifeldy_sd3_lib_60.Services {
             ICsvService csv,
             IZipService zip
         ) {
-            _envVar = envVar.Value;
-            _logger = logger;
-            _as = @as;
-            _csv = csv;
-            _zip = zip;
+            this._envVar = envVar.Value;
+            this._logger = logger;
+            this._as = @as;
+            this._csv = csv;
+            this._zip = zip;
 
-            BackupFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.BACKUP_FOLDER_PATH);
-            if (!Directory.Exists(BackupFolderPath)) {
-                Directory.CreateDirectory(BackupFolderPath);
+            this.BackupFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.BACKUP_FOLDER_PATH);
+            if (!Directory.Exists(this.BackupFolderPath)) {
+                _ = Directory.CreateDirectory(this.BackupFolderPath);
             }
 
-            TempFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.TEMP_FOLDER_PATH);
-            if (!Directory.Exists(TempFolderPath)) {
-                Directory.CreateDirectory(TempFolderPath);
+            this.TempFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.TEMP_FOLDER_PATH);
+            if (!Directory.Exists(this.TempFolderPath)) {
+                _ = Directory.CreateDirectory(this.TempFolderPath);
             }
 
-            DownloadFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.DOWNLOAD_FOLDER_PATH);
-            if (!Directory.Exists(DownloadFolderPath)) {
-                Directory.CreateDirectory(DownloadFolderPath);
+            this.DownloadFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.DOWNLOAD_FOLDER_PATH);
+            if (!Directory.Exists(this.DownloadFolderPath)) {
+                _ = Directory.CreateDirectory(this.DownloadFolderPath);
             }
         }
 
         public void DeleteSingleFileInFolder(string fileName, string folderPath = null) {
-            string path = folderPath ?? TempFolderPath;
+            string path = folderPath ?? this.TempFolderPath;
             try {
-                FileInfo fi = new FileInfo(Path.Combine(path, fileName));
+                var fi = new FileInfo(Path.Combine(path, fileName));
                 if (fi.Exists) {
                     fi.Delete();
                 }
             }
             catch (Exception ex) {
-                _logger.LogError($"[BERKAS_DELETE_SINGLE_FILE_IN_FOLDER] {ex.Message}");
+                this._logger.LogError("[BERKAS_DELETE_SINGLE_FILE_IN_FOLDER] {ex.Message}", ex.Message);
             }
         }
 
         public void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false) {
-            string path = folderPath ?? TempFolderPath;
-            if (!isInRecursive && path == TempFolderPath) {
-                BackupAllFilesInFolder(TempFolderPath);
+            string path = folderPath ?? this.TempFolderPath;
+            if (!isInRecursive && path == this.TempFolderPath) {
+                this.BackupAllFilesInFolder(this.TempFolderPath);
             }
+
             try {
                 if (Directory.Exists(path)) {
-                    DirectoryInfo di = new DirectoryInfo(path);
+                    var di = new DirectoryInfo(path);
                     FileSystemInfo[] fsis = di.GetFileSystemInfos();
                     foreach (FileSystemInfo fsi in fsis) {
                         if (fsi.Attributes == FileAttributes.Directory) {
-                            DeleteOldFilesInFolder(fsi.FullName, maxOldDays, true);
+                            this.DeleteOldFilesInFolder(fsi.FullName, maxOldDays, true);
                         }
+
                         if (fsi.LastWriteTime <= DateTime.Now.AddDays(-maxOldDays)) {
-                            _logger.LogInformation($"[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {fsi.FullName}");
+                            this._logger.LogInformation("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {FullName}", fsi.FullName);
                             fsi.Delete();
                         }
                     }
                 }
             }
             catch (Exception ex) {
-                _logger.LogError($"[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {ex.Message}");
+                this._logger.LogError("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {ex}", ex.Message);
             }
         }
 
         public void CleanUp(bool clearPendingFileForZip = true) {
-            DeleteOldFilesInFolder(Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), _envVar.MAX_RETENTIONS_DAYS);
-            DeleteOldFilesInFolder(BackupFolderPath, _envVar.MAX_RETENTIONS_DAYS);
-            DeleteOldFilesInFolder(TempFolderPath, _envVar.MAX_RETENTIONS_DAYS);
-            DeleteOldFilesInFolder(DownloadFolderPath, _envVar.MAX_RETENTIONS_DAYS);
-            DeleteOldFilesInFolder(_csv.CsvFolderPath, _envVar.MAX_RETENTIONS_DAYS);
-            DeleteOldFilesInFolder(_zip.ZipFolderPath, _envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this.BackupFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._csv.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._zip.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
             if (clearPendingFileForZip) {
-                _zip.ListFileForZip.Clear();
+                this._zip.ListFileForZip.Clear();
             }
         }
 
         public void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false) {
-            Directory.CreateDirectory(target.FullName);
+            _ = Directory.CreateDirectory(target.FullName);
             foreach (FileInfo fi in source.GetFiles()) {
                 FileInfo res = fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
-                _logger.LogInformation($"[BERKAS_COPY_ALL_FILES_AND_DIRECTORIES] {fi.FullName} => {res.FullName}");
+                this._logger.LogInformation("[BERKAS_COPY_ALL_FILES_AND_DIRECTORIES] {FullName} => {FullName}", fi.FullName, res.FullName);
             }
+
             foreach (DirectoryInfo diSourceSubDir in source.GetDirectories()) {
                 DirectoryInfo nextTargetSubDir = target.CreateSubdirectory(diSourceSubDir.Name);
-                CopyAllFilesAndDirectories(diSourceSubDir, nextTargetSubDir, true);
+                this.CopyAllFilesAndDirectories(diSourceSubDir, nextTargetSubDir, true);
             }
         }
 
         public void BackupAllFilesInFolder(string folderPath) {
-            DirectoryInfo diSource = new DirectoryInfo(folderPath);
-            DirectoryInfo diTarget = new DirectoryInfo(BackupFolderPath);
-            CopyAllFilesAndDirectories(diSource, diTarget);
+            var diSource = new DirectoryInfo(folderPath);
+            var diTarget = new DirectoryInfo(this.BackupFolderPath);
+            this.CopyAllFilesAndDirectories(diSource, diTarget);
         }
 
     }

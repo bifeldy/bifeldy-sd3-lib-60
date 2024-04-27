@@ -47,11 +47,11 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IApiTokenRepository apiTokenRepo,
             IOraPg orapg
         ) {
-            _hca = hca;
-            _app = app;
-            _chiper = chiper;
-            _apiTokenRepo = apiTokenRepo;
-            _orapg = orapg;
+            this._hca = hca;
+            this._app = app;
+            this._chiper = chiper;
+            this._apiTokenRepo = apiTokenRepo;
+            this._orapg = orapg;
         }
 
         [HttpPost("login")]
@@ -62,42 +62,42 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 string password = formData?.password;
 
                 if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) {
-                    return BadRequest(new ResponseJsonSingle<dynamic> {
-                        info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
+                    return this.BadRequest(new ResponseJsonSingle<dynamic> {
+                        info = $"🙄 400 - {this.GetType().Name} :: Login Gagal 😪",
                         result = new {
                             message = "Data tidak lengkap!"
                         }
                     });
                 }
 
-                API_TOKEN_T dcApiToken = await _apiTokenRepo.LoginBot(userName, password);
+                API_TOKEN_T dcApiToken = await this._apiTokenRepo.LoginBot(userName, password);
                 if (dcApiToken == null) {
-                    return BadRequest(new ResponseJsonSingle<dynamic> {
-                        info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
+                    return this.BadRequest(new ResponseJsonSingle<dynamic> {
+                        info = $"🙄 400 - {this.GetType().Name} :: Login Gagal 😪",
                         result = new {
                             message = "User name / password salah!"
                         }
                     });
                 }
 
-                UserApiSession userSession = new UserApiSession {
+                var userSession = new UserApiSession {
                     name = dcApiToken.USER_NAME,
                     role = UserSessionRole.EXTERNAL_BOT,
                     // dc_api_token_t = dcApiToken
                 };
-                string token = _chiper.EncodeJWT(userSession);
+                string token = this._chiper.EncodeJWT(userSession);
 
-                return StatusCode(StatusCodes.Status201Created, new {
-                    info = $"😅 201 - {GetType().Name} :: Login Berhasil 🤣",
+                return this.StatusCode(StatusCodes.Status201Created, new {
+                    info = $"😅 201 - {this.GetType().Name} :: Login Berhasil 🤣",
                     result = userSession,
                     token
                 });
             }
             catch (Exception ex) {
-                return BadRequest(new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 400 - {GetType().Name} :: Login Gagal 😪",
+                return this.BadRequest(new ResponseJsonSingle<dynamic> {
+                    info = $"🙄 400 - {this.GetType().Name} :: Login Gagal 😪",
                     result = new {
-                        message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
+                        message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
                 });
             }
@@ -110,23 +110,23 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
             try {
-                UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
+                var userSession = (UserApiSession)this._hca.HttpContext.Items["user"];
 
-                API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(userSession.name);
+                API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(userSession.name);
                 dcApiToken.TOKEN_SEKALI_PAKAI = null;
-                _orapg.Set<API_TOKEN_T>().Update(dcApiToken);
-                await _orapg.SaveChangesAsync();
+                _ = this._orapg.Set<API_TOKEN_T>().Update(dcApiToken);
+                _ = await this._orapg.SaveChangesAsync();
 
-                return Accepted(new ResponseJsonSingle<dynamic> {
-                    info = $"😅 204 - {GetType().Name} :: Logout Berhasil 🤣",
+                return this.Accepted(new ResponseJsonSingle<dynamic> {
+                    info = $"😅 204 - {this.GetType().Name} :: Logout Berhasil 🤣",
                     result = userSession
                 });
             }
             catch (Exception ex) {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 500 - {GetType().Name} :: Logout Gagal 😪",
+                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
+                    info = $"🙄 500 - {this.GetType().Name} :: Logout Gagal 😪",
                     result = new {
-                        message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
+                        message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
                 });
             }
@@ -138,18 +138,18 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
             try {
-                UserApiSession userSession = (UserApiSession) _hca.HttpContext.Items["user"];
+                var userSession = (UserApiSession)this._hca.HttpContext.Items["user"];
 
-                return Accepted(new ResponseJsonSingle<dynamic> {
-                    info = $"😅 202 - {GetType().Name} :: Verifikasi Berhasil 🤣",
+                return this.Accepted(new ResponseJsonSingle<dynamic> {
+                    info = $"😅 202 - {this.GetType().Name} :: Verifikasi Berhasil 🤣",
                     result = userSession
                 });
             }
             catch (Exception ex) {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 500 - {GetType().Name} :: Verifikasi Gagal 😪",
+                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
+                    info = $"🙄 500 - {this.GetType().Name} :: Verifikasi Gagal 😪",
                     result = new {
-                        message = _app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
+                        message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
                 });
             }

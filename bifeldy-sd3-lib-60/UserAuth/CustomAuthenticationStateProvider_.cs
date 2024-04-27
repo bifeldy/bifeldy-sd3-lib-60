@@ -26,8 +26,8 @@ namespace bifeldy_sd3_lib_60.UserAuth {
         private readonly ILogger<CustomAuthenticationStateProvider> _logger;
         private readonly ProtectedSessionStorage _protectedSessionStorage;
 
-        private static readonly ClaimsIdentity _anonymousClaimsIdentity = new ClaimsIdentity();
-        private static readonly ClaimsPrincipal _anonymousPrincipal = new ClaimsPrincipal(_anonymousClaimsIdentity);
+        private static readonly ClaimsIdentity _anonymousClaimsIdentity = new();
+        private static readonly ClaimsPrincipal _anonymousPrincipal = new(_anonymousClaimsIdentity);
 
         public string SessionKey { get; } = "user-session";
 
@@ -35,50 +35,46 @@ namespace bifeldy_sd3_lib_60.UserAuth {
             ILogger<CustomAuthenticationStateProvider> logger,
             ProtectedSessionStorage protectedSessionStorage
         ) {
-            _logger = logger;
-            _protectedSessionStorage = protectedSessionStorage;
+            this._logger = logger;
+            this._protectedSessionStorage = protectedSessionStorage;
         }
 
         public ClaimsPrincipal GetUserClaimPrincipal(UserWebSession userSession) {
-            List<Claim> userClaim = new List<Claim> {
-                new Claim(ClaimTypes.Sid, userSession.nik),
-                new Claim(ClaimTypes.Name, userSession.name),
-                new Claim(ClaimTypes.Role, userSession.role.ToString())
+            var userClaim = new List<Claim> {
+                new(ClaimTypes.Sid, userSession.nik),
+                new(ClaimTypes.Name, userSession.name),
+                new(ClaimTypes.Role, userSession.role.ToString())
             };
-            ClaimsIdentity userClaimIdentity = new ClaimsIdentity(userClaim, SessionKey);
+            var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
             return new ClaimsPrincipal(userClaimIdentity);
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync() {
             try {
-                var userSessionStorage = await _protectedSessionStorage.GetAsync<UserWebSession>(SessionKey);
-                var userSession = userSessionStorage.Success ? userSessionStorage.Value : null;
-                if (userSession == null) {
-                    throw new Exception("User Not Login");
-                }
-
-                return new AuthenticationState(GetUserClaimPrincipal(userSession));
+                ProtectedBrowserStorageResult<UserWebSession> userSessionStorage = await this._protectedSessionStorage.GetAsync<UserWebSession>(this.SessionKey);
+                UserWebSession userSession = (userSessionStorage.Success ? userSessionStorage.Value : null) ?? throw new Exception("User Not Login");
+                return new AuthenticationState(this.GetUserClaimPrincipal(userSession));
             }
             catch (Exception ex) {
-                _logger.LogError($"[CUSTOM_AUTHENTICATION_STATE_PROVIDER_ERROR] 🔓 {ex.Message}");
+                this._logger.LogError("[CUSTOM_AUTHENTICATION_STATE_PROVIDER_ERROR] 🔓 {ex}", ex.Message);
                 return new AuthenticationState(_anonymousPrincipal);
             }
         }
 
         public async Task UpdateAuthenticationState(UserWebSession userSession) {
-            ClaimsPrincipal userClaimPrincipal = null;
+            ClaimsPrincipal userClaimPrincipal;
             if (userSession == null) {
                 userClaimPrincipal = _anonymousPrincipal;
-                await _protectedSessionStorage.DeleteAsync(SessionKey);
+                await this._protectedSessionStorage.DeleteAsync(this.SessionKey);
             }
             else {
-                userClaimPrincipal = GetUserClaimPrincipal(userSession);
-                await _protectedSessionStorage.SetAsync(SessionKey, userSession);
+                userClaimPrincipal = this.GetUserClaimPrincipal(userSession);
+                await this._protectedSessionStorage.SetAsync(this.SessionKey, userSession);
             }
 
-            AuthenticationState authState = new AuthenticationState(userClaimPrincipal);
-            Task<AuthenticationState> authStateTask = Task.FromResult(authState);
-            NotifyAuthenticationStateChanged(authStateTask);
+            var authState = new AuthenticationState(userClaimPrincipal);
+            var authStateTask = Task.FromResult(authState);
+            this.NotifyAuthenticationStateChanged(authStateTask);
         }
 
     }

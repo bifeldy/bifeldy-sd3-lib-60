@@ -65,15 +65,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            _envVar = envVar.Value;
-            _logger = logger;
-            _as = @as;
-            _http = http;
-            _converter = converter;
-            _oracle = oracle;
-            _postgres = postgres;
-            _orapg = orapg;
-            _mssql = mssql;
+            this._envVar = envVar.Value;
+            this._logger = logger;
+            this._as = @as;
+            this._http = http;
+            this._converter = converter;
+            this._oracle = oracle;
+            this._postgres = postgres;
+            this._orapg = orapg;
+            this._mssql = mssql;
         }
 
         /** Custom Queries */
@@ -82,18 +82,20 @@ namespace bifeldy_sd3_lib_60.Repositories {
             get {
                 string FullDbName = string.Empty;
                 try {
-                    FullDbName += _orapg.DbName;
+                    FullDbName += this._orapg.DbName;
                 }
                 catch {
                     FullDbName += "-";
                 }
+
                 FullDbName += " / ";
                 try {
-                    FullDbName += _mssql.DbName;
+                    FullDbName += this._mssql.DbName;
                 }
                 catch {
                     FullDbName += "-";
                 }
+
                 return FullDbName;
             }
         }
@@ -101,19 +103,19 @@ namespace bifeldy_sd3_lib_60.Repositories {
         /* ** */
 
         public async Task<string> CekVersi() {
-            if (_as.DebugMode) {
+            if (this._as.DebugMode) {
                 return "OKE";
             }
             else {
                 try {
-                    string res1 = await _orapg.ExecScalarAsync<string>(
+                    string res = await this._orapg.ExecScalarAsync<string>(
                         $@"
                             SELECT
                                 CASE
                                     WHEN COALESCE(aprove, 'N') = 'Y' AND {(
-                                            _envVar.IS_USING_POSTGRES ?
-                                            "COALESCE(tgl_berlaku, NOW())::DATE <= CURRENT_DATE" :
-                                            "TRUNC(COALESCE(tgl_berlaku, SYSDATE)) <= TRUNC(SYSDATE)"
+                                            this._envVar.IS_USING_POSTGRES
+                                            ? "COALESCE(tgl_berlaku, NOW())::DATE <= CURRENT_DATE"
+                                            : "TRUNC(COALESCE(tgl_berlaku, SYSDATE)) <= TRUNC(SYSDATE)"
                                         )} 
                                         THEN COALESCE(VERSI_BARU, '0')
                                     WHEN COALESCE(aprove, 'N') = 'N'
@@ -128,28 +130,30 @@ namespace bifeldy_sd3_lib_60.Repositories {
                                 AND UPPER(nama_prog) LIKE :nama_prog
                         ",
                         new List<CDbQueryParamBind> {
-                            new CDbQueryParamBind { NAME = "dc_kode", VALUE = await GetKodeDc() },
-                            new CDbQueryParamBind { NAME = "nama_prog", VALUE = $"%{_as.AppName}%" }
+                            new() { NAME = "dc_kode", VALUE = await this.GetKodeDc() },
+                            new() { NAME = "nama_prog", VALUE = $"%{this._as.AppName}%" }
                         }
                     );
-                    if (string.IsNullOrEmpty(res1)) {
-                        return $"Program :: {_as.AppName}" + Environment.NewLine + "Belum Terdaftar Di Master Program DC";
+                    if (string.IsNullOrEmpty(res)) {
+                        res = $"Program :: {this._as.AppName}" + Environment.NewLine + "Belum Terdaftar Di Master Program DC";
                     }
-                    if (res1 == _as.AppVersion) {
-                        return "OKE";
+                    else if (res == this._as.AppVersion) {
+                        res = "OKE";
                     }
                     else {
-                        return $"Versi Program :: {_as.AppName}" + Environment.NewLine + $"Tidak Sama Dengan Master Program = v{res1}";
+                        res = $"Versi Program :: {this._as.AppName}" + Environment.NewLine + $"Tidak Sama Dengan Master Program = v{res}";
                     }
+
+                    return res;
                 }
-                catch (Exception ex1) {
-                    return ex1.Message;
+                catch (Exception ex) {
+                    return ex.Message;
                 }
             }
         }
 
         public async Task<bool> LoginUser(string userNameNik, string password) {
-            string loggedInUsername = await _orapg.ExecScalarAsync<string>(
+            string loggedInUsername = await this._orapg.ExecScalarAsync<string>(
                 $@"
                     SELECT
                         user_name
@@ -160,47 +164,47 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         AND UPPER(user_password) = :password
                 ",
                 new List<CDbQueryParamBind> {
-                    new CDbQueryParamBind { NAME = "user_name", VALUE = userNameNik },
-                    new CDbQueryParamBind { NAME = "user_nik", VALUE = userNameNik },
-                    new CDbQueryParamBind { NAME = "password", VALUE = password }
+                    new() { NAME = "user_name", VALUE = userNameNik },
+                    new() { NAME = "user_nik", VALUE = userNameNik },
+                    new() { NAME = "password", VALUE = password }
                 }
             );
             return !string.IsNullOrEmpty(loggedInUsername);
         }
 
         public async Task<string> GetURLWebService(string webType) {
-            return await _orapg.ExecScalarAsync<string>(
+            return await this._orapg.ExecScalarAsync<string>(
                 $@"SELECT WEB_URL FROM DC_WEBSERVICE_T WHERE WEB_TYPE = :web_type",
                 new List<CDbQueryParamBind> {
-                    new CDbQueryParamBind { NAME = "web_type", VALUE = webType }
+                    new() { NAME = "web_type", VALUE = webType }
                 }
             );
         }
 
         public async Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName) {
-            return await _orapg.ExecQueryAsync($@"
+            return await this._orapg.ExecQueryAsync($@"
                 INSERT INTO {logTableName} (TPC, OFFS, PARTT, KEY, VAL, TMSTAMP)
                 VALUES (:tpc, :offs, :partt, :key, :value, :tmstmp)
             ", new List<CDbQueryParamBind> {
-                new CDbQueryParamBind { NAME = "tpc", VALUE = topic },
-                new CDbQueryParamBind { NAME = "offs", VALUE = offset },
-                new CDbQueryParamBind { NAME = "partt", VALUE = partition },
-                new CDbQueryParamBind { NAME = "key", VALUE = msg.Key },
-                new CDbQueryParamBind { NAME = "value", VALUE = msg.Value },
-                new CDbQueryParamBind { NAME = "tmstmp", VALUE = msg.Timestamp.UtcDateTime }
+                new() { NAME = "tpc", VALUE = topic },
+                new() { NAME = "offs", VALUE = offset },
+                new() { NAME = "partt", VALUE = partition },
+                new() { NAME = "key", VALUE = msg.Key },
+                new() { NAME = "value", VALUE = msg.Value },
+                new() { NAME = "tmstmp", VALUE = msg.Timestamp.UtcDateTime }
             });
         }
 
         /* ** */
 
         public async Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk) {
-            string url = await GetURLWebService("SYNCHO") ?? _envVar.WS_SYNCHO;
+            string url = await this.GetURLWebService("SYNCHO") ?? this._envVar.WS_SYNCHO;
             url += kodeDcInduk;
 
-            HttpResponseMessage httpResponse = await _http.PostData(url, null);
+            HttpResponseMessage httpResponse = await this._http.PostData(url, null);
             string httpResString = await httpResponse.Content.ReadAsStringAsync();
 
-            return _converter.JsonToObject<List<DC_TABEL_V>>(httpResString);
+            return this._converter.JsonToObject<List<DC_TABEL_V>>(httpResString);
         }
 
         //
@@ -214,22 +218,23 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
             IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
 
-            string kodeDc = await GetKodeDc();
-            DC_TABEL_V dc = await _orapg.Set<DC_TABEL_V>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper()).FirstOrDefaultAsync();
+            string kodeDc = await this.GetKodeDc();
+            DC_TABEL_V dc = await this._orapg.Set<DC_TABEL_V>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper()).FirstOrDefaultAsync();
             if (kodeDc.ToUpper() == "DCHO" || dc.TBL_JENIS_DC.ToUpper() != "INDUK") {
                 throw new Exception("Khusus DC Induk");
             }
 
-            List<DC_TABEL_V> dbInfo = await GetListBranchDbInformation(kodeDcInduk);
+            List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
             foreach (DC_TABEL_V dbi in dbInfo) {
                 CDatabase dbCon = null;
                 bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                 if (isPostgre) {
-                    dbCon = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                    dbCon = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                 }
                 else {
-                    dbCon = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                    dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                 }
+
                 dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
             }
 
@@ -242,38 +247,39 @@ namespace bifeldy_sd3_lib_60.Repositories {
             CDatabase dbSqlDc = null;
             bool dbIsUsingPostgre = false;
 
-            string kodeDcSekarang = await GetKodeDc();
+            string kodeDcSekarang = await this.GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
-                List<DC_TABEL_V> dbInfo = await GetListBranchDbInformation("DCHO");
+                List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation("DCHO");
                 DC_TABEL_V dcho = dbInfo.FirstOrDefault();
-                dbConHo = _oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
+                dbConHo = this._oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
             }
             else {
-                dbConHo = (CDatabase) _orapg;
+                dbConHo = (CDatabase)this._orapg;
             }
 
             DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
             if (dbi != null) {
                 dbIsUsingPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                 if (dbIsUsingPostgre) {
-                    dbOraPgDc = _postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                    dbOraPgDc = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                 }
                 else {
-                    dbOraPgDc = _oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                    dbOraPgDc = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                 }
-                dbSqlDc = _mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
+
+                dbSqlDc = this._mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
             }
 
             return (dbIsUsingPostgre, dbOraPgDc, dbSqlDc);
         }
 
         public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback) {
-            string kodeDcSekarang = await GetKodeDc();
+            string kodeDcSekarang = await this.GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
                 throw new Exception("Khusus HO!");
             }
 
-            DataTable dt = await _orapg.GetDataTableAsync($@"
+            DataTable dt = await this._orapg.GetDataTableAsync($@"
                 SELECT
                     a.dc_kode,
                     a.ip_nginx,
@@ -287,10 +293,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 WHERE
                     a.dc_kode = :kode_dc
             ", new List<CDbQueryParamBind>() {
-                new CDbQueryParamBind { NAME = "app_name", VALUE = _as.AppName.ToUpper() },
-                new CDbQueryParamBind { NAME = "kode_dc", VALUE = dcKode.ToUpper() }
+                new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
+                new() { NAME = "kode_dc", VALUE = dcKode.ToUpper() }
             });
-            List<ListApiDc> listApiDcs = dt.ToList<ListApiDc>();
+            var listApiDcs = dt.ToList<ListApiDc>();
 
             ListApiDc dbi = listApiDcs.FirstOrDefault();
             if (dbi == null || string.IsNullOrEmpty(dbi?.IP_NGINX)) {
@@ -302,11 +308,12 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 var urlApiDc = new Uri($"http://{dbi.IP_NGINX}{pathApiDc}{request.QueryString.Value}");
 
                 // API Key Khusus Bypass ~ Case Sensitive
-                var queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
-                queryApiDc.Set("key", _as.AppName);
+                System.Collections.Specialized.NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
+                queryApiDc.Set("key", this._as.AppName);
 
-                var uriBuilder = new UriBuilder(urlApiDc);
-                uriBuilder.Query = queryApiDc.ToString();
+                var uriBuilder = new UriBuilder(urlApiDc) {
+                    Query = queryApiDc.ToString()
+                };
 
                 Callback(null, uriBuilder.Uri);
             }

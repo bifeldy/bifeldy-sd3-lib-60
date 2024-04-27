@@ -16,22 +16,19 @@ namespace bifeldy_sd3_lib_60.Models {
 
     public class EnvVar {
 
-        protected string GetEnvVar(string key) {
-            return Environment.GetEnvironmentVariable(key);
-        }
+        protected static string GetEnvVar(string key) => Environment.GetEnvironmentVariable(key);
 
         private bool isUsingPostgres = true;
         public bool IS_USING_POSTGRES {
             get {
                 string dbPgEnv = GetEnvVar("IS_USING_POSTGRES");
                 if (!string.IsNullOrEmpty(dbPgEnv)) {
-                    isUsingPostgres = bool.Parse(dbPgEnv);
+                    this.isUsingPostgres = bool.Parse(dbPgEnv);
                 }
-                return isUsingPostgres;
+
+                return this.isUsingPostgres;
             }
-            set {
-                isUsingPostgres = value;
-            }
+            set => this.isUsingPostgres = value;
         }
 
         private string kunciIpDomain = "localhost";
@@ -39,13 +36,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string kunciIpDomainEnv = GetEnvVar("KUNCI_IP_DOMAIN");
                 if (!string.IsNullOrEmpty(kunciIpDomainEnv)) {
-                    kunciIpDomain = kunciIpDomainEnv;
+                    this.kunciIpDomain = kunciIpDomainEnv;
                 }
-                return kunciIpDomain;
+
+                return this.kunciIpDomain;
             }
-            set {
-                kunciIpDomain = value;
-            }
+            set => this.kunciIpDomain = value;
         }
 
         private string kunciGxxx = "kuncirest";
@@ -53,13 +49,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string kunciGxxxEnv = GetEnvVar("KUNCI_GXXX");
                 if (!string.IsNullOrEmpty(kunciGxxxEnv)) {
-                    kunciGxxx = kunciGxxxEnv;
+                    this.kunciGxxx = kunciGxxxEnv;
                 }
-                return kunciGxxx;
+
+                return this.kunciGxxx;
             }
-            set {
-                kunciGxxx = value;
-            }
+            set => this.kunciGxxx = value;
         }
 
         private string jwtAudience = "jwt_audience";
@@ -67,13 +62,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string jwtAudienceEnv = GetEnvVar("JWT_AUDIENCE");
                 if (!string.IsNullOrEmpty(jwtAudienceEnv)) {
-                    jwtAudience = jwtAudienceEnv;
+                    this.jwtAudience = jwtAudienceEnv;
                 }
-                return jwtAudience;
+
+                return this.jwtAudience;
             }
-            set {
-                jwtAudience = value;
-            }
+            set => this.jwtAudience = value;
         }
 
         private string jwtSecret = "jwt_secret";
@@ -81,13 +75,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string jwtSecretEnv = GetEnvVar("JWT_SECRET");
                 if (!string.IsNullOrEmpty(jwtSecretEnv)) {
-                    jwtSecret = jwtSecretEnv;
+                    this.jwtSecret = jwtSecretEnv;
                 }
-                return jwtSecret;
+
+                return this.jwtSecret;
             }
-            set {
-                jwtSecret = value;
-            }
+            set => this.jwtSecret = value;
         }
 
         private string backupFolderPath = "backups";
@@ -95,13 +88,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string backupFolderPathEnv = GetEnvVar("BACKUP_FOLDER_PATH");
                 if (!string.IsNullOrEmpty(backupFolderPathEnv)) {
-                    backupFolderPath = backupFolderPathEnv;
+                    this.backupFolderPath = backupFolderPathEnv;
                 }
-                return backupFolderPath;
+
+                return this.backupFolderPath;
             }
-            set {
-                backupFolderPath = value;
-            }
+            set => this.backupFolderPath = value;
         }
 
         private string tempFolderPath = "temps";
@@ -109,13 +101,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string tempFolderPathEnv = GetEnvVar("TEMP_FOLDER_PATH");
                 if (!string.IsNullOrEmpty(tempFolderPathEnv)) {
-                    tempFolderPath = tempFolderPathEnv;
+                    this.tempFolderPath = tempFolderPathEnv;
                 }
-                return tempFolderPath;
+
+                return this.tempFolderPath;
             }
-            set {
-                tempFolderPath = value;
-            }
+            set => this.tempFolderPath = value;
         }
 
         private string csvFolderPath = "csvs";
@@ -123,13 +114,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string csvFolderPathEnv = GetEnvVar("CSV_FOLDER_PATH");
                 if (!string.IsNullOrEmpty(csvFolderPathEnv)) {
-                    csvFolderPath = csvFolderPathEnv;
+                    this.csvFolderPath = csvFolderPathEnv;
                 }
-                return csvFolderPath;
+
+                return this.csvFolderPath;
             }
-            set {
-                csvFolderPath = value;
-            }
+            set => this.csvFolderPath = value;
         }
 
         private string zipFolderPath = "zips";
@@ -137,13 +127,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string zipFolderPathEnv = GetEnvVar("ZIP_FOLDER_PATH");
                 if (!string.IsNullOrEmpty(zipFolderPathEnv)) {
-                    zipFolderPath = zipFolderPathEnv;
+                    this.zipFolderPath = zipFolderPathEnv;
                 }
-                return zipFolderPath;
+
+                return this.zipFolderPath;
             }
-            set {
-                zipFolderPath = value;
-            }
+            set => this.zipFolderPath = value;
         }
 
         private string downloadFolderPath = "downloads";
@@ -151,13 +140,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string downloadFolderPathEnv = GetEnvVar("DOWNLOAD_FOLDER_PATH");
                 if (!string.IsNullOrEmpty(downloadFolderPathEnv)) {
-                    downloadFolderPath = downloadFolderPathEnv;
+                    this.downloadFolderPath = downloadFolderPathEnv;
                 }
-                return downloadFolderPath;
+
+                return this.downloadFolderPath;
             }
-            set {
-                downloadFolderPath = value;
-            }
+            set => this.downloadFolderPath = value;
         }
 
         private string imageFolderPath = "images";
@@ -165,13 +153,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string imageFolderPathEnv = GetEnvVar("IMAGE_FOLDER_PATH");
                 if (!string.IsNullOrEmpty(imageFolderPathEnv)) {
-                    imageFolderPath = imageFolderPathEnv;
+                    this.imageFolderPath = imageFolderPathEnv;
                 }
-                return imageFolderPath;
+
+                return this.imageFolderPath;
             }
-            set {
-                imageFolderPath = value;
-            }
+            set => this.imageFolderPath = value;
         }
 
         private int maxRetentionDays = 14;
@@ -179,13 +166,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string maxRetentionDaysEnv = GetEnvVar("MAX_RETENTIONS_DAYS");
                 if (!string.IsNullOrEmpty(maxRetentionDaysEnv)) {
-                    maxRetentionDays = int.Parse(maxRetentionDaysEnv);
+                    this.maxRetentionDays = int.Parse(maxRetentionDaysEnv);
                 }
-                return maxRetentionDays;
+
+                return this.maxRetentionDays;
             }
-            set {
-                maxRetentionDays = value;
-            }
+            set => this.maxRetentionDays = value;
         }
 
         private string smtpServerIpDomain = "http://127.0.0.1";
@@ -193,13 +179,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string smtpServerIpDomainEnv = GetEnvVar("SMTP_SERVER_IP_DOMAIN");
                 if (!string.IsNullOrEmpty(smtpServerIpDomainEnv)) {
-                    smtpServerIpDomain = smtpServerIpDomainEnv;
+                    this.smtpServerIpDomain = smtpServerIpDomainEnv;
                 }
-                return smtpServerIpDomain;
+
+                return this.smtpServerIpDomain;
             }
-            set {
-                smtpServerIpDomain = value;
-            }
+            set => this.smtpServerIpDomain = value;
         }
 
         private int smtpServerPort = 587;
@@ -207,13 +192,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string smtpServerPortEnv = GetEnvVar("SMTP_SERVER_PORT");
                 if (!string.IsNullOrEmpty(smtpServerPortEnv)) {
-                    smtpServerPort = int.Parse(smtpServerPortEnv);
+                    this.smtpServerPort = int.Parse(smtpServerPortEnv);
                 }
-                return smtpServerPort;
+
+                return this.smtpServerPort;
             }
-            set {
-                smtpServerPort = value;
-            }
+            set => this.smtpServerPort = value;
         }
 
         private string smtpServerUsername = "admin@localhost";
@@ -221,13 +205,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string smtpServerUsernameEnv = GetEnvVar("SMTP_SERVER_USERNAME");
                 if (!string.IsNullOrEmpty(smtpServerUsernameEnv)) {
-                    smtpServerUsername = smtpServerUsernameEnv;
+                    this.smtpServerUsername = smtpServerUsernameEnv;
                 }
-                return smtpServerUsername;
+
+                return this.smtpServerUsername;
             }
-            set {
-                smtpServerUsername = value;
-            }
+            set => this.smtpServerUsername = value;
         }
 
         private string smtpServerPassword = "root";
@@ -235,13 +218,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string smtpServerPasswordEnv = GetEnvVar("SMTP_SERVER_PASSWORD");
                 if (!string.IsNullOrEmpty(smtpServerPasswordEnv)) {
-                    smtpServerPassword = smtpServerPasswordEnv;
+                    this.smtpServerPassword = smtpServerPasswordEnv;
                 }
-                return smtpServerPassword;
+
+                return this.smtpServerPassword;
             }
-            set {
-                smtpServerPassword = value;
-            }
+            set => this.smtpServerPassword = value;
         }
 
         private string wsSyncHo = "http://127.0.0.1";
@@ -249,13 +231,12 @@ namespace bifeldy_sd3_lib_60.Models {
             get {
                 string wsSyncHoEnv = GetEnvVar("WS_SYNCHO");
                 if (!string.IsNullOrEmpty(wsSyncHoEnv)) {
-                    wsSyncHo = wsSyncHoEnv;
+                    this.wsSyncHo = wsSyncHoEnv;
                 }
-                return wsSyncHo;
+
+                return this.wsSyncHo;
             }
-            set {
-                wsSyncHo = value;
-            }
+            set => this.wsSyncHo = value;
         }
 
         // private string haha;

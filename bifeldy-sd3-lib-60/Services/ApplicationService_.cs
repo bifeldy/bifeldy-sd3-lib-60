@@ -41,26 +41,27 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
-        private IDictionary<string, dynamic> DbConfig = new ExpandoObject();
+        private readonly IDictionary<string, dynamic> DbConfig = new ExpandoObject();
 
         public CApplicationService() {
-            _SettingLibb = new SettingLibb.Class1();
+            this._SettingLibb = new SettingLibb.Class1();
         }
 
         public string GetVariabel(string key, string kunci) {
             try {
-                if (DbConfig.ContainsKey(key)) {
-                    if (!string.IsNullOrEmpty(DbConfig[key])) {
-                        return DbConfig[key];
+                if (this.DbConfig.ContainsKey(key)) {
+                    if (!string.IsNullOrEmpty(this.DbConfig[key])) {
+                        return this.DbConfig[key];
                     }
                 }
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
-                string result = _SettingLibb.GetVariabel(key, kunci);
+                string result = this._SettingLibb.GetVariabel(key, kunci);
                 if (result.ToUpper().Contains("ERROR")) {
                     throw new Exception("SettingLibb Gagal");
                 }
-                DbConfig.Add(key, result);
-                return DbConfig[key];
+
+                this.DbConfig.Add(key, result);
+                return this.DbConfig[key];
             }
             catch {
                 return null;
@@ -68,7 +69,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public CIpMacAddress[] GetIpMacAddress() {
-            List<CIpMacAddress> IpMacAddress = new List<CIpMacAddress>();
+            var IpMacAddress = new List<CIpMacAddress>();
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
             foreach (NetworkInterface nic in nics) {
                 if (nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback) {
@@ -86,6 +87,7 @@ namespace bifeldy_sd3_lib_60.Services {
                             }
                         }
                     }
+
                     IpMacAddress.Add(new CIpMacAddress {
                         NAME = nic.Name,
                         DESCRIPTION = nic.Description,
@@ -95,21 +97,20 @@ namespace bifeldy_sd3_lib_60.Services {
                     });
                 }
             }
+
             return IpMacAddress.ToArray();
         }
 
         public string[] GetAllIpAddress() {
-            string[] iv4 = GetIpMacAddress().Where(d => !string.IsNullOrEmpty(d.IP_V4_ADDRESS)).Select(d => d.IP_V4_ADDRESS.ToUpper()).ToArray();
-            string[] iv6 = GetIpMacAddress().Where(d => !string.IsNullOrEmpty(d.IP_V6_ADDRESS)).Select(d => d.IP_V6_ADDRESS.ToUpper()).ToArray();
+            string[] iv4 = this.GetIpMacAddress().Where(d => !string.IsNullOrEmpty(d.IP_V4_ADDRESS)).Select(d => d.IP_V4_ADDRESS.ToUpper()).ToArray();
+            string[] iv6 = this.GetIpMacAddress().Where(d => !string.IsNullOrEmpty(d.IP_V6_ADDRESS)).Select(d => d.IP_V6_ADDRESS.ToUpper()).ToArray();
             string[] ip = new string[iv4.Length + iv6.Length];
             iv4.CopyTo(ip, 0);
             iv6.CopyTo(ip, iv4.Length);
             return ip;
         }
 
-        public string[] GetAllMacAddress() {
-            return GetIpMacAddress().Where(d => !string.IsNullOrEmpty(d.MAC_ADDRESS)).Select(d => d.MAC_ADDRESS.ToUpper()).ToArray();
-        }
+        public string[] GetAllMacAddress() => this.GetIpMacAddress().Where(d => !string.IsNullOrEmpty(d.MAC_ADDRESS)).Select(d => d.MAC_ADDRESS.ToUpper()).ToArray();
 
     }
 

@@ -24,7 +24,6 @@ using Microsoft.Extensions.Options;
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using System.Diagnostics;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -45,28 +44,28 @@ namespace bifeldy_sd3_lib_60.Databases {
             IApplicationService @as,
             IConverterService cs
         ) : base(options, envVar, logger, cs) {
-            _logger = logger;
-            _envVar = envVar.Value;
-            _as = @as;
+            this._logger = logger;
+            this._envVar = envVar.Value;
+            this._as = @as;
             // --
-            InitializeConnection();
+            this.InitializeConnection();
             // --
-            Database.SetCommandTimeout(1800); // 30 Minute
+            this.Database.SetCommandTimeout(1800); // 30 Minute
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
-            options.UseSqlServer(DbConnectionString)
+            _ = options.UseSqlServer(this.DbConnectionString)
                 .LogTo(s => Console.WriteLine(s))
-                .EnableDetailedErrors(_as.DebugMode)
-                .EnableSensitiveDataLogging(_as.DebugMode);
+                .EnableDetailedErrors(this._as.DebugMode)
+                .EnableSensitiveDataLogging(this._as.DebugMode);
         }
 
         public void InitializeConnection(string dbIpAddrss = null, string dbName = null, string dbUsername = null, string dbPassword = null) {
-            DbIpAddrss = dbIpAddrss ?? _as.GetVariabel("IPSql", _envVar.KUNCI_GXXX);
-            DbName = dbName ?? _as.GetVariabel("DatabaseSql", _envVar.KUNCI_GXXX);
-            DbUsername = dbUsername ?? _as.GetVariabel("UserSql", _envVar.KUNCI_GXXX);
-            DbPassword = dbPassword ?? _as.GetVariabel("PasswordSql", _envVar.KUNCI_GXXX);
-            DbConnectionString = $"Data Source={DbIpAddrss};Initial Catalog={DbName};User ID={DbUsername};Password={DbPassword};Connection Timeout=180;"; // 3 menit
+            this.DbIpAddrss = dbIpAddrss ?? this._as.GetVariabel("IPSql", this._envVar.KUNCI_GXXX);
+            this.DbName = dbName ?? this._as.GetVariabel("DatabaseSql", this._envVar.KUNCI_GXXX);
+            this.DbUsername = dbUsername ?? this._as.GetVariabel("UserSql", this._envVar.KUNCI_GXXX);
+            this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordSql", this._envVar.KUNCI_GXXX);
+            this.DbConnectionString = $"Data Source={this.DbIpAddrss};Initial Catalog={this.DbName};User ID={this.DbUsername};Password={this.DbPassword};Connection Timeout=180;"; // 3 menit
         }
 
         protected override void BindQueryParameter(DbCommand cmd, List<CDbQueryParamBind> parameters) {
@@ -74,10 +73,11 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.Parameters.Clear();
             if (parameters != null) {
                 for (int i = 0; i < parameters.Count; i++) {
-                    string pName = parameters[i].NAME.StartsWith($"{prefix}") ? parameters[i].NAME.Substring(1) : parameters[i].NAME;
+                    string pName = parameters[i].NAME.StartsWith($"{prefix}") ? parameters[i].NAME[1..] : parameters[i].NAME;
                     if (string.IsNullOrEmpty(pName)) {
                         throw new Exception("Nama Parameter Wajib Diisi");
                     }
+
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
                     if (pValType.IsArray) {
@@ -87,71 +87,76 @@ namespace bifeldy_sd3_lib_60.Databases {
                             if (!string.IsNullOrEmpty(bindStr)) {
                                 bindStr += ", ";
                             }
+
                             bindStr += $"{prefix}{pName}_{id}";
-                            cmd.Parameters.Add(new SqlParameter {
+                            _ = cmd.Parameters.Add(new SqlParameter {
                                 ParameterName = $"{pName}_{id}",
                                 Value = data ?? DBNull.Value
                             });
                             id++;
                         }
-                        Regex regex = new Regex($"{prefix}{pName}");
+
+                        var regex = new Regex($"{prefix}{pName}");
                         cmd.CommandText = regex.Replace(cmd.CommandText, bindStr, 1);
                     }
                     else {
-                        SqlParameter param = new SqlParameter {
+                        var param = new SqlParameter {
                             ParameterName = pName,
                             Value = pVal ?? DBNull.Value
                         };
                         if (parameters[i].SIZE > 0) {
                             param.Size = parameters[i].SIZE;
                         }
+
                         if (parameters[i].DIRECTION > 0) {
                             param.Direction = parameters[i].DIRECTION;
                         }
-                        cmd.Parameters.Add(param);
+
+                        _ = cmd.Parameters.Add(param);
                     }
                 }
             }
-            LogQueryParameter(cmd, prefix);
+
+            this.LogQueryParameter(cmd, prefix);
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
-            return await GetAllColumnTableAsync(tableName, cmd);
+            return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
-            BindQueryParameter(cmd, bindParam);
-            return await GetDataTableAsync(cmd);
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.GetDataTableAsync(cmd);
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
-            BindQueryParameter(cmd, bindParam);
-            return await ExecScalarAsync<T>(cmd);
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.ExecScalarAsync<T>(cmd);
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
-            BindQueryParameter(cmd, bindParam);
-            return await ExecQueryAsync(cmd);
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.ExecQueryAsync(cmd);
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = procedureName;
             cmd.CommandType = CommandType.StoredProcedure;
-            BindQueryParameter(cmd, bindParam);
-            return await ExecProcedureAsync(cmd);
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.ExecProcedureAsync(cmd);
         }
 
         public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable) {
@@ -159,45 +164,44 @@ namespace bifeldy_sd3_lib_60.Databases {
             Exception exception = null;
             SqlBulkCopy dbBulkCopy = null;
             try {
-                await OpenConnection();
-                dbBulkCopy = new SqlBulkCopy((SqlConnection) GetConnection()) {
+                await this.OpenConnection();
+                dbBulkCopy = new SqlBulkCopy((SqlConnection)this.GetConnection()) {
                     DestinationTableName = tableName
                 };
                 await dbBulkCopy.WriteToServerAsync(dataTable);
                 result = true;
             }
             catch (Exception ex) {
-                _logger.LogError($"[SQL_BULK_INSERT] {ex.Message}");
+                this._logger.LogError("[SQL_BULK_INSERT] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                if (dbBulkCopy != null) {
-                    dbBulkCopy.Close();
-                }
-                await CloseConnection();
+                dbBulkCopy?.Close();
+                await this.CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
-            BindQueryParameter(cmd, bindParam);
-            return await ExecReaderAsync(cmd);
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.ExecReaderAsync(cmd);
         }
 
         public override async Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null) {
-            SqlCommand cmd = (SqlCommand) CreateCommand();
+            var cmd = (SqlCommand)this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
-            BindQueryParameter(cmd, bindParam);
-            return await RetrieveBlob(cmd, stringPathDownload, stringFileName);
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.RetrieveBlob(cmd, stringPathDownload, stringFileName);
         }
 
         public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {
-            CMsSQL mssql = (CMsSQL) Clone();
+            var mssql = (CMsSQL)this.Clone();
             mssql.InitializeConnection(dbIpAddrss, dbUsername, dbPassword, dbName);
             mssql.ReSetConnectionString();
             return mssql;

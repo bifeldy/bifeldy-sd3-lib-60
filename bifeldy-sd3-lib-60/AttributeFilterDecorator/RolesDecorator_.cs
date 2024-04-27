@@ -21,6 +21,7 @@ using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
 
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class RolesDecorator : Attribute, IAuthorizationFilter {
 
         protected readonly IList<UserSessionRole> _roles = new List<UserSessionRole>() {
@@ -31,22 +32,23 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
 
         public RolesDecorator(params UserSessionRole[] roles) {
             foreach (UserSessionRole role in roles) {
-                if (!_roles.Contains(role)) {
-                    _roles.Add(role);
+                if (!this._roles.Contains(role)) {
+                    this._roles.Add(role);
                 }
             }
-            _roles = _roles.OrderBy(r => r).ToList();
+
+            this._roles = this._roles.OrderBy(r => r).ToList();
         }
 
         public virtual void OnAuthorization(AuthorizationFilterContext context) {
-            user = (UserApiSession) context.HttpContext.Items["user"];
+            this.user = (UserApiSession) context.HttpContext.Items["user"];
 
-            if (_roles == null || user == null) {
+            if (this._roles == null || this.user == null) {
                 throw new NotImplementedException();
             }
         }
 
-        public void Failed(AuthorizationFilterContext context) {
+        public static void Failed(AuthorizationFilterContext context) {
             context.Result = new JsonResult(new {
                 info = "🙄 401 - API Authorization :: Gagal Authentikasi Pengguna 😪",
                 result = new {
@@ -57,7 +59,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
             };
         }
 
-        public void RejectRole(AuthorizationFilterContext context, string message) {
+        public static void RejectRole(AuthorizationFilterContext context, string message) {
             context.Result = new JsonResult(new {
                 info = "😡 403 - API Authorization :: Whoops, Akses Ditolak 😤",
                 result = new {
@@ -79,8 +81,8 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
         public override void OnAuthorization(AuthorizationFilterContext context) {
             try {
                 base.OnAuthorization(context);
-                UserSessionRole minRole = _roles.LastOrDefault();
-                if (user.role > minRole) {
+                UserSessionRole minRole = this._roles.LastOrDefault();
+                if (this.user.role > minRole) {
                     RejectRole(context, $"Dibutuhkan Setidaknya Minimal :: {minRole}");
                 }
             }
@@ -100,8 +102,8 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
         public override void OnAuthorization(AuthorizationFilterContext context) {
             try {
                 base.OnAuthorization(context);
-                if (!_roles.Contains(user.role)) {
-                    string requiredRole = string.Join(" / ", _roles.Select(r => r.ToString()).ToArray());
+                if (!this._roles.Contains(this.user.role)) {
+                    string requiredRole = string.Join(" / ", this._roles.Select(r => r.ToString()).ToArray());
                     RejectRole(context, $"Khusus :: {requiredRole}");
                 }
             }

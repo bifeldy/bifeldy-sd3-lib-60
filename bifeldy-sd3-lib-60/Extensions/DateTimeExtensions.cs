@@ -16,16 +16,14 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class DateTimeExtensions {
 
-        private static GregorianCalendar _gc = new GregorianCalendar();
+        private static readonly GregorianCalendar _gc = new();
 
         public static int GetWeekOfMonth(this DateTime time) {
-            DateTime first = new DateTime(time.Year, time.Month, 1);
+            var first = new DateTime(time.Year, time.Month, 1);
             return time.GetWeekOfYear() - first.GetWeekOfYear() + 1;
         }
 
-        public static int GetWeekOfYear(this DateTime time) {
-            return _gc.GetWeekOfYear(time, CalendarWeekRule.FirstDay, DayOfWeek.Sunday);
-        }
+        public static int GetWeekOfYear(this DateTime time) => _gc.GetWeekOfYear(time, CalendarWeekRule.FirstDay, DayOfWeek.Sunday);
 
     }
 

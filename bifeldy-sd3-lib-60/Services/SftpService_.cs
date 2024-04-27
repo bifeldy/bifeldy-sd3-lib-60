@@ -29,67 +29,70 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly ILogger<CSftpService> _logger;
 
         public CSftpService(ILogger<CSftpService> logger) {
-            _logger = logger;
+            this._logger = logger;
         }
 
         public bool GetFile(string hostname, int port, string username, string password, string remotePath, string localFile, Action<double> progress = null) {
             try {
-                using (SftpClient sftp = new SftpClient(hostname, port, username, password)) {
+                using (var sftp = new SftpClient(hostname, port, username, password)) {
                     sftp.Connect();
-                    using (FileStream fs = new FileStream(localFile, FileMode.OpenOrCreate)) {
+                    using (var fs = new FileStream(localFile, FileMode.OpenOrCreate)) {
                         sftp.DownloadFile(remotePath, fs, downloaded => {
                             double percentage = (double) downloaded / fs.Length * 100;
-                            if (progress != null) {
-                                progress(percentage);
-                            }
-                            _logger.LogInformation($"[SFTP_GET_FILE] {localFile} @ {percentage} %");
+                            progress?.Invoke(percentage);
+
+                            this._logger.LogInformation("[SFTP_GET_FILE] {localFile} @ {percentage} %", localFile, percentage);
                         });
                     }
+
                     sftp.Disconnect();
                 }
+
                 return true;
             }
             catch (Exception ex) {
-                _logger.LogError($"[SFTP_GET_FILE] {ex.Message}");
+                this._logger.LogError("[SFTP_GET_FILE] {ex}", ex.Message);
                 return false;
             }
         }
 
         public bool PutFile(string hostname, int port, string username, string password, string localFile, string remotePath, Action<double> progress = null) {
             try {
-                using (SftpClient sftp = new SftpClient(hostname, port, username, password)) {
+                using (var sftp = new SftpClient(hostname, port, username, password)) {
                     sftp.Connect();
-                    using (FileStream fs = new FileStream(localFile, FileMode.Open)) {
+                    using (var fs = new FileStream(localFile, FileMode.Open)) {
                         sftp.UploadFile(fs, remotePath, uploaded => {
                             double percentage = (double) uploaded / fs.Length * 100;
-                            if (progress != null) {
-                                progress(percentage);
-                            }
-                            _logger.LogInformation($"[SFTP_PUT_FILE] {localFile} @ {percentage} %");
+                            progress?.Invoke(percentage);
+
+                            this._logger.LogInformation("[SFTP_PUT_FILE] {localFile} @ {percentage} %", localFile, percentage);
                         });
                     }
+
                     sftp.Disconnect();
                 }
+
                 return true;
             }
             catch (Exception ex) {
-                _logger.LogError($"[SFTP_PUT_FILE] {ex.Message}");
+                this._logger.LogError("[SFTP_PUT_FILE] {ex}", ex.Message);
                 return false;
             }
         }
 
         public string[] GetDirectoryList(string hostname, int port, string username, string password, string remotePath) {
-            List<SftpFile> response = new List<SftpFile>();
+            var response = new List<SftpFile>();
             try {
-                using (SftpClient sftp = new SftpClient(hostname, port, username, password)) {
+                using (var sftp = new SftpClient(hostname, port, username, password)) {
                     sftp.Connect();
                     response = (List<SftpFile>) sftp.ListDirectory(remotePath);
                     sftp.Disconnect();
                 }
             }
             catch (Exception ex) {
-                _logger.LogError($"[SFTP_GET_DIRECTORY_LIST] {ex.Message}");
+                this._logger.LogError("[SFTP_GET_DIRECTORY_LIST] {ex}", ex.Message);
             }
+
             return response.Select(r => r.FullName).ToArray();
         }
 

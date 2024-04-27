@@ -41,11 +41,12 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string GZipDecompressString(byte[] byteData) {
-            using (MemoryStream msi = new MemoryStream(byteData)) {
-                using (MemoryStream mso = new MemoryStream()) {
-                    using (GZipStream gs = new GZipStream(msi, CompressionMode.Decompress)) {
-                        CopyTo(gs, mso);
+            using (var msi = new MemoryStream(byteData)) {
+                using (var mso = new MemoryStream()) {
+                    using (var gs = new GZipStream(msi, CompressionMode.Decompress)) {
+                        this.CopyTo(gs, mso);
                     }
+
                     return Encoding.UTF8.GetString(mso.ToArray());
                 }
             }
@@ -53,29 +54,31 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public byte[] GZipCompressString(string text) {
             byte[] bytes = Encoding.UTF8.GetBytes(text);
-            using (MemoryStream msi = new MemoryStream(bytes)) {
-                using (MemoryStream mso = new MemoryStream()) {
-                    using (GZipStream gs = new GZipStream(mso, CompressionMode.Compress)) {
-                        CopyTo(msi, gs);
+            using (var msi = new MemoryStream(bytes)) {
+                using (var mso = new MemoryStream()) {
+                    using (var gs = new GZipStream(mso, CompressionMode.Compress)) {
+                        this.CopyTo(msi, gs);
                     }
+
                     return mso.ToArray();
                 }
             }
         }
 
         public List<byte[]> ReadFileAsBinaryChunk(string filePath, int maxChunk = 1024) {
-            List<byte[]> res = new List<byte[]>();
-            using (MemoryStream ms = ReadFileAsBinaryStream(filePath, maxChunk)) {
+            var res = new List<byte[]>();
+            using (MemoryStream ms = this.ReadFileAsBinaryStream(filePath, maxChunk)) {
                 byte[] data = ms.ToArray();
                 foreach (byte[] d in data.Split(maxChunk)) {
                     res.Add(d);
                 }
             }
+
             return res;
         }
 
         public MemoryStream ReadFileAsBinaryStream(string filePath, int maxChunk = 1024) {
-            MemoryStream dest = new MemoryStream();
+            var dest = new MemoryStream();
             using (Stream source = File.OpenRead(filePath)) {
                 byte[] buffer = new byte[maxChunk];
                 int bytesRead = 0;
@@ -83,6 +86,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     dest.Write(buffer, 0, bytesRead);
                 }
             }
+
             return dest;
         }
 

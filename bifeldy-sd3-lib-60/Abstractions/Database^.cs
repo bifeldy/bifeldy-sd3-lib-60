@@ -64,88 +64,84 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public string DbTnsOdp { get; set; }
         public string DbConnectionString { get; set; }
 
-        public bool HasUnCommitRollbackSqlQuery => Database.CurrentTransaction != null;
+        public bool HasUnCommitRollbackSqlQuery => this.Database.CurrentTransaction != null;
 
         public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs) : base(options) {
-            _envVar = envVar.Value;
-            _logger = logger;
-            _cs = cs;
+            this._envVar = envVar.Value;
+            this._logger = logger;
+            this._cs = cs;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);
-            Assembly libAsm = Assembly.GetExecutingAssembly();
-            Assembly prgAsm = Assembly.GetEntryAssembly();
+            var libAsm = Assembly.GetExecutingAssembly();
+            var prgAsm = Assembly.GetEntryAssembly();
             modelBuilder.RegisterAllEntities<EntityTable>(libAsm);
             modelBuilder.RegisterAllEntities<EntityTable>(prgAsm);
             // DbSet<T> Case Sensitive ~
             foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
                 string tblName = entityType.GetTableName();
-                if (_envVar.IS_USING_POSTGRES) {
+                if (this._envVar.IS_USING_POSTGRES) {
                     entityType.SetTableName(tblName.ToLower());
                 }
+
                 foreach (IMutableProperty property in entityType.GetProperties()) {
                     string colName = property.GetColumnBaseName();
-                    if (_envVar.IS_USING_POSTGRES) {
+                    if (this._envVar.IS_USING_POSTGRES) {
                         property.SetColumnName(colName.ToLower());
                     }
                 }
             }
         }
 
-        public object Clone() {
-            return MemberwiseClone();
-        }
+        public object Clone() => this.MemberwiseClone();
 
-        protected void ReSetConnectionString() {
-            Database.SetConnectionString(DbConnectionString);
-        }
+        protected void ReSetConnectionString() => this.Database.SetConnectionString(this.DbConnectionString);
 
-        protected virtual DbConnection GetConnection() {
-            return Database.GetDbConnection();
-        }
+        protected virtual DbConnection GetConnection() => this.Database.GetDbConnection();
 
         protected virtual DbCommand CreateCommand() {
-            DbCommand cmd = GetConnection().CreateCommand();
+            DbCommand cmd = this.GetConnection().CreateCommand();
             cmd.CommandTimeout = 1800; // 30 Minutes
             return cmd;
         }
 
         protected async Task OpenConnection() {
-            if (Database.CurrentTransaction == null) {
-                if (GetConnection().State != ConnectionState.Closed) {
+            if (this.Database.CurrentTransaction == null) {
+                if (this.GetConnection().State != ConnectionState.Closed) {
                     throw new Exception("Koneksi Database Sedang Digunakan");
                 }
-                await Database.OpenConnectionAsync();
+
+                await this.Database.OpenConnectionAsync();
             }
         }
 
         /// <summary> Jangan Lupa Di Commit Atau Rollback Sebelum Menjalankan Ini </summary>
         protected async Task CloseConnection(bool force = false) {
-            if (Database.CurrentTransaction == null || force) {
-                if (GetConnection().State != ConnectionState.Closed) {
-                    await Database.CloseConnectionAsync();
+            if (this.Database.CurrentTransaction == null || force) {
+                if (this.GetConnection().State != ConnectionState.Closed) {
+                    await this.Database.CloseConnectionAsync();
                 }
             }
         }
 
         public async Task<IDbContextTransaction> TransactionStart(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted) {
-            await OpenConnection();
-            return await Database.BeginTransactionAsync(isolationLevel);
+            await this.OpenConnection();
+            return await this.Database.BeginTransactionAsync(isolationLevel);
         }
 
         public async Task TransactionCommit(DbTransaction useTrx = null) {
-            DbTransaction trx = useTrx ?? Database.CurrentTransaction.GetDbTransaction();
-            IDbContextTransaction ctx = await Database.UseTransactionAsync(trx);
+            DbTransaction trx = useTrx ?? this.Database.CurrentTransaction.GetDbTransaction();
+            IDbContextTransaction ctx = await this.Database.UseTransactionAsync(trx);
             await ctx.CommitAsync();
-            await CloseConnection(true);
+            await this.CloseConnection(true);
         }
 
         public async Task TransactionRollback(DbTransaction useTrx = null) {
-            DbTransaction trx = useTrx ?? Database.CurrentTransaction.GetDbTransaction();
-            IDbContextTransaction ctx = await Database.UseTransactionAsync(trx);
+            DbTransaction trx = useTrx ?? this.Database.CurrentTransaction.GetDbTransaction();
+            IDbContextTransaction ctx = await this.Database.UseTransactionAsync(trx);
             await ctx.RollbackAsync();
-            await CloseConnection(true);
+            await this.CloseConnection(true);
         }
 
         protected void LogQueryParameter(DbCommand databaseCommand, char databaseParameterPrefix) {
@@ -156,59 +152,61 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 if (pValType == typeof(string) || pValType == typeof(DateTime)) {
                     pVal = $"'{pVal}'";
                 }
-                Regex regex = new Regex($"{databaseParameterPrefix}{databaseCommand.Parameters[i].ParameterName}");
+
+                var regex = new Regex($"{databaseParameterPrefix}{databaseCommand.Parameters[i].ParameterName}");
                 sqlTextQueryParameters = regex.Replace(sqlTextQueryParameters, pVal.ToString(), 1);
             }
+
             sqlTextQueryParameters = sqlTextQueryParameters.Replace($"\r\n", " ");
             sqlTextQueryParameters = Regex.Replace(sqlTextQueryParameters, @"\s+", " ");
-            _logger.LogInformation($"[SQL_PARAMETERS] {sqlTextQueryParameters.Trim()}");
+            this._logger.LogInformation("[SQL_PARAMETERS] {sqlTextQueryParameters}", sqlTextQueryParameters.Trim());
         }
 
         protected virtual async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, DbCommand databaseCommand) {
-            DataTable dt = await GetDataTableAsync(databaseCommand);
+            DataTable dt = await this.GetDataTableAsync(databaseCommand);
             return dt.Columns;
         }
 
         protected virtual async Task<DataTable> GetDataTableAsync(DbCommand databaseCommand) {
-            DataTable result = new DataTable();
+            var result = new DataTable();
             DbDataReader dr = null;
             Exception exception = null;
             try {
                 // await OpenConnection();
                 // dataAdapter.Fill(result);
-                dr = await ExecReaderAsync(databaseCommand);
+                dr = await this.ExecReaderAsync(databaseCommand);
                 result.Load(dr);
             }
             catch (Exception ex) {
-                _logger.LogError($"[DATA_TABLE] {ex.Message}");
+                this._logger.LogError("[DATA_TABLE] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                if (dr != null) {
-                    dr.Close();
-                }
-                await CloseConnection();
+                dr?.Close();
+                await this.CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 
         protected virtual async Task<T> ExecScalarAsync<T>(DbCommand databaseCommand) {
-            T result = _cs.GetDefaultValueT<T>();
+            T result = this._cs.GetDefaultValueT<T>();
             Exception exception = null;
             try {
-                await OpenConnection();
+                await this.OpenConnection();
                 object _obj = await databaseCommand.ExecuteScalarAsync();
                 if (_obj != null) {
-                    result = (T)Convert.ChangeType(_obj, typeof(T));
+                    result = (T) Convert.ChangeType(_obj, typeof(T));
                 }
             }
             catch (Exception ex) {
-                _logger.LogError($"[EXEC_SCALAR] {ex.Message}");
+                this._logger.LogError("[EXEC_SCALAR] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                await CloseConnection();
+                await this.CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 
@@ -216,38 +214,40 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             bool result = false;
             Exception exception = null;
             try {
-                await OpenConnection();
+                await this.OpenConnection();
                 result = await databaseCommand.ExecuteNonQueryAsync() >= 0;
             }
             catch (Exception ex) {
-                _logger.LogError($"[EXEC_QUERY] {ex.Message}");
+                this._logger.LogError("[EXEC_QUERY] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                await CloseConnection();
+                await this.CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 
         protected virtual async Task<CDbExecProcResult> ExecProcedureAsync(DbCommand databaseCommand) {
-            CDbExecProcResult result = new CDbExecProcResult {
+            var result = new CDbExecProcResult {
                 STATUS = false,
                 QUERY = databaseCommand.CommandText,
                 PARAMETERS = databaseCommand.Parameters
             };
             Exception exception = null;
             try {
-                await OpenConnection();
+                await this.OpenConnection();
                 result.STATUS = await databaseCommand.ExecuteNonQueryAsync() == -1;
                 result.PARAMETERS = databaseCommand.Parameters;
             }
             catch (Exception ex) {
-                _logger.LogError($"[EXEC_PROCEDURE] {ex.Message}");
+                this._logger.LogError("[EXEC_PROCEDURE] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                await CloseConnection();
+                await this.CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 
@@ -258,17 +258,18 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             DbDataReader result = null;
             Exception exception = null;
             try {
-                await OpenConnection();
+                await this.OpenConnection();
                 result = await databaseCommand.ExecuteReaderAsync();
             }
             catch (Exception ex) {
-                _logger.LogError($"[EXEC_READER] {ex.Message}");
+                this._logger.LogError("[EXEC_READER] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
                 // Kalau Koneksinya Di Close Dari Sini Tidak Akan Bisa Pakai Reader Untuk Baca Lagi
                 // await CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 
@@ -276,15 +277,16 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             string result = null;
             Exception exception = null;
             try {
-                await OpenConnection();
+                await this.OpenConnection();
                 string filePathResult = $"{stringPathDownload}/{stringFileName}";
                 DbDataReader rdrGetBlob = await databaseCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
                 if (!rdrGetBlob.HasRows) {
                     throw new Exception("File Tidak Ditemukan");
                 }
+
                 while (await rdrGetBlob.ReadAsync()) {
-                    FileStream fs = new FileStream(filePathResult, FileMode.OpenOrCreate, FileAccess.Write);
-                    BinaryWriter bw = new BinaryWriter(fs);
+                    var fs = new FileStream(filePathResult, FileMode.OpenOrCreate, FileAccess.Write);
+                    var bw = new BinaryWriter(fs);
                     long startIndex = 0;
                     int bufferSize = 8192;
                     byte[] outbyte = new byte[bufferSize - 1];
@@ -296,21 +298,24 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                         startIndex += bufferSize;
                         retval = (int)rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
                     }
+
                     bw.Write(outbyte, 0, (retval > 0 ? retval : 1) - 1);
                     bw.Flush();
                     bw.Close();
                 }
+
                 rdrGetBlob.Close();
                 rdrGetBlob = null;
                 result = filePathResult;
             }
             catch (Exception ex) {
-                _logger.LogError($"[RETRIEVE_BLOB] {ex.Message}");
+                this._logger.LogError("[RETRIEVE_BLOB] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                await CloseConnection();
+                await this.CloseConnection();
             }
+
             return (exception == null) ? result : throw exception;
         }
 

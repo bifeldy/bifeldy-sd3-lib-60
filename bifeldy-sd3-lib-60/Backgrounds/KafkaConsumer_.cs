@@ -45,11 +45,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private IConsumer<string, string> consumer = null;
 
-        private string KAFKA_NAME {
-            get {
-                return "KAFKA_" + _pubSubName ?? $"CONSUMER_{_hostPort.ToUpper()}#{_topicName.ToUpper()}";
-            }
-        }
+        private string KAFKA_NAME => "KAFKA_" + this._pubSubName ?? $"CONSUMER_{this._hostPort.ToUpper()}#{this._topicName.ToUpper()}";
 
         const ulong COMMIT_AFTER_N_MESSAGES = 10;
 
@@ -58,27 +54,27 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             string hostPort, string topicName, string logTableName = null,
             string groupId = null, bool suffixKodeDc = false, string pubSubName = null
         ) {
-            _logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
-            _app = serviceProvider.GetRequiredService<IApplicationService>();
-            _converter = serviceProvider.GetRequiredService<IConverterService>();
-            _pubSub = serviceProvider.GetRequiredService<IPubSubService>();
-            _kafka = serviceProvider.GetRequiredService<IKafkaService>();
+            this._logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
+            this._app = serviceProvider.GetRequiredService<IApplicationService>();
+            this._converter = serviceProvider.GetRequiredService<IConverterService>();
+            this._pubSub = serviceProvider.GetRequiredService<IPubSubService>();
+            this._kafka = serviceProvider.GetRequiredService<IKafkaService>();
 
             IServiceScope scopedService = serviceProvider.CreateScope();
-            _generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
+            this._generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
-            _hostPort = hostPort;
-            _topicName = topicName;
-            _groupId = !string.IsNullOrEmpty(groupId) ? groupId : _app.AppName;
+            this._hostPort = hostPort;
+            this._topicName = topicName;
+            this._groupId = !string.IsNullOrEmpty(groupId) ? groupId : this._app.AppName;
 
-            _logTableName = logTableName ?? "KAFKA_CONSUMER_AUTO_LOG";
-            _suffixKodeDc = suffixKodeDc;
-            _pubSubName = pubSubName;
+            this._logTableName = logTableName ?? "KAFKA_CONSUMER_AUTO_LOG";
+            this._suffixKodeDc = suffixKodeDc;
+            this._pubSubName = pubSubName;
         }
 
         public override void Dispose() {
-            consumer?.Dispose();
-            _pubSub.DisposeAndRemoveSubscriber(KAFKA_NAME);
+            this.consumer?.Dispose();
+            this._pubSub.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
             base.Dispose();
         }
 
@@ -86,54 +82,59 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             try {
                 await Task.Yield();
 
-                if (_suffixKodeDc) {
-                    if (!_groupId.EndsWith("_")) {
-                        _groupId += "_";
+                if (this._suffixKodeDc) {
+                    if (!this._groupId.EndsWith("_")) {
+                        this._groupId += "_";
                     }
-                    if (!_topicName.EndsWith("_")) {
-                        _topicName += "_";
+
+                    if (!this._topicName.EndsWith("_")) {
+                        this._topicName += "_";
                     }
-                    string kodeDc = await _generalRepo.GetKodeDc();
-                    _groupId += kodeDc;
-                    _topicName += kodeDc;
+
+                    string kodeDc = await this._generalRepo.GetKodeDc();
+                    this._groupId += kodeDc;
+                    this._topicName += kodeDc;
                 }
-                if (observeable == null) {
-                    observeable = _pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(KAFKA_NAME);
+
+                this.observeable ??= this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(this.KAFKA_NAME);
+
+                if (this.consumer == null) {
+                    await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName);
+                    this.consumer = this._kafka.CreateKafkaConsumerInstance<string, string>(this._hostPort, this._groupId);
+                    TopicPartition topicPartition = this._kafka.CreateKafkaConsumerTopicPartition(this._topicName, -1);
+                    TopicPartitionOffset topicPartitionOffset = this._kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
+                    this.consumer.Assign(topicPartitionOffset);
+                    this.consumer.Subscribe(this._topicName);
                 }
-                if (consumer == null) {
-                    await _kafka.CreateTopicIfNotExist(_hostPort, _topicName);
-                    consumer = _kafka.CreateKafkaConsumerInstance<string, string>(_hostPort, _groupId);
-                    TopicPartition topicPartition = _kafka.CreateKafkaConsumerTopicPartition(_topicName, -1);
-                    TopicPartitionOffset topicPartitionOffset = _kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
-                    consumer.Assign(topicPartitionOffset);
-                    consumer.Subscribe(_topicName);
-                }
+
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
-                    ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
-                    _logger.LogInformation($"[KAFKA_CONSUMER_MESSAGE] 🏗 {result.Message.Key} :: {result.Message.Value}");
+                    ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
+                    this._logger.LogInformation("[KAFKA_CONSUMER_MESSAGE] 🏗 {Key} :: {Value}", result.Message.Key, result.Message.Value);
                     try {
-                        await _generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, _logTableName);
+                        _ = await this._generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
                     }
                     catch (Exception e) {
-                        _logger.LogError($"[KAFKA_CONSUMER_SAVEDB] 🏗 {e.Message}");
+                        this._logger.LogError("[KAFKA_CONSUMER_SAVEDB] 🏗 {e}", e.Message);
                     }
-                    Message<string, dynamic> msg = new Message<string, dynamic> {
+
+                    var msg = new Message<string, dynamic> {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
-                        Value = result.Message.Value.StartsWith("{") ? _converter.JsonToObject<dynamic>(result.Message.Value) : result.Message.Value,
+                        Value = result.Message.Value.StartsWith("{") ? this._converter.JsonToObject<dynamic>(result.Message.Value) : result.Message.Value,
                         Timestamp = result.Message.Timestamp
                     };
-                    observeable.OnNext(msg);
+                    this.observeable.OnNext(msg);
                     if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
-                        consumer.Commit();
+                        _ = this.consumer.Commit();
                         i = 0;
                     }
                 }
-                consumer.Close();
+
+                this.consumer.Close();
             }
             catch (Exception ex) {
-                _logger.LogError($"[KAFKA_CONSUMER_ERROR] 🏗 {ex.Message}");
+                this._logger.LogError("[KAFKA_CONSUMER_ERROR] 🏗 {ex}", ex.Message);
             }
         }
 

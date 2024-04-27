@@ -36,26 +36,26 @@ namespace bifeldy_sd3_lib_60.Services {
         public string CsvFolderPath { get; }
 
         public CCsvService(IOptions<EnvVar> envVar, ILogger<CCsvService> logger, IApplicationService @as) {
-            _envVar = envVar.Value;
-            _logger = logger;
-            _as = @as;
+            this._envVar = envVar.Value;
+            this._logger = logger;
+            this._as = @as;
 
-            CsvFolderPath = Path.Combine(_as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, _envVar.CSV_FOLDER_PATH);
-            if (!Directory.Exists(CsvFolderPath)) {
-                Directory.CreateDirectory(CsvFolderPath);
+            this.CsvFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.CSV_FOLDER_PATH);
+            if (!Directory.Exists(this.CsvFolderPath)) {
+                _ = Directory.CreateDirectory(this.CsvFolderPath);
             }
         }
 
         public bool DataTable2CSV(DataTable table, string filename, string separator, string outputPath = null) {
             bool res = false;
             StreamWriter writer = null;
-            string path = Path.Combine(outputPath ?? CsvFolderPath, filename);
+            string path = Path.Combine(outputPath ?? this.CsvFolderPath, filename);
             try {
                 writer = new StreamWriter(path);
                 string sep = string.Empty;
-                StringBuilder builder = new StringBuilder();
+                var builder = new StringBuilder();
                 foreach (DataColumn col in table.Columns) {
-                    builder.Append(sep).Append(col.ColumnName);
+                    _ = builder.Append(sep).Append(col.ColumnName);
                     sep = separator;
                 }
                 // Untuk Export *.CSV Di Buat NAMA_KOLOM Besar Semua Tanpa Petik "NAMA_KOLOM"
@@ -64,22 +64,23 @@ namespace bifeldy_sd3_lib_60.Services {
                     sep = string.Empty;
                     builder = new StringBuilder();
                     foreach (DataColumn col in table.Columns) {
-                        builder.Append(sep).Append(row[col.ColumnName]);
+                        _ = builder.Append(sep).Append(row[col.ColumnName]);
                         sep = separator;
                     }
+
                     writer.WriteLine(builder.ToString());
                 }
-                _logger.LogInformation($"[DATA_TABLE_2_CSV] {path}");
+
+                this._logger.LogInformation("[DATA_TABLE_2_CSV] {path}", path);
                 res = true;
             }
             catch (Exception ex) {
-                _logger.LogError($"[DATA_TABLE_2_CSV] {ex.Message}");
+                this._logger.LogError("[DATA_TABLE_2_CSV] {ex}", ex.Message);
             }
             finally {
-                if (writer != null) {
-                    writer.Close();
-                }
+                writer?.Close();
             }
+
             return res;
         }
 

@@ -41,12 +41,11 @@ using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
-namespace bifeldy_sd3_lib_60
-{
+namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
 
-        public static string DEFAULT_DATA_FOLDER = "_data";
+        public static readonly string DEFAULT_DATA_FOLDER = "_data";
 
         public static WebApplicationBuilder Builder = null;
         public static IServiceCollection Services = null;
@@ -71,16 +70,14 @@ namespace bifeldy_sd3_lib_60
             Config = builder.Configuration;
         }
 
-        public static void InitApp(WebApplication app) {
-            App = app;
-        }
+        public static void InitApp(WebApplication app) => App = app;
 
         /* ** */
 
         public static void SetupSerilog() {
-            Builder.Host.UseSerilog((hostContext, services, configuration) => {
+            _ = Builder.Host.UseSerilog((hostContext, services, configuration) => {
                 string appPathDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-                configuration.WriteTo.File(appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
+                _ = configuration.WriteTo.File(appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
             });
         }
 
@@ -93,14 +90,14 @@ namespace bifeldy_sd3_lib_60
             bool enableApiKey = true,
             bool enableJwt = false
         ) {
-            Services.AddSwaggerGen(c => {
+            _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
                 c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo {
                     Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
                     Description = docsDescription ?? "API Documentation ~"
                 });
                 if (enableApiKey) {
-                    OpenApiSecurityScheme apiKey = new OpenApiSecurityScheme {
+                    var apiKey = new OpenApiSecurityScheme {
                         Description = @"API-Key Origin. Example: 'http://.../...?key=000...'",
                         Name = "key",
                         In = ParameterLocation.Query,
@@ -116,8 +113,9 @@ namespace bifeldy_sd3_lib_60
                         { apiKey, Array.Empty<string>() }
                     });
                 }
+
                 if (enableJwt) {
-                    OpenApiSecurityScheme jwt = new OpenApiSecurityScheme {
+                    var jwt = new OpenApiSecurityScheme {
                         Description = @"Authorization Header. Example: 'Bearer eyj...'",
                         Name = "Authorization",
                         In = ParameterLocation.Header,
@@ -141,11 +139,11 @@ namespace bifeldy_sd3_lib_60
             string proxyHeaderName = "x-forwarded-prefix"
         ) {
             NginxPathName = proxyHeaderName;
-            App.UseSwagger(c => {
+            _ = App.UseSwagger(c => {
                 c.RouteTemplate = "{documentName}/swagger.json";
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
-                    List<OpenApiServer> openApiServers = new List<OpenApiServer>() {
-                        new OpenApiServer {
+                    var openApiServers = new List<OpenApiServer>() {
+                        new() {
                             Description = "Direct IP Server",
                             Url = "/"
                         }
@@ -157,10 +155,11 @@ namespace bifeldy_sd3_lib_60
                             Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
                         });
                     }
+
                     swaggerDoc.Servers = openApiServers;
                 });
             });
-            App.UseSwaggerUI(c => {
+            _ = App.UseSwaggerUI(c => {
                 c.RoutePrefix = apiUrlPrefix;
                 c.SwaggerEndpoint("swagger.json", apiUrlPrefix);
                 c.DefaultModelsExpandDepth(-1);
@@ -169,63 +168,61 @@ namespace bifeldy_sd3_lib_60
 
         /* ** */
 
-        public static void LoadConfig() {
-            Services.Configure<EnvVar>(Config.GetSection("ENV"));
-        }
+        public static void LoadConfig() => Services.Configure<EnvVar>(Config.GetSection("ENV"));
 
         public static void AddDependencyInjection() {
-            Services.AddHttpContextAccessor();
+            _ = Services.AddHttpContextAccessor();
             // --
-            Services.AddDbContext<IOracle, COracle>();
-            Services.AddDbContext<IPostgres, CPostgres>();
-            Services.AddDbContext<IMsSQL, CMsSQL>();
+            _ = Services.AddDbContext<IOracle, COracle>();
+            _ = Services.AddDbContext<IPostgres, CPostgres>();
+            _ = Services.AddDbContext<IMsSQL, CMsSQL>();
             // --
             // Setiap Request Cycle 1 Scope 1x New Object 1x Sesion Saja
             // --
-            Services.AddScoped<IOraPg>(sp => {
+            _ = Services.AddScoped<IOraPg>(sp => {
                 EnvVar _envVar = sp.GetRequiredService<IOptions<EnvVar>>().Value;
                 return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<IPostgres>() : sp.GetRequiredService<IOracle>();
             });
-            Services.AddScoped<ProtectedSessionStorage>();
-            Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
-            Services.AddScoped<IGeneralRepository, CGeneralRepository>();
-            Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
-            Services.AddScoped<IApiTokenRepository, CApiTokenRepository>();
-            Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
-            Services.AddScoped<IUserRepository, CUserRepository>();
+            _ = Services.AddScoped<ProtectedSessionStorage>();
+            _ = Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+            _ = Services.AddScoped<IGeneralRepository, CGeneralRepository>();
+            _ = Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
+            _ = Services.AddScoped<IApiTokenRepository, CApiTokenRepository>();
+            _ = Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
+            _ = Services.AddScoped<IUserRepository, CUserRepository>();
             // --
             // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
             // --
-            Services.AddSingleton<IConverter>(sp => {
+            _ = Services.AddSingleton<IConverter>(sp => {
                 return new SynchronizedConverter(new PdfTools());
             });
-            Services.AddSingleton<IApplicationService, CApplicationService>();
-            Services.AddSingleton<IGlobalService, CGlobalService>();
-            Services.AddSingleton<IConverterService, CConverterService>();
-            Services.AddSingleton<ICsvService, CCsvService>();
-            Services.AddSingleton<IZipService, CZipService>();
-            Services.AddSingleton<IHttpService, CHttpService>();
-            Services.AddSingleton<IFtpService, CFtpService>();
-            Services.AddSingleton<IBerkasService, CBerkasService>();
-            Services.AddSingleton<ISftpService, CSftpService>();
-            Services.AddSingleton<IStreamService, CStreamService>();
-            Services.AddSingleton<IChiperService, CChiperService>();
-            Services.AddSingleton<ILockerService, CLockerService>();
-            Services.AddSingleton<IPubSubService, CPubSubService>();
-            Services.AddSingleton<IKafkaService, CKafkaService>();
-            Services.AddSingleton<IRdlcService, CRdlcService>();
+            _ = Services.AddSingleton<IApplicationService, CApplicationService>();
+            _ = Services.AddSingleton<IGlobalService, CGlobalService>();
+            _ = Services.AddSingleton<IConverterService, CConverterService>();
+            _ = Services.AddSingleton<ICsvService, CCsvService>();
+            _ = Services.AddSingleton<IZipService, CZipService>();
+            _ = Services.AddSingleton<IHttpService, CHttpService>();
+            _ = Services.AddSingleton<IFtpService, CFtpService>();
+            _ = Services.AddSingleton<IBerkasService, CBerkasService>();
+            _ = Services.AddSingleton<ISftpService, CSftpService>();
+            _ = Services.AddSingleton<IStreamService, CStreamService>();
+            _ = Services.AddSingleton<IChiperService, CChiperService>();
+            _ = Services.AddSingleton<ILockerService, CLockerService>();
+            _ = Services.AddSingleton<IPubSubService, CPubSubService>();
+            _ = Services.AddSingleton<IKafkaService, CKafkaService>();
+            _ = Services.AddSingleton<IRdlcService, CRdlcService>();
         }
 
         /* ** */
 
         public static void AddKafkaProducerBackground(string hostPort, string topicName, short replication = 1, int partition = 1, bool suffixKodeDc = false, string pubSubName = null) {
-            Services.AddHostedService(sp => {
+            _ = Services.AddHostedService(sp => {
                 return new CKafkaProducer(sp, hostPort, topicName, replication, partition, suffixKodeDc, pubSubName);
             });
         }
 
         public static void AddKafkaConsumerBackground(string hostPort, string topicName, string logTableName = null, string groupId = null, bool suffixKodeDc = false, string pubSubName = null) {
-            Services.AddHostedService(sp => {
+            _ = Services.AddHostedService(sp => {
                 return new CKafkaConsumer(sp, hostPort, topicName, logTableName, groupId, suffixKodeDc, pubSubName);
             });
         }
@@ -238,6 +235,7 @@ namespace bifeldy_sd3_lib_60
                         AddKafkaProducerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.REPLICATION, ks.Value.PARTITION, ks.Value.SUFFIX_KODE_DC, ks.Key);
                     }
                 }
+
                 foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
                     if (ks.Key.StartsWith("CONSUMER_")) {
                         AddKafkaConsumerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.LOG_TABLE_NAME, ks.Value.GROUP_ID, ks.Value.SUFFIX_KODE_DC, ks.Key);
@@ -249,10 +247,12 @@ namespace bifeldy_sd3_lib_60
         /* ** */
 
         public static void AddJobScheduler() {
-            Services.AddQuartz(opt => {
+            _ = Services.AddQuartz(opt => {
+#pragma warning disable CS0618 // Type or member is obsolete
                 opt.UseMicrosoftDependencyInjectionJobFactory();
+#pragma warning restore CS0618 // Type or member is obsolete
             });
-            Services.AddQuartzHostedService(opt => {
+            _ = Services.AddQuartzHostedService(opt => {
                 opt.WaitForJobsToComplete = true;
             });
         }
@@ -261,6 +261,7 @@ namespace bifeldy_sd3_lib_60
             if (string.IsNullOrEmpty(jobName)) {
                 jobName = typeof(T).Name;
             }
+
             JobBuilder jobBuilder = JobBuilder.Create(typeof(T)).WithIdentity(jobName);
             IJobDetail jobDetail = jobBuilder.Build();
             TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity(jobName);
@@ -283,10 +284,11 @@ namespace bifeldy_sd3_lib_60
         public async static Task<DateTimeOffset[]> StartJobScheduler() {
             ISchedulerFactory schedulerFactory = App.Services.GetRequiredService<ISchedulerFactory>();
             IScheduler scheduler = await schedulerFactory.GetScheduler();
-            List<Task<DateTimeOffset>> allJobs = new List<Task<DateTimeOffset>>();
+            var allJobs = new List<Task<DateTimeOffset>>();
             foreach (KeyValuePair<string, KeyValuePair<IJobDetail, ITrigger>> jl in jobList) {
                 allJobs.Add(scheduler.ScheduleJob(jl.Value.Key, jl.Value.Value));
             }
+
             return await Task.WhenAll(allJobs);
         }
 
@@ -308,19 +310,20 @@ namespace bifeldy_sd3_lib_60
         /* ** */
 
         public static void UseNginxProxyPathSegment() {
-            App.Use(async (context, next) => {
+            _ = App.Use(async (context, next) => {
                 if (context.Request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
                     context.Request.PathBase = pathBase.Last();
                     if (context.Request.Path.StartsWithSegments(context.Request.PathBase, out PathString path)) {
                         context.Request.Path = path;
                     }
                 }
+
                 await next();
             });
         }
 
         public static void UseHelmet() {
-            App.UseHelmet(o => {
+            _ = App.UseHelmet(o => {
                 o.UseContentSecurityPolicy = false; // Buat Web Socket (Blazor SignalR, Socket.io, Web RTC)
                 o.UseXContentTypeOptions = false; // Boleh Content-Sniff :: .mkv Dibaca .mp4
                 o.UseReferrerPolicy = false; // Kalau Pakai Service Worker (Gak Set Origin, Tapi Referrer)
@@ -328,7 +331,7 @@ namespace bifeldy_sd3_lib_60
         }
 
         public static void UseErrorHandlerMiddleware() {
-            App.Use(async (context, next) => {
+            _ = App.Use(async (context, next) => {
 
                 // Khusus API Path :: Akan Di Handle Error Dengan Balikan Data JSON
                 // Selain Itu Atau Jika Masih Ada Error Lain
@@ -362,13 +365,9 @@ namespace bifeldy_sd3_lib_60
             });
         }
 
-        public static void UseApiKeyMiddleware() {
-            App.UseMiddleware<ApiKeyMiddleware>();
-        }
+        public static void UseApiKeyMiddleware() => App.UseMiddleware<ApiKeyMiddleware>();
 
-        public static void UseJwtMiddleware() {
-            App.UseMiddleware<JwtMiddleware>();
-        }
+        public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
 
     }
 

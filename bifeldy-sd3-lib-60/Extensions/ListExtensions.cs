@@ -21,7 +21,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
             if (string.IsNullOrEmpty(tableName)) {
                 tableName = typeof(T).Name;
             }
-            DataTable table = new DataTable(tableName);
+
+            var table = new DataTable(tableName);
 
             //
             // Special handling for value types and string
@@ -38,7 +39,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     throw new Exception("Nama Kolom Tabel Wajib Diisi");
                 }
 
-                DataColumn dc = new DataColumn(arrayListSingleValueColumnName, typeof(T));
+                var dc = new DataColumn(arrayListSingleValueColumnName, typeof(T));
                 table.Columns.Add(dc);
                 foreach (T item in listData) {
                     DataRow dr = table.NewRow();
@@ -49,7 +50,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             else {
                 PropertyDescriptorCollection properties = TypeDescriptor.GetProperties(typeof(T));
                 foreach (PropertyDescriptor prop in properties) {
-                    table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+                    _ = table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
                 }
 
                 foreach (T item in listData) {
@@ -62,6 +63,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             row[prop.Name] = DBNull.Value;
                         }
                     }
+
                     table.Rows.Add(row);
                 }
             }

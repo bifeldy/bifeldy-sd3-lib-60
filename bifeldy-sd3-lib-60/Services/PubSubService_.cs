@@ -29,45 +29,45 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IConverterService _converter;
 
-        IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
+        private readonly IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
 
         public CPubSubService(IConverterService converter) {
-            _converter = converter;
+            this._converter = converter;
         }
 
-        public bool IsExist(string key) {
-            return keyValuePairs.ContainsKey(key);
-        }
+        public bool IsExist(string key) => this.keyValuePairs.ContainsKey(key);
 
-        public BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) {
-            return new BehaviorSubject<T>(initialValue);
-        }
+        public BehaviorSubject<T> CreateNewBehaviorSubject<T>(T initialValue) => new(initialValue);
 
         public BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string key) {
             if (string.IsNullOrEmpty(key)) {
                 throw new Exception("Nama Key Wajib Diisi");
             }
-            if (!keyValuePairs.ContainsKey(key)) {
-                T defaultValue = _converter.GetDefaultValueT<T>();
-                return CreateGlobalAppBehaviorSubject(key, defaultValue);
+
+            if (!this.keyValuePairs.ContainsKey(key)) {
+                T defaultValue = this._converter.GetDefaultValueT<T>();
+                return this.CreateGlobalAppBehaviorSubject(key, defaultValue);
             }
-            return keyValuePairs[key];
+
+            return this.keyValuePairs[key];
         }
 
         public BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string key, T initialValue) {
             if (string.IsNullOrEmpty(key)) {
                 throw new Exception("Nama Key Wajib Diisi");
             }
-            if (!keyValuePairs.ContainsKey(key)) {
-                keyValuePairs.Add(key, CreateNewBehaviorSubject(initialValue));
+
+            if (!this.keyValuePairs.ContainsKey(key)) {
+                this.keyValuePairs.Add(key, this.CreateNewBehaviorSubject(initialValue));
             }
-            return keyValuePairs[key];
+
+            return this.keyValuePairs[key];
         }
 
         public void DisposeAndRemoveSubscriber(string key) {
-            if (keyValuePairs.ContainsKey(key)) {
-                keyValuePairs[key].Dispose();
-                keyValuePairs.Remove(key);
+            if (this.keyValuePairs.ContainsKey(key)) {
+                this.keyValuePairs[key].Dispose();
+                _ = this.keyValuePairs.Remove(key);
             }
         }
 

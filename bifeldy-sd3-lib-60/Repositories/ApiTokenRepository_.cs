@@ -43,48 +43,49 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            _as = @as;
-            _orapg = orapg;
+            this._as = @as;
+            this._orapg = orapg;
         }
 
         public async Task<bool> Create(API_TOKEN_T apiToken) {
-            apiToken.APP_NAME = _as.AppName.ToUpper();
-            _orapg.Set<API_TOKEN_T>().Add(apiToken);
-            return await _orapg.SaveChangesAsync() > 0;
+            apiToken.APP_NAME = this._as.AppName.ToUpper();
+            _ = this._orapg.Set<API_TOKEN_T>().Add(apiToken);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         public async Task<List<API_TOKEN_T>> GetAll(string userName = null) {
-            DbSet<API_TOKEN_T> dbSet = _orapg.Set<API_TOKEN_T>();
-            IQueryable<API_TOKEN_T> query = dbSet.Where(at => at.APP_NAME.ToUpper() == _as.AppName.ToUpper() || at.APP_NAME.ToUpper() == "*");
+            DbSet<API_TOKEN_T> dbSet = this._orapg.Set<API_TOKEN_T>();
+            IQueryable<API_TOKEN_T> query = dbSet.Where(at => at.APP_NAME.ToUpper() == this._as.AppName.ToUpper() || at.APP_NAME.ToUpper() == "*");
             if (!string.IsNullOrEmpty(userName)) {
                 query = dbSet.Where(at => at.USER_NAME.ToUpper() == userName.ToUpper());
             }
-            return await ((query == null) ? dbSet : query).ToListAsync();
+
+            return await (query ?? dbSet).ToListAsync();
         }
 
         public async Task<API_TOKEN_T> GetByUserName(string userName) {
-            return await _orapg.Set<API_TOKEN_T>().Where(at =>
+            return await this._orapg.Set<API_TOKEN_T>().Where(at =>
                 at.USER_NAME.ToUpper() == userName.ToUpper() && (
-                    at.APP_NAME.ToUpper() == _as.AppName.ToUpper() || at.APP_NAME.ToUpper() == "*"
+                    at.APP_NAME.ToUpper() == this._as.AppName.ToUpper() || at.APP_NAME.ToUpper() == "*"
                 )
             ).SingleOrDefaultAsync();
         }
 
         public async Task<API_TOKEN_T> GetByUserNamePass(string userName, string password) {
-            return await _orapg.Set<API_TOKEN_T>()
+            return await this._orapg.Set<API_TOKEN_T>()
                 .Where(at =>
                     at.USER_NAME.ToUpper() == userName.ToUpper() &&
                     at.PASSWORD.ToUpper() == password.ToUpper() && (
-                        at.APP_NAME.ToUpper() == _as.AppName.ToUpper() || at.APP_NAME.ToUpper() == "*"
+                        at.APP_NAME.ToUpper() == this._as.AppName.ToUpper() || at.APP_NAME.ToUpper() == "*"
                     )
                 )
                 .SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string userName) {
-            API_TOKEN_T auth = await GetByUserName(userName);
-            _orapg.Set<API_TOKEN_T>().Remove(auth);
-            return await _orapg.SaveChangesAsync() > 0;
+            API_TOKEN_T auth = await this.GetByUserName(userName);
+            _ = this._orapg.Set<API_TOKEN_T>().Remove(auth);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         /* ** */
@@ -93,22 +94,24 @@ namespace bifeldy_sd3_lib_60.Repositories {
             bool tokenSekaliPakaiValid = apiToken?.TOKEN_SEKALI_PAKAI.ToUpper() == tokenSekaliPakai.ToUpper();
             if (tokenSekaliPakaiValid) {
                 apiToken.TOKEN_SEKALI_PAKAI = null;
-                _orapg.Set<API_TOKEN_T>().Update(apiToken);
-                await _orapg.SaveChangesAsync();
+                _ = this._orapg.Set<API_TOKEN_T>().Update(apiToken);
+                _ = await this._orapg.SaveChangesAsync();
             }
+
             return tokenSekaliPakaiValid;
         }
 
         public async Task<API_TOKEN_T> LoginBot(string userName, string password) {
-            API_TOKEN_T apiToken = await GetByUserNamePass(userName, password);
+            API_TOKEN_T apiToken = await this.GetByUserNamePass(userName, password);
             if (apiToken != null) {
                 apiToken.TOKEN_SEKALI_PAKAI = null;
                 apiToken.LAST_LOGIN = DateTime.Now;
-                _orapg.Set<API_TOKEN_T>().Update(apiToken);
-                if (await _orapg.SaveChangesAsync() > 0) {
-                    return await GetByUserNamePass(userName, password);
+                _ = this._orapg.Set<API_TOKEN_T>().Update(apiToken);
+                if (await this._orapg.SaveChangesAsync() > 0) {
+                    return await this.GetByUserNamePass(userName, password);
                 }
             }
+
             return null;
         }
 

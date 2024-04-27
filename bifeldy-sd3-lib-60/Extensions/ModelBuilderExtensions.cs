@@ -38,7 +38,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     .ToArray();
                 EntityTypeBuilder entity = modelBuilder.Entity(type);
                 if (orderedKeys.Length > 0) {
-                    entity.HasKey(orderedKeys);
+                    _ = entity.HasKey(orderedKeys);
                 }
             }
         }

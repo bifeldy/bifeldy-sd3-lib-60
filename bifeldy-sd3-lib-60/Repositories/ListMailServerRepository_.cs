@@ -58,78 +58,76 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            _envVar = envVar.Value;
-            _logger = logger;
-            _gs = gs;
-            _orapg = orapg;
+            this._envVar = envVar.Value;
+            this._logger = logger;
+            this._gs = gs;
+            this._orapg = orapg;
         }
 
         public async Task<bool> Create(DC_LISTMAILSERVER_T apiKey) {
-            _orapg.Set<DC_LISTMAILSERVER_T>().Add(apiKey);
-            return await _orapg.SaveChangesAsync() > 0;
+            _ = this._orapg.Set<DC_LISTMAILSERVER_T>().Add(apiKey);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         public async Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null) {
-            DbSet<DC_LISTMAILSERVER_T> dbSet = _orapg.Set<DC_LISTMAILSERVER_T>();
+            DbSet<DC_LISTMAILSERVER_T> dbSet = this._orapg.Set<DC_LISTMAILSERVER_T>();
             IQueryable<DC_LISTMAILSERVER_T> query = null;
             if (!string.IsNullOrEmpty(dckode)) {
-                dbSet.Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper());
+                _ = dbSet.Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper());
             }
-            return await ((query == null) ? dbSet : query).ToListAsync();
+
+            return await (query ?? dbSet).ToListAsync();
         }
 
         public async Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode) {
-            return await _orapg.Set<DC_LISTMAILSERVER_T>()
+            return await this._orapg.Set<DC_LISTMAILSERVER_T>()
                 .Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper())
                 .SingleOrDefaultAsync();
         }
 
         public async Task<bool> Delete(string dckode) {
-            DC_LISTMAILSERVER_T apiKey = await GetByDcKode(dckode);
-            _orapg.Set<DC_LISTMAILSERVER_T>().Remove(apiKey);
-            return await _orapg.SaveChangesAsync() > 0;
+            DC_LISTMAILSERVER_T apiKey = await this.GetByDcKode(dckode);
+            _ = this._orapg.Set<DC_LISTMAILSERVER_T>().Remove(apiKey);
+            return await this._orapg.SaveChangesAsync() > 0;
         }
 
         /* ** */
 
         private async Task<SmtpClient> CreateSmtpClient() {
-            string dcKode = await GetKodeDc();
-            DC_LISTMAILSERVER_T mailServer = await GetByDcKode(dcKode);
+            string dcKode = await this.GetKodeDc();
+            DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
             int port = int.Parse(mailServer.MAIL_PORT);
             return new SmtpClient {
-                Host = mailServer.MAIL_HOSTNAME ?? _envVar.SMTP_SERVER_IP_DOMAIN,
-                Port = (port > 0) ? port : _envVar.SMTP_SERVER_PORT,
+                Host = mailServer.MAIL_HOSTNAME ?? this._envVar.SMTP_SERVER_IP_DOMAIN,
+                Port = (port > 0) ? port : this._envVar.SMTP_SERVER_PORT,
                 Credentials = new NetworkCredential(
-                    mailServer.MAIL_USERNAME ?? _envVar.SMTP_SERVER_USERNAME,
-                    mailServer.MAIL_PASSWORD ?? _envVar.SMTP_SERVER_PASSWORD
+                    mailServer.MAIL_USERNAME ?? this._envVar.SMTP_SERVER_USERNAME,
+                    mailServer.MAIL_PASSWORD ?? this._envVar.SMTP_SERVER_PASSWORD
                 )
             };
         }
 
         public MailAddress CreateEmailAddress(string address, string displayName = null) {
-            if (string.IsNullOrEmpty(displayName)) {
-                return new MailAddress(address);
-            }
-            return new MailAddress(address, displayName, Encoding.UTF8);
+            return string.IsNullOrEmpty(displayName) ? new MailAddress(address) : new MailAddress(address, displayName, Encoding.UTF8);
         }
 
         public List<MailAddress> CreateEmailAddress(string[] address) {
-            List<MailAddress> addresses = new List<MailAddress>();
+            var addresses = new List<MailAddress>();
             foreach (string a in address) {
-                addresses.Add(CreateEmailAddress(a));
+                addresses.Add(this.CreateEmailAddress(a));
             }
+
             return addresses;
         }
 
-        public Attachment CreateEmailAttachment(string filePath) {
-            return new Attachment(filePath);
-        }
+        public Attachment CreateEmailAttachment(string filePath) => new(filePath);
 
         public List<Attachment> CreateEmailAttachment(string[] filePath) {
-            List<Attachment> attachments = new List<Attachment>();
+            var attachments = new List<Attachment>();
             foreach (string path in filePath) {
-                attachments.Add(CreateEmailAttachment(path));
+                attachments.Add(this.CreateEmailAttachment(path));
             }
+
             return attachments;
         }
 
@@ -142,7 +140,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             List<MailAddress> bcc = null,
             List<Attachment> attachments = null
         ) {
-            MailMessage mailMessage = new MailMessage {
+            var mailMessage = new MailMessage {
                 Subject = subject,
                 SubjectEncoding = Encoding.UTF8,
                 Body = body,
@@ -153,26 +151,30 @@ namespace bifeldy_sd3_lib_60.Repositories {
             foreach (MailAddress t in to) {
                 mailMessage.To.Add(t);
             }
+
             if (cc != null) {
                 foreach (MailAddress c in cc) {
                     mailMessage.CC.Add(c);
                 }
             }
+
             if (bcc != null) {
                 foreach (MailAddress b in bcc) {
                     mailMessage.Bcc.Add(b);
                 }
             }
+
             if (attachments != null) {
                 foreach (Attachment a in attachments) {
                     mailMessage.Attachments.Add(a);
                 }
             }
+
             return mailMessage;
         }
 
         public async Task SendEmailMessage(MailMessage mailMessage) {
-            SmtpClient smtpClient = await CreateSmtpClient();
+            SmtpClient smtpClient = await this.CreateSmtpClient();
             await smtpClient.SendMailAsync(mailMessage);
         }
 
@@ -187,8 +189,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
         ) {
             Exception e = null;
             try {
-                await SendEmailMessage(
-                    CreateEmailMessage(
+                await this.SendEmailMessage(
+                    this.CreateEmailMessage(
                         subject,
                         body,
                         from,
@@ -200,9 +202,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 );
             }
             catch (Exception ex) {
-                _logger.LogError($"[SUREL_CREATE_AND_SEND] {ex.Message}");
+                this._logger.LogError("[SUREL_CREATE_AND_SEND] {ex}", ex.Message);
                 e = ex;
             }
+
             if (e != null) {
                 throw e;
             }

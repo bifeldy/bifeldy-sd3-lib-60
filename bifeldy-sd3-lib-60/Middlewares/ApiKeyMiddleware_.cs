@@ -36,11 +36,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             IGlobalService gs,
             IConverterService cs
         ) {
-            _next = next;
-            _logger = logger;
-            _app = app;
-            _gs = gs;
-            _cs = cs;
+            this._next = next;
+            this._logger = logger;
+            this._app = app;
+            this._gs = gs;
+            this._cs = cs;
         }
 
         public async Task Invoke(HttpContext context, IApiKeyRepository _akRepo) {
@@ -49,24 +49,25 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             if (!request.Path.Value.StartsWith("/api/") || request.Path.Value.StartsWith("/api/swagger")) {
-                await _next(context);
+                await this._next(context);
                 return;
             }
 
-            string[] serverIps = _app.GetAllIpAddress();
-            foreach (var ip in serverIps) {
-                if (!_gs.AllowedIpOrigin.Contains(ip)) {
-                    _gs.AllowedIpOrigin.Add(ip);
+            string[] serverIps = this._app.GetAllIpAddress();
+            foreach (string ip in serverIps) {
+                if (!this._gs.AllowedIpOrigin.Contains(ip)) {
+                    this._gs.AllowedIpOrigin.Add(ip);
                 }
             }
 
             string ipDomainHost = request.Host.Host;
-            if (!_gs.AllowedIpOrigin.Contains(ipDomainHost)) {
-                _gs.AllowedIpOrigin.Add(ipDomainHost);
+            if (!this._gs.AllowedIpOrigin.Contains(ipDomainHost)) {
+                this._gs.AllowedIpOrigin.Add(ipDomainHost);
             }
+
             string ipDomainProxy = request.Headers["x-forwarded-host"];
-            if (!string.IsNullOrEmpty(ipDomainProxy) && !_gs.AllowedIpOrigin.Contains(ipDomainProxy)) {
-                _gs.AllowedIpOrigin.Add(ipDomainProxy);
+            if (!string.IsNullOrEmpty(ipDomainProxy) && !this._gs.AllowedIpOrigin.Contains(ipDomainProxy)) {
+                this._gs.AllowedIpOrigin.Add(ipDomainProxy);
             }
 
             RequestJson reqBody = null;
@@ -75,10 +76,10 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 string rbString = await request.GetRequestBodyStringAsync();
                 if (!string.IsNullOrEmpty(rbString)) {
                     try {
-                        reqBody = _cs.JsonToObject<RequestJson>(rbString);
+                        reqBody = this._cs.JsonToObject<RequestJson>(rbString);
                     }
                     catch (Exception ex) {
-                        _logger.LogError($"[JSON_BODY] 🌸 {ex.Message}");
+                        this._logger.LogError("[JSON_BODY] 🌸 {ex}", ex.Message);
                     }
                 }
             }
@@ -93,6 +94,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             else */ if (!string.IsNullOrEmpty(request.Query["key"])) {
                 apiKey = request.Query["key"];
             }
+
             context.Items["api_key"] = apiKey;
 
             string ipOrigin = connection.RemoteIpAddress.ToString();
@@ -108,14 +110,15 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             else if (!string.IsNullOrEmpty(request.Headers["x-forwarded-for"])) {
                 ipOrigin = request.Headers["x-forwarded-for"];
             }
-            ipOrigin = _gs.CleanIpOrigin(ipOrigin);
+
+            ipOrigin = this._gs.CleanIpOrigin(ipOrigin);
             context.Items["ip_origin"] = ipOrigin;
 
-            _logger.LogInformation($"[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}");
+            this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);
 
             // API Key Khusus Bypass ~ Case Sensitive
-            if (apiKey == _app.AppName || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
-                await _next(context);
+            if (apiKey == this._app.AppName || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+                await this._next(context);
             }
             else {
                 response.Clear();

@@ -25,7 +25,7 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IRdlcService {
-        IDictionary<string, dynamic> fileType { get; }
+        IDictionary<string, dynamic> FileType { get; }
         LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null);
         ReportDataSource CreateReportDataSource(string name, DataTable dt);
         ReportParameter[] CreateReportParameter(IDictionary<string, string> dict);
@@ -38,7 +38,7 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IWebHostEnvironment _he;
         private readonly IConverterService _converter;
 
-        public IDictionary<string, dynamic> fileType { get; } = new Dictionary<string, dynamic> {
+        public IDictionary<string, dynamic> FileType { get; } = new Dictionary<string, dynamic> {
             {
                 "PDF", new {
                     contentType = "application/pdf",
@@ -66,33 +66,34 @@ namespace bifeldy_sd3_lib_60.Services {
         };
 
         public CRdlcService(IWebHostEnvironment he, IConverterService converter) {
-            _he = he;
-            _converter = converter;
+            this._he = he;
+            this._converter = converter;
         }
 
         public LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null) {
             var report = new LocalReport {
-                ReportPath = $"{_he.ContentRootPath}/wwwroot/rdlcs/{rdlcPath}"
+                ReportPath = $"{this._he.ContentRootPath}/wwwroot/rdlcs/{rdlcPath}"
             };
             if (ds != null) {
                 report.DisplayName = ds.Name;
                 report.DataSources.Add(ds);
             }
+
             if (param != null) {
                 report.SetParameters(param);
             }
+
             return report;
         }
 
-        public ReportDataSource CreateReportDataSource(string name, DataTable dt) {
-            return new ReportDataSource(name, dt);
-        }
+        public ReportDataSource CreateReportDataSource(string name, DataTable dt) => new(name, dt);
 
         public ReportParameter[] CreateReportParameter(IDictionary<string, string> dict) {
             var ls = new List<ReportParameter>();
             foreach (KeyValuePair<string, string> kvp in dict) {
                 ls.Add(new ReportParameter(kvp.Key, kvp.Value));
             }
+
             return ls.ToArray();
         }
 
@@ -128,17 +129,17 @@ namespace bifeldy_sd3_lib_60.Services {
             if (saveAs == "PDF" && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 throw new Exception("PDF Asli Hanya Dapat Dijalankan Pada OS Windows");
             }
-            if (margin == null) {
-                margin = new MarginSettings {
-                    Top = 1,
-                    Bottom = 1,
-                    Left = 1,
-                    Right = 1,
-                    Unit = Unit.Centimeters
-                };
-            }
-            var ds = CreateReportDataSource(dsName, dt);
-            var report = CreateLocalReport(rdlcPath, ds, param);
+
+            margin ??= new MarginSettings {
+                Top = 1,
+                Bottom = 1,
+                Left = 1,
+                Right = 1,
+                Unit = Unit.Centimeters
+            };
+
+            ReportDataSource ds = this.CreateReportDataSource(dsName, dt);
+            LocalReport report = this.CreateLocalReport(rdlcPath, ds, param);
             var model = new RdlcReport {
                 DisplayName = report.DisplayName,
                 Margins = margin,
@@ -149,8 +150,9 @@ namespace bifeldy_sd3_lib_60.Services {
             };
             if (model.RenderType == "HTML5") {
                 model.HtmlContent = Encoding.UTF8.GetString(model.Report);
-                model.Report = _converter.HtmlToPdf(GenerateHtmlReport(model));
+                model.Report = this._converter.HtmlToPdf(this.GenerateHtmlReport(model));
             }
+
             return model;
         }
 

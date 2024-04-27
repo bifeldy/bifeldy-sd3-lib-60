@@ -18,7 +18,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
     public static class DataTableExtensions {
 
         public static List<T> ToList<T>(this DataTable dt) {
-            List<string> columnNames = dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName.ToUpper()).ToList();
+            var columnNames = dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName.ToUpper()).ToList();
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             return dt.AsEnumerable().Select(row => {
@@ -33,6 +33,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         }
                     }
                 }
+
                 return objT;
             }).ToList();
         }

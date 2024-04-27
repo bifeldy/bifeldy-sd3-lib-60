@@ -21,16 +21,16 @@ namespace bifeldy_sd3_lib_60.Utilities {
         private readonly AttributeRouteModel _routePrefix;
 
         public RoutePrefix(IRouteTemplateProvider route) {
-            _routePrefix = new AttributeRouteModel(route);
+            this._routePrefix = new AttributeRouteModel(route);
         }
 
         public void Apply(ApplicationModel application) {
             foreach (SelectorModel selector in application.Controllers.SelectMany(c => c.Selectors)) {
                 if (selector.AttributeRouteModel != null) {
-                    selector.AttributeRouteModel = AttributeRouteModel.CombineAttributeRouteModel(_routePrefix, selector.AttributeRouteModel);
+                    selector.AttributeRouteModel = AttributeRouteModel.CombineAttributeRouteModel(this._routePrefix, selector.AttributeRouteModel);
                 }
                 else {
-                    selector.AttributeRouteModel = _routePrefix;
+                    selector.AttributeRouteModel = this._routePrefix;
                 }
             }
         }

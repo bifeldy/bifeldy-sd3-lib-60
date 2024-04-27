@@ -36,9 +36,9 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IBerkasService _bs;
 
         public CFtpService(ILogger<CFtpService> logger, IApplicationService @as, IBerkasService bs) {
-            _logger = logger;
-            _as = @as;
-            _bs = bs;
+            this._logger = logger;
+            this._as = @as;
+            this._bs = bs;
         }
 
         public async Task<FtpClient> CreateFtpConnection(string ipDomainHost, int portNumber, string userName, string password, string remoteWorkDir) {
@@ -56,33 +56,34 @@ namespace bifeldy_sd3_lib_60.Services {
                 await ftpClient.SetWorkingDirectoryAsync(remoteWorkDir);
             }
             catch (Exception ex) {
-                _logger.LogError($"[FTP_CREATE_FTP_CONNECTION] {ex.Message}");
+                this._logger.LogError("[FTP_CREATE_FTP_CONNECTION] {ex}", ex.Message);
                 throw;
             }
+
             return ftpClient;
         }
 
         public async Task<CFtpResultInfo> SendFtpFiles(FtpClient ftpConnection, string localDirPath, string fileName = null, Action<double> progress = null) {
-            CFtpResultInfo ftpResultInfo = new CFtpResultInfo();
-            DirectoryInfo directoryInfo = new DirectoryInfo(localDirPath);
+            var ftpResultInfo = new CFtpResultInfo();
+            var directoryInfo = new DirectoryInfo(localDirPath);
             FileInfo[] fileInfos = directoryInfo.GetFiles();
             if (fileName != null) {
                 fileInfos = fileInfos.Where(f => f.Name.Contains(fileName)).ToArray();
             }
+
             string cwd = await ftpConnection.GetWorkingDirectoryAsync();
             foreach (FileInfo fi in fileInfos) {
                 string fileSent = "Fail";
-                string fn = _as.DebugMode ? $"_SIMULASI__{fi.Name}" : fi.Name;
+                string fn = this._as.DebugMode ? $"_SIMULASI__{fi.Name}" : fi.Name;
                 if (ftpConnection.FileExists(fn)) {
                     await ftpConnection.DeleteFileAsync(fn);
                 }
+
                 IProgress<FtpProgress> ftpProgress = new Progress<FtpProgress>(data => {
-                    if (progress != null) {
-                        progress(data.Progress);
-                    }
+                    progress?.Invoke(data.Progress);
                 });
                 FtpStatus ftpStatus = await ftpConnection.UploadFileAsync(fi.FullName, fn, progress: ftpProgress);
-                CFtpResultSendGet resultSend = new CFtpResultSendGet {
+                var resultSend = new CFtpResultSendGet {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = fi
                 };
@@ -93,27 +94,28 @@ namespace bifeldy_sd3_lib_60.Services {
                 else {
                     ftpResultInfo.Fail.Add(resultSend);
                 }
-                _logger.LogInformation($"[FTP_SEND_FTP_FILES] {fileSent} @ {cwd}/{fn}");
+
+                this._logger.LogInformation("[FTP_SEND_FTP_FILES] {fileSent} @ {cwd}/{fn}", fileSent, cwd, fn);
             }
+
             if (ftpConnection.IsConnected) {
                 await ftpConnection.DisconnectAsync();
             }
+
             return ftpResultInfo;
         }
 
         public async Task<CFtpResultInfo> GetFtpFileDir(FtpClient ftpConnection, string localDirFilePath, bool isDirectory = false, Action<double> progress = null) {
-            CFtpResultInfo ftpResultInfo = new CFtpResultInfo();
-            string saveDownloadTo = Path.Combine(_bs.DownloadFolderPath, localDirFilePath);
+            var ftpResultInfo = new CFtpResultInfo();
+            string saveDownloadTo = Path.Combine(this._bs.DownloadFolderPath, localDirFilePath);
             IProgress<FtpProgress> ftpProgress = new Progress<FtpProgress>(data => {
-                if (progress != null) {
-                    progress(data.Progress);
-                }
+                progress?.Invoke(data.Progress);
             });
             if (isDirectory) {
                 List<FtpResult> ftpResult = await ftpConnection.DownloadDirectoryAsync(saveDownloadTo, localDirFilePath, FtpFolderSyncMode.Update, FtpLocalExists.Overwrite, progress: ftpProgress);
                 foreach (FtpResult fr in ftpResult) {
                     string fileGet = "Fail";
-                    CFtpResultSendGet resultGet = new CFtpResultSendGet {
+                    var resultGet = new CFtpResultSendGet {
                         FtpStatusSendGet = fr.IsSuccess,
                         FileInformation = new FileInfo(Path.Combine(saveDownloadTo, fr.Name))
                     };
@@ -124,13 +126,14 @@ namespace bifeldy_sd3_lib_60.Services {
                     else {
                         ftpResultInfo.Fail.Add(resultGet);
                     }
-                    _logger.LogInformation($"[FTP_GET_FTP_FILE_DIR] {fileGet} @ {fr.LocalPath}");
+
+                    this._logger.LogInformation("[FTP_GET_FTP_FILE_DIR] {fileGet} @ {LocalPath}", fileGet, fr.LocalPath);
                 }
             }
             else {
                 string fileGet = "Fail";
-                FtpStatus ftpStatus = await ftpConnection.DownloadFileAsync(_bs.DownloadFolderPath, localDirFilePath, FtpLocalExists.Overwrite, progress: ftpProgress);
-                CFtpResultSendGet resultGet = new CFtpResultSendGet {
+                FtpStatus ftpStatus = await ftpConnection.DownloadFileAsync(this._bs.DownloadFolderPath, localDirFilePath, FtpLocalExists.Overwrite, progress: ftpProgress);
+                var resultGet = new CFtpResultSendGet {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = new FileInfo(saveDownloadTo)
                 };
@@ -141,22 +144,25 @@ namespace bifeldy_sd3_lib_60.Services {
                 else {
                     ftpResultInfo.Fail.Add(resultGet);
                 }
-                _logger.LogInformation($"[FTP_GET_FTP_FILE_DIR] {fileGet} @ {saveDownloadTo}");
+
+                this._logger.LogInformation("[FTP_GET_FTP_FILE_DIR] {fileGet} @ {saveDownloadTo}", fileGet, saveDownloadTo);
             }
+
             if (ftpConnection.IsConnected) {
                 await ftpConnection.DisconnectAsync();
             }
+
             return ftpResultInfo;
         }
 
         public async Task<CFtpResultInfo> CreateFtpConnectionAndSendFtpFiles(string ipDomainHost, int portNumber, string userName, string password, string remoteWorkDir, string localDirPath, string fileName = null, Action<double> progress = null) {
-            FtpClient ftpClient = await CreateFtpConnection(ipDomainHost, portNumber, userName, password, remoteWorkDir);
-            return await SendFtpFiles(ftpClient, localDirPath, fileName, progress);
+            FtpClient ftpClient = await this.CreateFtpConnection(ipDomainHost, portNumber, userName, password, remoteWorkDir);
+            return await this.SendFtpFiles(ftpClient, localDirPath, fileName, progress);
         }
 
         public async Task<CFtpResultInfo> CreateFtpConnectionAndGetFtpFileDir(string ipDomainHost, int portNumber, string userName, string password, string remoteWorkDir, string localDirFilePath, bool isDirectory = false, Action<double> progress = null) {
-            FtpClient ftpClient = await CreateFtpConnection(ipDomainHost, portNumber, userName, password, remoteWorkDir);
-            return await GetFtpFileDir(ftpClient, localDirFilePath, isDirectory, progress);
+            FtpClient ftpClient = await this.CreateFtpConnection(ipDomainHost, portNumber, userName, password, remoteWorkDir);
+            return await this.GetFtpFileDir(ftpClient, localDirFilePath, isDirectory, progress);
         }
 
     }
