@@ -44,7 +44,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         private readonly EnvVar _envVar;
 
-        private readonly ILogger<CGeneralRepository> _logger;
         private readonly IApplicationService _as;
         private readonly IHttpService _http;
         private readonly IConverterService _converter;
@@ -56,7 +55,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         public CGeneralRepository(
             IOptions<EnvVar> envVar,
-            ILogger<CGeneralRepository> logger,
             IApplicationService @as,
             IHttpService http,
             IConverterService converter,
@@ -66,7 +64,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
             this._envVar = envVar.Value;
-            this._logger = logger;
             this._as = @as;
             this._http = http;
             this._converter = converter;

@@ -46,21 +46,17 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private readonly EnvVar _envVar;
         private readonly ILogger<CListMailServerRepository> _logger;
 
-        private readonly IGlobalService _gs;
-
         private readonly IOraPg _orapg;
 
         public CListMailServerRepository(
             IOptions<EnvVar> envVar,
             ILogger<CListMailServerRepository> logger,
             IApplicationService @as,
-            IGlobalService gs,
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
             this._envVar = envVar.Value;
             this._logger = logger;
-            this._gs = gs;
             this._orapg = orapg;
         }
 
