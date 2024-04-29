@@ -142,12 +142,8 @@ namespace bifeldy_sd3_lib_60 {
             _ = App.UseSwagger(c => {
                 c.RouteTemplate = "{documentName}/swagger.json";
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
-                    var openApiServers = new List<OpenApiServer>() {
-                        new() {
-                            Description = "Direct IP Server",
-                            Url = "/"
-                        }
-                    };
+                    var openApiServers = new List<OpenApiServer>();
+
                     string proxyPath = request.Headers[proxyHeaderName];
                     if (!string.IsNullOrEmpty(proxyPath)) {
                         openApiServers.Add(new OpenApiServer {
@@ -156,6 +152,10 @@ namespace bifeldy_sd3_lib_60 {
                         });
                     }
 
+                    openApiServers.Add(new OpenApiServer {
+                        Description = "Direct IP Server",
+                        Url = "/"
+                    });
                     swaggerDoc.Servers = openApiServers;
                 });
             });

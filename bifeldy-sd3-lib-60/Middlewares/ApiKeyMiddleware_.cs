@@ -85,13 +85,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
 
             string apiKey = string.Empty;
-            /* if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
+            if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
                 apiKey = request.Headers["x-api-key"];
             }
             else if (!string.IsNullOrEmpty(reqBody?.key)) {
                 apiKey = reqBody.key;
             }
-            else */ if (!string.IsNullOrEmpty(request.Query["key"])) {
+            else if (!string.IsNullOrEmpty(request.Query["key"])) {
                 apiKey = request.Query["key"];
             }
 
