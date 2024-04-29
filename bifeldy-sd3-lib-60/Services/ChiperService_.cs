@@ -14,6 +14,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -23,7 +24,6 @@ using Microsoft.IdentityModel.Tokens;
 using Ionic.Crc;
 
 using bifeldy_sd3_lib_60.Models;
-using System.Security.Claims;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -71,7 +71,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string EncryptText(string plainText, string passPhrase = null) {
             if (string.IsNullOrEmpty(passPhrase)) {
-                passPhrase = this._app.AppName;
+                passPhrase = this.HashText(passPhrase);
             }
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
@@ -105,7 +105,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string DecryptText(string cipherText, string passPhrase = null) {
             if (string.IsNullOrEmpty(passPhrase)) {
-                passPhrase = this._app.AppName;
+                passPhrase = this.HashText(passPhrase);
             }
             // Get the complete stream of bytes that represent:
             // [32 bytes of Salt] + [32 bytes of IV] + [n bytes of CipherText]
