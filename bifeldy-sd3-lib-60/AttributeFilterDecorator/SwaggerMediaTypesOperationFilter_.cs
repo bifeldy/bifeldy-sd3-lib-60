@@ -19,7 +19,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
 
-    public class SwaggerMediaTypesOperationFilter : IOperationFilter {
+    public sealed class SwaggerMediaTypesOperationFilter : IOperationFilter {
 
         public static readonly List<string> AcceptedContentType = new() {
             MediaTypeNames.Application.Json,
