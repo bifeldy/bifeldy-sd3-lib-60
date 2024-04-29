@@ -16,9 +16,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorator;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
@@ -53,8 +53,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
 
             RequestJson reqBody = null;
-            string accept = request.Headers["accept"].ToString();
-            if (accept.Contains("application/xml") || accept.Contains("application/json")) {
+            string contentType = request.Headers["content-type"].ToString();
+            if (SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
                 string rbString = await request.GetRequestBodyStringAsync();
                 if (!string.IsNullOrEmpty(rbString)) {
                     try {

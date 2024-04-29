@@ -33,6 +33,7 @@ using Quartz;
 using Serilog;
 using Serilog.Events;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorator;
 using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Middlewares;
@@ -131,6 +132,8 @@ namespace bifeldy_sd3_lib_60 {
                         { jwt, Array.Empty<string>() }
                     });
                 }
+
+                c.OperationFilter<SwaggerMediaTypesOperationFilter>();
             });
         }
 
