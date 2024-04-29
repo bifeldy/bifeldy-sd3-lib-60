@@ -6,7 +6,7 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Role Decorator Class & Function Di Controller
+ * Catatan      :: Filter Terima Content Type
  *              :: Tidak Untuk Didaftarkan Ke DI Container
  * 
  */
