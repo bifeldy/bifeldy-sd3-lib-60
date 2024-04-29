@@ -12,8 +12,10 @@
  */
 
 using System.Drawing;
+using System.Net.Mime;
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Xml.Linq;
 
 using DinkToPdf;
 using DinkToPdf.Contracts;
@@ -27,7 +29,10 @@ namespace bifeldy_sd3_lib_60.Services {
         byte[] ImageToByte(Image x);
         Image ByteToImage(byte[] byteArray);
         T JsonToObject<T>(string j2o);
+        string JsonToXml(string json);
         string ObjectToJson(object body);
+        string XmlToJson(string xml);
+        T XmlJsonToObject<T>(string type, string text);
         T GetDefaultValueT<T>();
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
         Dictionary<string, T> ClassToDictionary<T>(object obj);
@@ -52,6 +57,26 @@ namespace bifeldy_sd3_lib_60.Services {
         public T JsonToObject<T>(string j2o) => JsonConvert.DeserializeObject<T>(j2o);
 
         public string ObjectToJson(object o2j) => JsonConvert.SerializeObject(o2j);
+
+        public string XmlToJson(string xml) {
+            var xdoc = XDocument.Parse(xml);
+            xdoc.Declaration = null;
+            return JsonConvert.SerializeXNode(xdoc, Formatting.None, true);
+        }
+
+        public string JsonToXml(string json) => JsonConvert.DeserializeXmlNode(json, "root").ToString();
+
+        public T XmlJsonToObject<T>(string type, string text) {
+            switch (type) {
+                case MediaTypeNames.Application.Xml:
+                    text = this.XmlToJson(text);
+                    goto case MediaTypeNames.Application.Json;
+                case MediaTypeNames.Application.Json:
+                    return this.JsonToObject<T>(text);
+                default:
+                    throw new NotImplementedException("No Type Available!");
+            }
+        }
 
         public T GetDefaultValueT<T>() {
             dynamic x = null;

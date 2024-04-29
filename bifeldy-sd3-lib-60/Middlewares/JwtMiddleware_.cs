@@ -58,7 +58,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 string rbString = await request.GetRequestBodyStringAsync();
                 if (!string.IsNullOrEmpty(rbString)) {
                     try {
-                        reqBody = this._converter.JsonToObject<RequestJson>(rbString);
+                        reqBody = this._converter.XmlJsonToObject<RequestJson>(contentType, rbString);
                     }
                     catch (Exception ex) {
                         this._logger.LogError("[JSON_BODY] 🔐 {ex}", ex.Message);
