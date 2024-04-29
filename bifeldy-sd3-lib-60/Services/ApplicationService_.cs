@@ -17,11 +17,13 @@ using System.Reflection;
 
 using Microsoft.Extensions.Hosting;
 
+using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IApplicationService {
+        DateTime? BuildTime { get; }
         bool DebugMode { get; }
         string AppName { get; }
         string AppLocation { get; }
@@ -33,6 +35,14 @@ namespace bifeldy_sd3_lib_60.Services {
     }
 
     public sealed class CApplicationService : IApplicationService {
+
+        public DateTime? BuildTime {
+            get {
+                var prgAsm = Assembly.GetEntryAssembly();
+                var libAsm = Assembly.GetExecutingAssembly();
+                return prgAsm.GetLinkerBuildTime() ?? libAsm.GetLinkerBuildTime();
+            }
+        }
 
         public bool DebugMode => Bifeldy.App.Environment.IsDevelopment();
         public string AppName => Bifeldy.App.Environment.ApplicationName;
