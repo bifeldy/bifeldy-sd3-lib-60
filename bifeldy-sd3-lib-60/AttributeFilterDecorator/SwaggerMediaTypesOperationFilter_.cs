@@ -22,8 +22,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
     public sealed class SwaggerMediaTypesOperationFilter : IOperationFilter {
 
         public static readonly List<string> AcceptedContentType = new() {
-            MediaTypeNames.Application.Json,
-            MediaTypeNames.Application.Xml
+            MediaTypeNames.Application.Json
         };
 
         public void Apply(OpenApiOperation operation, OperationFilterContext context) {
