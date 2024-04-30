@@ -19,7 +19,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 using bifeldy_sd3_lib_60.Models;
 
-namespace bifeldy_sd3_lib_60.AttributeFilterDecorator {
+namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class RolesDecorator : Attribute, IAuthorizationFilter {

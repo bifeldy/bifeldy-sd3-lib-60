@@ -13,11 +13,13 @@
 
 using System.Text.Json.Serialization;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+
 namespace bifeldy_sd3_lib_60.Models {
 
     public class RequestJson {
-        [JsonPropertyOrder(1)][JsonIgnore] public string key { get; set; }
-        [JsonPropertyOrder(2)][JsonIgnore] public string token { get; set; }
+        [JsonPropertyOrder(1)][SwaggerIgnore] public string key { get; set; }
+        [JsonPropertyOrder(2)][SwaggerIgnore] public string token { get; set; }
     }
 
     public abstract class ResponseJson<T> {
