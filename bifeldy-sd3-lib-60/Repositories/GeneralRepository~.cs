@@ -20,12 +20,13 @@ using Microsoft.Extensions.Options;
 
 using Confluent.Kafka;
 
-using bifeldy_sd3_lib_60.Databases;
-using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Abstractions;
-using bifeldy_sd3_lib_60.Tables;
-using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Tables;
 
 namespace bifeldy_sd3_lib_60.Repositories {
 
@@ -217,7 +218,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             string kodeDc = await this.GetKodeDc();
             DC_TABEL_V dc = await this._orapg.Set<DC_TABEL_V>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper()).FirstOrDefaultAsync();
             if (kodeDc.ToUpper() == "DCHO" || dc.TBL_JENIS_DC.ToUpper() != "INDUK") {
-                throw new Exception("Khusus DC Induk");
+                throw new TidakMemenuhiException("Khusus DC Induk");
             }
 
             List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
@@ -272,7 +273,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback) {
             string kodeDcSekarang = await this.GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
-                throw new Exception("Khusus HO!");
+                throw new TidakMemenuhiException("Khusus HO!");
             }
 
             DataTable dt = await this._orapg.GetDataTableAsync($@"
