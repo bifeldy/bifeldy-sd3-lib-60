@@ -125,9 +125,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 response.Clear();
                 response.StatusCode = StatusCodes.Status401Unauthorized;
                 await response.WriteAsJsonAsync(new {
-                    info = "🙄 401 - API Key :: Tidak Dapat Digunakan 😪",
+                    info = "401 - API Key :: Tidak Dapat Digunakan",
                     result = new {
-                        message = "💩 Api Key Salah / Tidak Terdaftar! 🤬",
+                        message = "Api Key Salah / Tidak Terdaftar!",
                         api_key = apiKey,
                         ip_origin = ipOrigin
                     }

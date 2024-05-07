@@ -302,9 +302,9 @@ namespace bifeldy_sd3_lib_60 {
             response.Clear();
             response.StatusCode = StatusCodes.Status404NotFound;
             await response.WriteAsJsonAsync(new {
-                info = "🙄 404 - Whoops :: API Tidak Ditemukan 😪",
+                info = "404 - Whoops :: API Tidak Ditemukan",
                 result = new {
-                    message = $"💩 Silahkan Periksa Kembali Dokumentasi API 🤬"
+                    message = $"Silahkan Periksa Kembali Dokumentasi API"
                 }
             });
         }
@@ -353,9 +353,9 @@ namespace bifeldy_sd3_lib_60 {
                             response.Clear();
                             response.StatusCode = StatusCodes.Status500InternalServerError;
                             await response.WriteAsJsonAsync(new {
-                                info = "🙄 500 - Whoops :: Terjadi Kesalahan 😪",
+                                info = "500 - Whoops :: Terjadi Kesalahan",
                                 result = new {
-                                    message = $"💩 {(App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data")} 🤬"
+                                    message = App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data"
                                 }
                             });
                         }

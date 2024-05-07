@@ -63,7 +63,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                 if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) {
                     return this.BadRequest(new ResponseJsonSingle<dynamic> {
-                        info = $"🙄 400 - {this.GetType().Name} :: Login Gagal 😪",
+                        info = $"400 - {this.GetType().Name} :: Login Gagal",
                         result = new {
                             message = "Data tidak lengkap!"
                         }
@@ -73,7 +73,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 API_TOKEN_T dcApiToken = await this._apiTokenRepo.LoginBot(userName, password);
                 if (dcApiToken == null) {
                     return this.BadRequest(new ResponseJsonSingle<dynamic> {
-                        info = $"🙄 400 - {this.GetType().Name} :: Login Gagal 😪",
+                        info = $"400 - {this.GetType().Name} :: Login Gagal",
                         result = new {
                             message = "User name / password salah!"
                         }
@@ -88,14 +88,14 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 string token = this._chiper.EncodeJWT(userSession);
 
                 return this.StatusCode(StatusCodes.Status201Created, new {
-                    info = $"😅 201 - {this.GetType().Name} :: Login Berhasil 🤣",
+                    info = $"201 - {this.GetType().Name} :: Login Berhasil",
                     result = userSession,
                     token
                 });
             }
             catch (Exception ex) {
                 return this.BadRequest(new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 400 - {this.GetType().Name} :: Login Gagal 😪",
+                    info = $"400 - {this.GetType().Name} :: Login Gagal",
                     result = new {
                         message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
@@ -118,13 +118,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 _ = await this._orapg.SaveChangesAsync();
 
                 return this.Accepted(new ResponseJsonSingle<dynamic> {
-                    info = $"😅 204 - {this.GetType().Name} :: Logout Berhasil 🤣",
+                    info = $"204 - {this.GetType().Name} :: Logout Berhasil",
                     result = userSession
                 });
             }
             catch (Exception ex) {
                 return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 500 - {this.GetType().Name} :: Logout Gagal 😪",
+                    info = $"500 - {this.GetType().Name} :: Logout Gagal",
                     result = new {
                         message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }
@@ -141,13 +141,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 var userSession = (UserApiSession) this._hca.HttpContext.Items["user"];
 
                 return this.Accepted(new ResponseJsonSingle<dynamic> {
-                    info = $"😅 202 - {this.GetType().Name} :: Verifikasi Berhasil 🤣",
+                    info = $"202 - {this.GetType().Name} :: Verifikasi Berhasil",
                     result = userSession
                 });
             }
             catch (Exception ex) {
                 return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
-                    info = $"🙄 500 - {this.GetType().Name} :: Verifikasi Gagal 😪",
+                    info = $"500 - {this.GetType().Name} :: Verifikasi Gagal",
                     result = new {
                         message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
                     }

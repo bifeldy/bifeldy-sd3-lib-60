@@ -108,9 +108,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
                     await response.WriteAsJsonAsync(new {
-                        info = "🙄 401 - JWT :: Tidak Dapat Digunakan 😪",
+                        info = "401 - JWT :: Tidak Dapat Digunakan",
                         result = new {
-                            message = "💩 Format Token Salah / Expired! 🤬"
+                            message = "Format Token Salah / Expired!"
                         }
                     });
                     return;
