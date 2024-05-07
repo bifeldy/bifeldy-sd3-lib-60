@@ -314,7 +314,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 // /blablablaGXXX/api/bliblibli
                 //
                 string currentPath = request.Path.Value;
-                if (string.IsNullOrEmpty(currentPath)) {
+                if (!string.IsNullOrEmpty(currentPath)) {
                     int idx = currentPath.ToUpper().IndexOf("DCHO");
                     if (idx >= 0) {
                         currentPath = $"{currentPath[..idx]}{dcKode.ToUpper()}{currentPath[(idx + 4)..]}";
