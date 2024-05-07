@@ -303,6 +303,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 string separator = "/api/";
 
                 //
+                // dotnet blablabla.dll
+                //
                 // http://127.x.xx.xxx/blablablaHOSIM/api/bliblibli
                 // http://127.x.xx.xxx/blablablaHO/api/bliblibli
                 // /blablablaHOSIM/api/bliblibli
@@ -315,9 +317,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 //
                 string currentPath = request.Path.Value;
                 if (!string.IsNullOrEmpty(currentPath)) {
-                    int idx = currentPath.ToUpper().IndexOf("DCHO");
-                    if (idx >= 0) {
-                        currentPath = $"{currentPath[..idx]}{dcKode.ToUpper()}{currentPath[(idx + 4)..]}";
+                    if (currentPath.ToUpper().Contains($"/{_as.AppName.ToUpper()}HO")) {
+                        string findUrl = $"{_as.AppName.ToUpper()}HO";
+                        int idx = currentPath.ToUpper().IndexOf(findUrl);
+                        if (idx >= 0) {
+                            idx += _as.AppName.Length;
+                            currentPath = $"{currentPath[..idx]}{dcKode.ToUpper()}{currentPath[(idx + 2)..]}";
+                        }
                     }
                 }
 
