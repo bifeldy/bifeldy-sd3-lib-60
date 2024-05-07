@@ -19,6 +19,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
     [ApiController]
     [Route("ping-pong")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public class PingPongController : ControllerBase {
 
         public PingPongController() {
