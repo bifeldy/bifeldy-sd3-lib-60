@@ -301,7 +301,25 @@ namespace bifeldy_sd3_lib_60.Repositories {
             }
             else {
                 string separator = "/api/";
-                string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? request.Path.Value : $"{dbi.API_PATH}{request.Path.Value?.Split(separator).Last()}";
+
+                //
+                // http://127.x.xx.xxx/blablablaHOSIM/api/bliblibli
+                // http://127.x.xx.xxx/blablablaHO/api/bliblibli
+                // /blablablaHOSIM/api/bliblibli
+                // /blablablaHO/api/bliblibli
+                //
+                // http://127.x.xx.xxx/blablablaGXXXSIM/api/bliblibli
+                // http://127.x.xx.xxx/blablablaGXXX/api/bliblibli
+                // /blablablaGXXXSIM/api/bliblibli
+                // /blablablaGXXX/api/bliblibli
+                //
+                string currentPath = request.Path.Value;
+                int idx = currentPath.ToUpper().IndexOf("DCHO");
+                if (idx >= 0) {
+                    currentPath = $"{currentPath[..idx]}{dcKode.ToUpper()}{currentPath[(idx + 4)..]}";
+                }
+
+                string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? currentPath : $"{dbi.API_PATH}{currentPath?.Split(separator).Last()}";
                 var urlApiDc = new Uri($"http://{dbi.IP_NGINX}{pathApiDc}{request.QueryString.Value}");
 
                 // API Key Khusus Bypass ~ Case Sensitive
