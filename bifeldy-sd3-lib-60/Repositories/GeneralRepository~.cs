@@ -317,8 +317,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 //
                 string currentPath = request.Path.Value;
                 if (!string.IsNullOrEmpty(currentPath)) {
-                    if (currentPath.ToUpper().Contains($"/{_as.AppName.ToUpper()}HO")) {
-                        string findUrl = $"{_as.AppName.ToUpper()}HO";
+                    string findUrl = $"{_as.AppName.ToUpper()}HO";
+                    if (currentPath.ToUpper().Contains($"/{findUrl}")) {
                         int idx = currentPath.ToUpper().IndexOf(findUrl);
                         if (idx >= 0) {
                             idx += _as.AppName.Length;
