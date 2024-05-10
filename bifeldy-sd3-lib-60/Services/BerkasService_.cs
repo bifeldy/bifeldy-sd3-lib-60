@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Models;
-using Serilog;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -25,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string DownloadFolderPath { get; }
         void DeleteSingleFileInFolder(string fileName, string folderPath = null);
         void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false);
-        void CleanUp(bool clearPendingFileForZip = true);
+        void CleanUp();
         void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false);
         void BackupAllFilesInFolder(string folderPath);
     }
@@ -112,16 +111,13 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public void CleanUp(bool clearPendingFileForZip = true) {
+        public void CleanUp() {
             this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), this._envVar.MAX_RETENTIONS_DAYS);
             this.DeleteOldFilesInFolder(this.BackupFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
             this.DeleteOldFilesInFolder(this.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
             this.DeleteOldFilesInFolder(this.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
             this.DeleteOldFilesInFolder(this._csv.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
             this.DeleteOldFilesInFolder(this._zip.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            if (clearPendingFileForZip) {
-                this._zip.ListFileForZip.Clear();
-            }
         }
 
         public void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false) {

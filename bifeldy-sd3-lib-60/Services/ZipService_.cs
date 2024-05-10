@@ -23,7 +23,6 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public interface IZipService {
         string ZipFolderPath { get; }
-        List<string> ListFileForZip { get; }
         int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileName = null, string password = null, string outputPath = null);
         int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputPath = null);
     }
@@ -37,14 +36,10 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string ZipFolderPath { get; }
 
-        public List<string> ListFileForZip { get; }
-
         public CZipService(IOptions<EnvVar> envVar, ILogger<CZipService> logger, IApplicationService @as) {
             this._envVar = envVar.Value;
             this._logger = logger;
             this._as = @as;
-
-            this.ListFileForZip = new List<string>();
 
             this.ZipFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.ZIP_FOLDER_PATH);
             if (!Directory.Exists(this.ZipFolderPath)) {
@@ -52,9 +47,8 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileName = null, string password = null, string outputPath = null) {
+        public int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileForZip = null, string password = null, string outputPath = null) {
             int totalFileInZip = 0;
-            List<string> ls = listFileName ?? this.ListFileForZip;
             string path = Path.Combine(outputPath ?? this.ZipFolderPath, zipFileName);
             try {
                 var zip = new ZipFile();
@@ -63,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     zip.CompressionLevel = CompressionLevel.BestCompression;
                 }
 
-                foreach (string targetFileName in ls) {
+                foreach (string targetFileName in listFileForZip) {
                     string filePath = Path.Combine(folderPath, targetFileName);
                     ZipEntry zipEntry = zip.AddFile(filePath, "");
                     if (zipEntry != null) {
@@ -78,11 +72,6 @@ namespace bifeldy_sd3_lib_60.Services {
             }
             catch (Exception ex) {
                 this._logger.LogError("[ZIP_LIST_FILE_IN_FOLDER] {ex}", ex.Message);
-            }
-            finally {
-                if (listFileName == null) {
-                    ls.Clear();
-                }
             }
 
             return totalFileInZip;
