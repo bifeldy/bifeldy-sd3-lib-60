@@ -28,29 +28,35 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public sealed class LoginInfo {
         public string user_name { get; set; }
         public string password { get; set; }
+        [SwaggerIgnore] public string secret { get; set; }
     }
 
     [ApiController]
     [Route("")]
     public class AuthenticationController : ControllerBase {
 
-        private readonly IHttpContextAccessor _hca;
         private readonly IApplicationService _app;
         private readonly IChiperService _chiper;
+        private readonly IApiKeyRepository _apiKeyRepo;
         private readonly IApiTokenRepository _apiTokenRepo;
+        private readonly IUserRepository _userRepo;
         private readonly IOraPg _orapg;
 
+        protected UserApiSession UserTokenData => (UserApiSession) this.HttpContext.Items["user"];
+
         public AuthenticationController(
-            IHttpContextAccessor hca,
             IApplicationService app,
             IChiperService chiper,
+            IApiKeyRepository apiKeyRepo,
             IApiTokenRepository apiTokenRepo,
+            IUserRepository userRepo,
             IOraPg orapg
         ) {
-            this._hca = hca;
             this._app = app;
             this._chiper = chiper;
+            this._apiKeyRepo = apiKeyRepo;
             this._apiTokenRepo = apiTokenRepo;
+            this._userRepo = userRepo;
             this._orapg = orapg;
         }
 
@@ -60,8 +66,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
             try {
                 string userName = formData?.user_name;
                 string password = formData?.password;
+                string secret = formData?.secret;
 
-                if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) {
+                if (string.IsNullOrEmpty(secret) && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))) {
                     return this.BadRequest(new ResponseJsonSingle<dynamic> {
                         info = $"400 - {this.GetType().Name} :: Login Gagal",
                         result = new {
@@ -70,21 +77,53 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     });
                 }
 
-                API_TOKEN_T dcApiToken = await this._apiTokenRepo.LoginBot(userName, password);
-                if (dcApiToken == null) {
-                    return this.BadRequest(new ResponseJsonSingle<dynamic> {
-                        info = $"400 - {this.GetType().Name} :: Login Gagal",
-                        result = new {
-                            message = "User name / password salah!"
+                UserApiSession userSession = null;
+
+                if (string.IsNullOrEmpty(secret)) {
+                    UserSessionRole userRole = default;
+
+                    API_TOKEN_T apiTokenT = await this._apiTokenRepo.LoginBot(userName, password);
+                    if (apiTokenT == null) {
+                        DC_USER_T dcUserT = await _userRepo.GetByUserNameNikPassword(userName, password);
+                        if (dcUserT == null) {
+                            return this.BadRequest(new ResponseJsonSingle<dynamic> {
+                                info = $"400 - {this.GetType().Name} :: Login Gagal",
+                                result = new {
+                                    message = "User name / password salah!"
+                                }
+                            });
                         }
-                    });
+                        else {
+                            userRole = UserSessionRole.USER_SD_SSD_3;
+                        }
+                    }
+                    else {
+                        userRole = UserSessionRole.EXTERNAL_BOT;
+                    }
+
+                    userSession = new UserApiSession {
+                        name = userName.ToUpper(),
+                        role = userRole
+                    };
+                }
+                else {
+                    API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(secret);
+                    if (apiKeyT == null) {
+                        return this.BadRequest(new ResponseJsonSingle<dynamic> {
+                            info = $"400 - {this.GetType().Name} :: Login Gagal",
+                            result = new {
+                                message = "Secret salah!"
+                            }
+                        });
+                    }
+                    else {
+                        userSession = new UserApiSession {
+                            name = this.HttpContext.Connection.RemoteIpAddress.ToString(),
+                            role = UserSessionRole.PROGRAM_SERVICE
+                        };
+                    }
                 }
 
-                var userSession = new UserApiSession {
-                    name = dcApiToken.USER_NAME,
-                    role = UserSessionRole.EXTERNAL_BOT,
-                    // dc_api_token_t = dcApiToken
-                };
                 string token = this._chiper.EncodeJWT(userSession);
 
                 return this.StatusCode(StatusCodes.Status201Created, new {
@@ -97,7 +136,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 return this.BadRequest(new ResponseJsonSingle<dynamic> {
                     info = $"400 - {this.GetType().Name} :: Login Gagal",
                     result = new {
-                        message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
+                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
+                            ? ex.Message
+                            : "Terjadi kesalahan saat proses data!"
                     }
                 });
             }
@@ -110,23 +151,25 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
             try {
-                var userSession = (UserApiSession) this._hca.HttpContext.Items["user"];
-
-                API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(userSession.name);
-                dcApiToken.TOKEN_SEKALI_PAKAI = null;
-                _ = this._orapg.Set<API_TOKEN_T>().Update(dcApiToken);
-                _ = await this._orapg.SaveChangesAsync();
+                if (this.UserTokenData.role == UserSessionRole.EXTERNAL_BOT) {
+                    API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(this.UserTokenData.name);
+                    dcApiToken.TOKEN_SEKALI_PAKAI = null;
+                    _ = this._orapg.Set<API_TOKEN_T>().Update(dcApiToken);
+                    _ = await this._orapg.SaveChangesAsync();
+                }
 
                 return this.Accepted(new ResponseJsonSingle<dynamic> {
                     info = $"204 - {this.GetType().Name} :: Logout Berhasil",
-                    result = userSession
+                    result = this.UserTokenData
                 });
             }
             catch (Exception ex) {
                 return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
                     info = $"500 - {this.GetType().Name} :: Logout Gagal",
                     result = new {
-                        message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
+                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
+                            ? ex.Message
+                            : "Terjadi kesalahan saat proses data!"
                     }
                 });
             }
@@ -138,18 +181,18 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
             try {
-                var userSession = (UserApiSession) this._hca.HttpContext.Items["user"];
-
                 return this.Accepted(new ResponseJsonSingle<dynamic> {
                     info = $"202 - {this.GetType().Name} :: Verifikasi Berhasil",
-                    result = userSession
+                    result = this.UserTokenData
                 });
             }
             catch (Exception ex) {
                 return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<dynamic> {
                     info = $"500 - {this.GetType().Name} :: Verifikasi Gagal",
                     result = new {
-                        message = this._app.DebugMode ? ex.Message : "Terjadi kesalahan saat proses data"
+                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
+                            ? ex.Message
+                            : "Terjadi kesalahan saat proses data!"
                     }
                 });
             }

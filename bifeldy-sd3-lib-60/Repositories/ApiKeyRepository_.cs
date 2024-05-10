@@ -27,6 +27,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<List<API_KEY_T>> GetAll(string key = null);
         Task<API_KEY_T> GetByKey(string key);
         Task<bool> Delete(string key);
+        Task<API_KEY_T> SecretLogin(string key);
         Task<bool> CheckKeyOrigin(string ipOrigin, string key);
     }
 
@@ -80,6 +81,14 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         /* ** */
+
+        public async Task<API_KEY_T> SecretLogin(string key) {
+            return await this._orapg.Set<API_KEY_T>().Where(ak =>
+                ak.KEY.ToUpper() == key.ToUpper() &&
+                ak.IP_ORIGIN == "*" &&
+                ak.APP_NAME == "*"
+            ).SingleOrDefaultAsync();
+        }
 
         public async Task<bool> CheckKeyOrigin(string ipOrigin, string key) {
             API_KEY_T ak = await this.GetByKey(key);
