@@ -30,6 +30,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly IConverterService _converter;
         private readonly IChiperService _chiper;
 
+        public string SessionKey { get; } = "user-session";
+
         public JwtMiddleware(
             RequestDelegate next,
             ILogger<JwtMiddleware> logger,
@@ -88,7 +90,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             this._logger.LogInformation("[JWT_MIDDLEWARE] 🔐 {token}", token);
 
             try {
-                IEnumerable<Claim> claims = this._chiper.DecodeJWT(token);
+                IEnumerable<Claim> userClaim = this._chiper.DecodeJWT(token);
+                var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
+                context.User = new ClaimsPrincipal(userClaimIdentity);
 
                 // API_TOKEN_T dcApiToken = await _apiTokenRepo.GetByUserName(claims.Where(c => c.Type == ClaimTypes.Name).First().Value);
                 // if (dcApiToken == null) {
@@ -96,8 +100,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 // }
 
                 context.Items["user"] = new UserApiSession {
-                    name = claims.Where(c => c.Type == ClaimTypes.Name).First().Value,
-                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), claims.Where(c => c.Type == ClaimTypes.Role).First().Value),
+                    name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
+                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value),
                     // dc_api_token_t = dcApiToken
                 };
             }
