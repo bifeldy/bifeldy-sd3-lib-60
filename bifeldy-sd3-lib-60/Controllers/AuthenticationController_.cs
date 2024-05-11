@@ -159,7 +159,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 }
 
                 return this.Accepted(new ResponseJsonSingle<dynamic> {
-                    info = $"204 - {this.GetType().Name} :: Logout Berhasil",
+                    info = $"202 - {this.GetType().Name} :: Logout Berhasil",
                     result = this.UserTokenData
                 });
             }
