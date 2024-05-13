@@ -33,7 +33,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
     [ApiController]
     [Route("")]
-    public class AuthenticationController : ControllerBase {
+    public class _Controller : ControllerBase {
 
         private readonly IApplicationService _app;
         private readonly IChiperService _chiper;
@@ -44,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         protected UserApiSession UserTokenData => (UserApiSession) this.HttpContext.Items["user"];
 
-        public AuthenticationController(
+        public _Controller(
             IApplicationService app,
             IChiperService chiper,
             IApiKeyRepository apiKeyRepo,
