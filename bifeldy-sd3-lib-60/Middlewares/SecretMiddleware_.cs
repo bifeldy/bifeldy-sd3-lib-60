@@ -20,7 +20,6 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Tables;
 using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
@@ -88,24 +87,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 bool allowed = false;
                 string currentKodeDc = await _generalRepo.GetKodeDc();
                 if (currentKodeDc == "DCHO") {
-                    API_KEY_T apiKeyT = await _apiKeyRepo.SecretLogin(secret);
-                    if (apiKeyT != null) {
+                    if (await _apiKeyRepo.SecretLogin(secret) != null) {
                         allowed = true;
                     }
                 }
                 else {
-                    string apiKey = string.Empty;
-                    if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
-                        apiKey = request.Headers["x-api-key"];
-                    }
-                    else if (!string.IsNullOrEmpty(request.Query["key"])) {
-                        apiKey = request.Query["key"];
-                    }
-                    else if (!string.IsNullOrEmpty(reqBody?.key)) {
-                        apiKey = reqBody.key;
-                    }
-
-                    if (apiKey == this._app.AppName) {
+                    string apiKey = _apiKeyRepo.GetApiKeyData(request, reqBody);
+                    if (apiKey == this._app.AppName || await _apiKeyRepo.SecretLogin(secret) != null) {
                         allowed = true;
                     }
                 }

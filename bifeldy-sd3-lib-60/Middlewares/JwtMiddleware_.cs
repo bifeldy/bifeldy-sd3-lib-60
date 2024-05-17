@@ -20,6 +20,7 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
@@ -44,7 +45,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context) {
+        public async Task Invoke(HttpContext context, IApiTokenRepository _apiTokenRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -72,20 +73,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 }
             }
 
-            string token = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers.Authorization)) {
-                token = request.Headers.Authorization;
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["x-access-token"])) {
-                token = request.Headers["x-access-token"];
-            }
-            else if (!string.IsNullOrEmpty(request.Query["token"])) {
-                token = request.Query["token"];
-            }
-            else if (!string.IsNullOrEmpty(reqBody?.token)) {
-                token = reqBody.token;
-            }
-
+            string token = _apiTokenRepo.GetTokenData(request, reqBody);
             if (token.StartsWith("Bearer ")) {
                 token = token[7..];
             }

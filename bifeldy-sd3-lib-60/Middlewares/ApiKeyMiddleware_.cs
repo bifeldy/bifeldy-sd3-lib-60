@@ -89,34 +89,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 }
             }
 
-            string apiKey = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
-                apiKey = request.Headers["x-api-key"];
-            }
-            else if (!string.IsNullOrEmpty(request.Query["key"])) {
-                apiKey = request.Query["key"];
-            }
-            else if (!string.IsNullOrEmpty(reqBody?.key)) {
-                apiKey = reqBody.key;
-            }
-
+            string apiKey = _akRepo.GetApiKeyData(request, reqBody);
             context.Items["api_key"] = apiKey;
-
-            string ipOrigin = connection.RemoteIpAddress.ToString();
-            if (!string.IsNullOrEmpty(request.Headers["origin"])) {
-                ipOrigin = request.Headers["origin"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["referer"])) {
-                ipOrigin = request.Headers["referer"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["cf-connecting-ip"])) {
-                ipOrigin = request.Headers["cf-connecting-ip"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["x-forwarded-for"])) {
-                ipOrigin = request.Headers["x-forwarded-for"];
-            }
-
-            ipOrigin = this._gs.CleanIpOrigin(ipOrigin);
+            string ipOrigin = this._gs.CleanIpOrigin(_akRepo.GetIpOriginData(connection, request));
             context.Items["ip_origin"] = ipOrigin;
 
             this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);
