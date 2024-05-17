@@ -333,6 +333,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 // API Key Khusus Bypass ~ Case Sensitive
                 System.Collections.Specialized.NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
                 queryApiDc.Set("key", this._as.AppName);
+                queryApiDc.Set("mask_ip", request.HttpContext.Connection.RemoteIpAddress.ToString());
 
                 var uriBuilder = new UriBuilder(urlApiDc) {
                     Query = queryApiDc.ToString()

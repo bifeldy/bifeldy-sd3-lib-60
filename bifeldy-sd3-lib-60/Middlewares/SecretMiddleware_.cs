@@ -102,10 +102,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 }
 
                 if (allowed) {
+                    string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"].ToString())
+                        ? _akRepo.GetIpOriginData(connection, request)
+                        : request.Query["mask_ip"].ToString();
                     var userSession = new UserApiSession {
-                        name = (currentKodeDc == "DCHO")
-                            ? context.Connection.RemoteIpAddress.ToString()
-                            : this._gs.CleanIpOrigin(_akRepo.GetIpOriginData(connection, request)),
+                        name = this._gs.CleanIpOrigin(maskIp),
                         role = UserSessionRole.PROGRAM_SERVICE
                     };
 
@@ -119,7 +120,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
                     context.Items["user"] = new UserApiSession {
                         name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
-                        role = (UserSessionRole)Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
+                        role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
                     };
                 }
                 else {
