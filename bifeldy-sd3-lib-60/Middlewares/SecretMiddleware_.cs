@@ -30,20 +30,17 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly RequestDelegate _next;
         private readonly ILogger<SecretMiddleware> _logger;
         private readonly IConverterService _converter;
-        private readonly IChiperService _chiper;
 
         public string SessionKey { get; } = "user-session";
 
         public SecretMiddleware(
             RequestDelegate next,
             ILogger<SecretMiddleware> logger,
-            IConverterService converter,
-            IChiperService chiper
+            IConverterService converter
         ) {
             this._next = next;
             this._logger = logger;
             this._converter = converter;
-            this._chiper = chiper;
         }
 
         public async Task Invoke(HttpContext context, IApiKeyRepository _apiKeyRepo) {
