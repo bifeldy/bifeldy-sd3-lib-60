@@ -29,6 +29,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly RequestDelegate _next;
         private readonly ILogger<SecretMiddleware> _logger;
         private readonly IApplicationService _app;
+        private readonly IGlobalService _gs;
         private readonly IConverterService _converter;
 
         public string SessionKey { get; } = "user-session";
@@ -37,15 +38,17 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             RequestDelegate next,
             ILogger<SecretMiddleware> logger,
             IApplicationService app,
+            IGlobalService gs,
             IConverterService converter
         ) {
             this._next = next;
             this._logger = logger;
             this._app = app;
+            this._gs = gs;
             this._converter = converter;
         }
 
-        public async Task Invoke(HttpContext context, IApiKeyRepository _apiKeyRepo, IGeneralRepository _generalRepo) {
+        public async Task Invoke(HttpContext context, IApiKeyRepository _akRepo, IGeneralRepository _generalRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -87,20 +90,22 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 bool allowed = false;
                 string currentKodeDc = await _generalRepo.GetKodeDc();
                 if (currentKodeDc == "DCHO") {
-                    if (await _apiKeyRepo.SecretLogin(secret) != null) {
+                    if (await _akRepo.SecretLogin(secret) != null) {
                         allowed = true;
                     }
                 }
                 else {
-                    string apiKey = _apiKeyRepo.GetApiKeyData(request, reqBody);
-                    if (apiKey == this._app.AppName || await _apiKeyRepo.SecretLogin(secret) != null) {
+                    string apiKey = _akRepo.GetApiKeyData(request, reqBody);
+                    if (apiKey == this._app.AppName || await _akRepo.SecretLogin(secret) != null) {
                         allowed = true;
                     }
                 }
 
                 if (allowed) {
                     var userSession = new UserApiSession {
-                        name = context.Connection.RemoteIpAddress.ToString(),
+                        name = (currentKodeDc == "DCHO")
+                            ? context.Connection.RemoteIpAddress.ToString()
+                            : this._gs.CleanIpOrigin(_akRepo.GetIpOriginData(connection, request)),
                         role = UserSessionRole.PROGRAM_SERVICE
                     };
 
