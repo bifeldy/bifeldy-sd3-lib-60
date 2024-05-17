@@ -33,7 +33,6 @@ namespace bifeldy_sd3_lib_60.Services {
         string ObjectToJson(object body);
         string XmlToJson(string xml);
         T XmlJsonToObject<T>(string type, string text);
-        T GetDefaultValueT<T>();
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
         Dictionary<string, T> ClassToDictionary<T>(object obj);
     }
@@ -76,32 +75,6 @@ namespace bifeldy_sd3_lib_60.Services {
                 default:
                     throw new NotImplementedException("No Type Available!");
             }
-        }
-
-        public T GetDefaultValueT<T>() {
-            dynamic x = null;
-            switch (Type.GetTypeCode(typeof(T))) {
-                case TypeCode.DateTime:
-                    x = DateTime.MinValue;
-                    break;
-                case TypeCode.Byte:
-                case TypeCode.SByte:
-                case TypeCode.Int16:
-                case TypeCode.UInt16:
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                case TypeCode.Decimal:
-                case TypeCode.Double:
-                    x = 0;
-                    break;
-                case TypeCode.Boolean:
-                    x = false;
-                    break;
-            }
-
-            return (T) Convert.ChangeType(x, typeof(T));
         }
 
         public string FormatByteSizeHumanReadable(long bytes, string forceUnit = null) {
@@ -153,7 +126,7 @@ namespace bifeldy_sd3_lib_60.Services {
                             return (T) data;
                         }
                         catch {
-                            return this.GetDefaultValueT<T>();
+                            return default;
                         }
                     });
         }

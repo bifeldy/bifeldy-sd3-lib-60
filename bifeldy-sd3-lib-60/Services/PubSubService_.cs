@@ -45,8 +45,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             if (!this.keyValuePairs.ContainsKey(key)) {
-                T defaultValue = this._converter.GetDefaultValueT<T>();
-                return this.CreateGlobalAppBehaviorSubject(key, defaultValue);
+                return this.CreateGlobalAppBehaviorSubject(key, default(T));
             }
 
             return this.keyValuePairs[key];

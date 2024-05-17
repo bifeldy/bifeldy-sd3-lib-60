@@ -190,7 +190,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         protected virtual async Task<T> ExecScalarAsync<T>(DbCommand databaseCommand) {
-            T result = this._cs.GetDefaultValueT<T>();
+            T result = default;
             Exception exception = null;
             try {
                 await this.OpenConnection();
