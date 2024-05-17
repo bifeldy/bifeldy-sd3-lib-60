@@ -367,6 +367,8 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
+        public static void UseSecretMiddleware() => App.UseMiddleware<SecretMiddleware>();
+
         public static void UseApiKeyMiddleware() => App.UseMiddleware<ApiKeyMiddleware>();
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();

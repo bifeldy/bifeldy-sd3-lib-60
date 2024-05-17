@@ -112,7 +112,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                         return this.BadRequest(new ResponseJsonSingle<dynamic> {
                             info = $"400 - {this.GetType().Name} :: Login Gagal",
                             result = new {
-                                message = "Secret salah!"
+                                message = "Secret salah / tidak dikenali!"
                             }
                         });
                     }

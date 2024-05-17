@@ -20,21 +20,24 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Tables;
+using bifeldy_sd3_lib_60.Repositories;
+using Newtonsoft.Json.Linq;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
-    public sealed class JwtMiddleware {
+    public sealed class SecretMiddleware {
 
         private readonly RequestDelegate _next;
-        private readonly ILogger<JwtMiddleware> _logger;
+        private readonly ILogger<SecretMiddleware> _logger;
         private readonly IConverterService _converter;
         private readonly IChiperService _chiper;
 
         public string SessionKey { get; } = "user-session";
 
-        public JwtMiddleware(
+        public SecretMiddleware(
             RequestDelegate next,
-            ILogger<JwtMiddleware> logger,
+            ILogger<SecretMiddleware> logger,
             IConverterService converter,
             IChiperService chiper
         ) {
@@ -44,16 +47,12 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context) {
+        public async Task Invoke(HttpContext context, IApiKeyRepository _apiKeyRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (
-                !request.Path.Value.StartsWith("/api/") ||
-                request.Path.Value.StartsWith("/api/swagger") ||
-                !string.IsNullOrEmpty(context.Items["secret"]?.ToString())
-            ) {
+            if (!request.Path.Value.StartsWith("/api/") || request.Path.Value.StartsWith("/api/swagger")) {
                 await this._next(context);
                 return;
             }
@@ -72,50 +71,51 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 }
             }
 
-            string token = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers.Authorization)) {
-                token = request.Headers.Authorization;
+            string secret = string.Empty;
+            if (!string.IsNullOrEmpty(request.Headers["x-secret-key"])) {
+                secret = request.Headers["x-secret-key"];
             }
-            else if (!string.IsNullOrEmpty(request.Headers["x-access-token"])) {
-                token = request.Headers["x-access-token"];
+            else if (!string.IsNullOrEmpty(request.Query["secret"])) {
+                secret = request.Query["secret"];
             }
-            else if (!string.IsNullOrEmpty(request.Query["token"])) {
-                token = request.Query["token"];
-            }
-            else if (!string.IsNullOrEmpty(reqBody?.token)) {
-                token = reqBody.token;
+            else if (!string.IsNullOrEmpty(reqBody?.secret)) {
+                secret = reqBody.secret;
             }
 
-            if (token.StartsWith("Bearer ")) {
-                token = token[7..];
-            }
+            context.Items["secret"] = secret;
+            this._logger.LogInformation("[SECRET_MIDDLEWARE] 🗝 {secret}", secret);
 
-            context.Items["token"] = token;
-            this._logger.LogInformation("[JWT_MIDDLEWARE] 🔐 {token}", token);
-
-            try {
-                IEnumerable<Claim> userClaim = this._chiper.DecodeJWT(token);
-                var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
-                context.User = new ClaimsPrincipal(userClaimIdentity);
-
-                context.Items["user"] = new UserApiSession {
-                    name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
-                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
-                };
-            }
-            catch {
-                context.Items["user"] = null;
-
-                if (!string.IsNullOrEmpty(token)) {
+            if (!string.IsNullOrEmpty(secret)) {
+                API_KEY_T apiKeyT = await _apiKeyRepo.SecretLogin(secret);
+                if (apiKeyT == null) {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
                     await response.WriteAsJsonAsync(new {
-                        info = "401 - JWT :: Tidak Dapat Digunakan",
+                        info = "401 - Secret :: Tidak Dapat Digunakan",
                         result = new {
-                            message = "Format Token Salah / Expired!"
+                            message = "Secret salah / tidak dikenali!"
                         }
                     });
                     return;
+                }
+                else {
+                    var userSession = new UserApiSession {
+                        name = context.Connection.RemoteIpAddress.ToString(),
+                        role = UserSessionRole.PROGRAM_SERVICE
+                    };
+
+                    var userClaim = new List<Claim> {
+                        new(ClaimTypes.Name, userSession.name),
+                        new(ClaimTypes.Role, userSession.role.ToString())
+                    };
+
+                    var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
+                    context.User = new ClaimsPrincipal(userClaimIdentity);
+
+                    context.Items["user"] = new UserApiSession {
+                        name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
+                        role = (UserSessionRole)Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
+                    };
                 }
             }
 

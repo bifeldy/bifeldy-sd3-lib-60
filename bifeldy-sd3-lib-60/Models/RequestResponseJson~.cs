@@ -20,6 +20,7 @@ namespace bifeldy_sd3_lib_60.Models {
     public class RequestJson {
         [JsonPropertyOrder(1)][SwaggerIgnore] public string key { get; set; }
         [JsonPropertyOrder(2)][SwaggerIgnore] public string token { get; set; }
+        [JsonPropertyOrder(2)][SwaggerIgnore] public string secret { get; set; }
     }
 
     public abstract class ResponseJson<T> {

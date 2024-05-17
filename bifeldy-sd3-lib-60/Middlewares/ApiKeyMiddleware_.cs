@@ -49,7 +49,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (!request.Path.Value.StartsWith("/api/") || request.Path.Value.StartsWith("/api/swagger")) {
+            if (
+                !request.Path.Value.StartsWith("/api/") ||
+                request.Path.Value.StartsWith("/api/swagger") ||
+                !string.IsNullOrEmpty(context.Items["secret"]?.ToString())
+            ) {
                 await this._next(context);
                 return;
             }
@@ -89,11 +93,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
                 apiKey = request.Headers["x-api-key"];
             }
-            else if (!string.IsNullOrEmpty(reqBody?.key)) {
-                apiKey = reqBody.key;
-            }
             else if (!string.IsNullOrEmpty(request.Query["key"])) {
                 apiKey = request.Query["key"];
+            }
+            else if (!string.IsNullOrEmpty(reqBody?.key)) {
+                apiKey = reqBody.key;
             }
 
             context.Items["api_key"] = apiKey;
