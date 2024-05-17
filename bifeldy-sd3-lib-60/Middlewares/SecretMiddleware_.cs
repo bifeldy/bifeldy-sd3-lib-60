@@ -22,7 +22,6 @@ using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Tables;
 using bifeldy_sd3_lib_60.Repositories;
-using Newtonsoft.Json.Linq;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
