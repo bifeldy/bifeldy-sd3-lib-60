@@ -61,8 +61,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 return;
             }
 
-            MemoryStream ms = null;
-
             RequestJson reqBody = await this._gs.GetRequestBody(request);
             string secret = this._gs.GetSecretData(request, reqBody);
 
@@ -115,14 +113,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     }
 
                     request.QueryString = new QueryBuilder(queryparameters).ToQueryString();
-
-                    if (reqBody != null) {
-                        reqBody.token = token;
-                        reqBody.secret = string.Empty;
-
-                        ms = new MemoryStream(Encoding.UTF8.GetBytes(this._converter.ObjectToJson(reqBody)));
-                        request.Body = ms;
-                    }
                 }
                 else {
                     response.Clear();
@@ -138,8 +128,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
 
             await this._next(context);
-
-            ms?.Close();
         }
 
     }

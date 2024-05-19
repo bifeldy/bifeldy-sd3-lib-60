@@ -48,7 +48,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         // This constant is used to determine the keysize of the encryption algorithm in bits.
         // We divide this by 8 within the code below to get the equivalent number of bytes.
-        private const int Keysize = 256;
+        private const int Keysize = 128;
 
         // This constant determines the number of iterations for the password bytes generation function.
         private const int DerivationIterations = 1000;
@@ -59,8 +59,8 @@ namespace bifeldy_sd3_lib_60.Services {
             this._stream = stream;
         }
 
-        private byte[] Generate256BitsOfRandomEntropy() {
-            byte[] randomBytes = new byte[32]; // 32 Bytes will give us 256 bits.
+        private byte[] Generate128BitsOfRandomEntropy() {
+            byte[] randomBytes = new byte[16]; // 16 Bytes will give us 128 bits.
             using (var rngCsp = RandomNumberGenerator.Create()) {
                 // Fill the array with cryptographically secure random bytes.
                 rngCsp.GetBytes(randomBytes);
@@ -75,13 +75,13 @@ namespace bifeldy_sd3_lib_60.Services {
             }
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
-            byte[] saltStringBytes = this.Generate256BitsOfRandomEntropy();
-            byte[] ivStringBytes = this.Generate256BitsOfRandomEntropy();
+            byte[] saltStringBytes = this.Generate128BitsOfRandomEntropy();
+            byte[] ivStringBytes = this.Generate128BitsOfRandomEntropy();
             byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
             using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
                 using (var symmetricKey = new RijndaelManaged()) {
-                    symmetricKey.BlockSize = 256;
+                    symmetricKey.BlockSize = 128;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform encryptor = symmetricKey.CreateEncryptor(keyBytes, ivStringBytes)) {
@@ -119,7 +119,7 @@ namespace bifeldy_sd3_lib_60.Services {
             using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
                 using (var symmetricKey = new RijndaelManaged()) {
-                    symmetricKey.BlockSize = 256;
+                    symmetricKey.BlockSize = 128;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes)) {

@@ -11,6 +11,7 @@
  * 
  */
 
+using System.Collections.Specialized;
 using System.Data;
 using System.Web;
 
@@ -333,9 +334,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? currentPath : $"{dbi.API_PATH}{currentPath?.Split(separator).Last()}";
                 var urlApiDc = new Uri($"http://{dbi.IP_NGINX}{pathApiDc}{request.QueryString.Value}");
 
-                // API Key Khusus Bypass ~ Case Sensitive
-                System.Collections.Specialized.NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
                 string hashText = this._chiper.HashText(this._as.AppName);
+                request.Headers["x-api-key"] = hashText;
+
+                // API Key Khusus Bypass ~ Case Sensitive
+                NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
                 queryApiDc.Set("key", hashText);
                 queryApiDc.Set("mask_ip", this._chiper.EncryptText(request.HttpContext.Connection.RemoteIpAddress.ToString(), hashText));
 
