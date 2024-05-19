@@ -11,7 +11,6 @@
  * 
  */
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -28,8 +27,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<List<API_KEY_T>> GetAll(string key = null);
         Task<API_KEY_T> GetByKey(string key);
         Task<bool> Delete(string key);
-        string GetApiKeyData(HttpRequest request, RequestJson reqBody);
-        string GetIpOriginData(ConnectionInfo connection, HttpRequest request);
         Task<API_KEY_T> SecretLogin(string key);
         Task<bool> CheckKeyOrigin(string ipOrigin, string key);
     }
@@ -84,39 +81,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         /* ** */
-
-        public string GetApiKeyData(HttpRequest request, RequestJson reqBody) {
-            string apiKey = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers["x-api-key"])) {
-                apiKey = request.Headers["x-api-key"];
-            }
-            else if (!string.IsNullOrEmpty(request.Query["key"])) {
-                apiKey = request.Query["key"];
-            }
-            else if (!string.IsNullOrEmpty(reqBody?.key)) {
-                apiKey = reqBody.key;
-            }
-
-            return apiKey;
-        }
-
-        public string GetIpOriginData(ConnectionInfo connection, HttpRequest request) {
-            string ipOrigin = connection.RemoteIpAddress.ToString();
-            if (!string.IsNullOrEmpty(request.Headers["origin"])) {
-                ipOrigin = request.Headers["origin"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["referer"])) {
-                ipOrigin = request.Headers["referer"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["cf-connecting-ip"])) {
-                ipOrigin = request.Headers["cf-connecting-ip"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["x-forwarded-for"])) {
-                ipOrigin = request.Headers["x-forwarded-for"];
-            }
-
-            return ipOrigin;
-        }
 
         public async Task<API_KEY_T> SecretLogin(string key) {
             return await this._orapg.Set<API_KEY_T>().Where(ak =>

@@ -28,20 +28,20 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly ILogger<ApiKeyMiddleware> _logger;
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
-        private readonly IConverterService _cs;
+        private readonly IChiperService _chiper;
 
         public ApiKeyMiddleware(
             RequestDelegate next,
             ILogger<ApiKeyMiddleware> logger,
             IApplicationService app,
             IGlobalService gs,
-            IConverterService cs
+            IChiperService chiper
         ) {
             this._next = next;
             this._logger = logger;
             this._app = app;
             this._gs = gs;
-            this._cs = cs;
+            this._chiper = chiper;
         }
 
         public async Task Invoke(HttpContext context, IApiKeyRepository _akRepo) {
@@ -75,29 +75,15 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 this._gs.AllowedIpOrigin.Add(ipDomainProxy);
             }
 
-            RequestJson reqBody = null;
-            string contentType = request.Headers["content-type"].ToString();
-            if (SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
-                string rbString = await request.GetRequestBodyStringAsync();
-                if (!string.IsNullOrEmpty(rbString)) {
-                    try {
-                        reqBody = this._cs.XmlJsonToObject<RequestJson>(contentType, rbString);
-                    }
-                    catch (Exception ex) {
-                        this._logger.LogError("[JSON_BODY] 🌸 {ex}", ex.Message);
-                    }
-                }
-            }
-
-            string apiKey = _akRepo.GetApiKeyData(request, reqBody);
+            string apiKey = this._gs.GetApiKeyData(request, await this._gs.GetRequestBody(request));
             context.Items["api_key"] = apiKey;
-            string ipOrigin = this._gs.CleanIpOrigin(_akRepo.GetIpOriginData(connection, request));
+            string ipOrigin = this._gs.CleanIpOrigin(this._gs.GetIpOriginData(connection, request));
             context.Items["ip_origin"] = ipOrigin;
 
             this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);
 
             // API Key Khusus Bypass ~ Case Sensitive
-            if (apiKey == this._app.AppName || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+            if (apiKey == this._chiper.HashText(this._app.AppName) || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
                 await this._next(context);
             }
             else {

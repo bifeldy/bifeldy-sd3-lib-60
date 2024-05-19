@@ -11,12 +11,12 @@
  * 
  */
 
-using System.Security.Claims;
+using System.Text;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 
-using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
@@ -30,6 +30,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly ILogger<SecretMiddleware> _logger;
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
+        private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
 
         public string SessionKey { get; } = "user-session";
@@ -39,12 +40,14 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             ILogger<SecretMiddleware> logger,
             IApplicationService app,
             IGlobalService gs,
+            IChiperService chiper,
             IConverterService converter
         ) {
             this._next = next;
             this._logger = logger;
             this._app = app;
             this._gs = gs;
+            this._chiper = chiper;
             this._converter = converter;
         }
 
@@ -58,36 +61,18 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 return;
             }
 
-            RequestJson reqBody = null;
-            string contentType = request.Headers["content-type"].ToString();
-            if (SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
-                string rbString = await request.GetRequestBodyStringAsync();
-                if (!string.IsNullOrEmpty(rbString)) {
-                    try {
-                        reqBody = this._converter.XmlJsonToObject<RequestJson>(contentType, rbString);
-                    }
-                    catch (Exception ex) {
-                        this._logger.LogError("[JSON_BODY] 🔐 {ex}", ex.Message);
-                    }
-                }
-            }
+            MemoryStream ms = null;
 
-            string secret = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers["x-secret-key"])) {
-                secret = request.Headers["x-secret-key"];
-            }
-            else if (!string.IsNullOrEmpty(request.Query["secret"])) {
-                secret = request.Query["secret"];
-            }
-            else if (!string.IsNullOrEmpty(reqBody?.secret)) {
-                secret = reqBody.secret;
-            }
+            RequestJson reqBody = await this._gs.GetRequestBody(request);
+            string secret = this._gs.GetSecretData(request, reqBody);
 
             context.Items["secret"] = secret;
             this._logger.LogInformation("[SECRET_MIDDLEWARE] 🗝 {secret}", secret);
 
             if (!string.IsNullOrEmpty(secret)) {
                 bool allowed = false;
+                string hashText = this._chiper.HashText(this._app.AppName);
+
                 string currentKodeDc = await _generalRepo.GetKodeDc();
                 if (currentKodeDc == "DCHO") {
                     if (await _akRepo.SecretLogin(secret) != null) {
@@ -95,33 +80,49 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     }
                 }
                 else {
-                    string apiKey = _akRepo.GetApiKeyData(request, reqBody);
-                    if (apiKey == this._app.AppName || await _akRepo.SecretLogin(secret) != null) {
+                    string apiKey = this._gs.GetApiKeyData(request, reqBody);
+                    if (apiKey == hashText || await _akRepo.SecretLogin(secret) != null) {
                         allowed = true;
                     }
                 }
 
                 if (allowed) {
-                    string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"].ToString())
-                        ? _akRepo.GetIpOriginData(connection, request)
-                        : request.Query["mask_ip"].ToString();
-                    var userSession = new UserApiSession {
+                    string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
+                        ? this._gs.GetIpOriginData(connection, request)
+                        : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
+                    string token = this._chiper.EncodeJWT(new UserApiSession {
                         name = this._gs.CleanIpOrigin(maskIp),
                         role = UserSessionRole.PROGRAM_SERVICE
-                    };
+                    });
 
-                    var userClaim = new List<Claim> {
-                        new(ClaimTypes.Name, userSession.name),
-                        new(ClaimTypes.Role, userSession.role.ToString())
-                    };
+                    request.Headers.Authorization = $"Bearer {token}";
+                    request.Headers["x-access-token"] = token;
+                    request.Headers["x-secret-key"] = string.Empty;
 
-                    var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
-                    context.User = new ClaimsPrincipal(userClaimIdentity);
+                    var queryitems = request.Query.SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value)).ToList();
+                    var queryparameters = new List<KeyValuePair<string, string>>();
+                    foreach (KeyValuePair<string, string> item in queryitems) {
+                        if (item.Key.ToLower() == "token") {
+                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, token));
+                        }
+                        else if (item.Key.ToLower() != "secret") {
+                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, item.Value));
+                        }
+                    }
 
-                    context.Items["user"] = new UserApiSession {
-                        name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
-                        role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
-                    };
+                    if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "token") == -1) {
+                        queryparameters.Add(new KeyValuePair<string, string>("token", token));
+                    }
+
+                    request.QueryString = new QueryBuilder(queryparameters).ToQueryString();
+
+                    if (reqBody != null) {
+                        reqBody.token = token;
+                        reqBody.secret = string.Empty;
+
+                        ms = new MemoryStream(Encoding.UTF8.GetBytes(this._converter.ObjectToJson(reqBody)));
+                        request.Body = ms;
+                    }
                 }
                 else {
                     response.Clear();
@@ -137,6 +138,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             }
 
             await this._next(context);
+
+            ms?.Close();
         }
 
     }

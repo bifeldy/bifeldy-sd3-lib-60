@@ -46,6 +46,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         private readonly IApplicationService _as;
         private readonly IHttpService _http;
+        private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
 
         private readonly IOracle _oracle;
@@ -57,6 +58,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IHttpService http,
+            IChiperService chiper,
             IConverterService converter,
             IOracle oracle,
             IPostgres postgres,
@@ -66,6 +68,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             this._envVar = envVar.Value;
             this._as = @as;
             this._http = http;
+            this._chiper = chiper;
             this._converter = converter;
             this._oracle = oracle;
             this._postgres = postgres;
@@ -332,8 +335,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
                 // API Key Khusus Bypass ~ Case Sensitive
                 System.Collections.Specialized.NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
-                queryApiDc.Set("key", this._as.AppName);
-                queryApiDc.Set("mask_ip", request.HttpContext.Connection.RemoteIpAddress.ToString());
+                string hashText = this._chiper.HashText(this._as.AppName);
+                queryApiDc.Set("key", hashText);
+                queryApiDc.Set("mask_ip", this._chiper.EncryptText(request.HttpContext.Connection.RemoteIpAddress.ToString(), hashText));
 
                 var uriBuilder = new UriBuilder(urlApiDc) {
                     Query = queryApiDc.ToString()

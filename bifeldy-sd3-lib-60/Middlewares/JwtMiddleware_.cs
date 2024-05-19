@@ -20,7 +20,6 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
@@ -28,7 +27,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
-        private readonly IConverterService _converter;
+        private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
 
         public string SessionKey { get; } = "user-session";
@@ -36,44 +35,26 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         public JwtMiddleware(
             RequestDelegate next,
             ILogger<JwtMiddleware> logger,
-            IConverterService converter,
+            IGlobalService gs,
             IChiperService chiper
         ) {
             this._next = next;
             this._logger = logger;
-            this._converter = converter;
+            this._gs = gs;
             this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context, IApiTokenRepository _apiTokenRepo) {
+        public async Task Invoke(HttpContext context) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (
-                !request.Path.Value.StartsWith("/api/") ||
-                request.Path.Value.StartsWith("/api/swagger") ||
-                !string.IsNullOrEmpty(context.Items["secret"]?.ToString())
-            ) {
+            if (!request.Path.Value.StartsWith("/api/") || request.Path.Value.StartsWith("/api/swagger")) {
                 await this._next(context);
                 return;
             }
 
-            RequestJson reqBody = null;
-            string contentType = request.Headers["content-type"].ToString();
-            if (SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
-                string rbString = await request.GetRequestBodyStringAsync();
-                if (!string.IsNullOrEmpty(rbString)) {
-                    try {
-                        reqBody = this._converter.XmlJsonToObject<RequestJson>(contentType, rbString);
-                    }
-                    catch (Exception ex) {
-                        this._logger.LogError("[JSON_BODY] 🔐 {ex}", ex.Message);
-                    }
-                }
-            }
-
-            string token = _apiTokenRepo.GetTokenData(request, reqBody);
+            string token = this._gs.GetTokenData(request, await this._gs.GetRequestBody(request));
             if (token.StartsWith("Bearer ")) {
                 token = token[7..];
             }

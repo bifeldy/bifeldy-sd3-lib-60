@@ -11,7 +11,6 @@
  * 
  */
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -29,7 +28,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<API_TOKEN_T> GetByUserName(string userName);
         Task<API_TOKEN_T> GetByUserNamePass(string userName, string password);
         Task<bool> Delete(string userName);
-        string GetTokenData(HttpRequest request, RequestJson reqBody);
         Task<bool> CheckTokenSekaliPakaiIsValid(API_TOKEN_T apiToken, string tokenSekaliPakai);
         Task<API_TOKEN_T> LoginBot(string userName, string password);
     }
@@ -91,24 +89,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         /* ** */
-
-        public string GetTokenData(HttpRequest request, RequestJson reqBody) {
-            string token = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers.Authorization)) {
-                token = request.Headers.Authorization;
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["x-access-token"])) {
-                token = request.Headers["x-access-token"];
-            }
-            else if (!string.IsNullOrEmpty(request.Query["token"])) {
-                token = request.Query["token"];
-            }
-            else if (!string.IsNullOrEmpty(reqBody?.token)) {
-                token = reqBody.token;
-            }
-
-            return token;
-        }
 
         public async Task<bool> CheckTokenSekaliPakaiIsValid(API_TOKEN_T apiToken, string tokenSekaliPakai) {
             bool tokenSekaliPakaiValid = apiToken?.TOKEN_SEKALI_PAKAI.ToUpper() == tokenSekaliPakai.ToUpper();

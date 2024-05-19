@@ -252,7 +252,9 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void AddJobScheduler() {
             _ = Services.AddQuartz(opt => {
+#pragma warning disable CS0618 // Type or member is obsolete
                 opt.UseMicrosoftDependencyInjectionJobFactory();
+#pragma warning restore CS0618 // Type or member is obsolete
             });
             _ = Services.AddQuartzHostedService(opt => {
                 opt.WaitForJobsToComplete = true;
