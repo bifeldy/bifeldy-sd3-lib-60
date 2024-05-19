@@ -70,8 +70,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string EncryptText(string plainText, string passPhrase = null) {
-            if (string.IsNullOrEmpty(passPhrase)) {
-                passPhrase = this.HashText(passPhrase);
+            if (string.IsNullOrEmpty(passPhrase) || passPhrase?.Length < 8) {
+                passPhrase = this.HashText(this._app.AppName);
             }
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
@@ -104,8 +104,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string DecryptText(string cipherText, string passPhrase = null) {
-            if (string.IsNullOrEmpty(passPhrase)) {
-                passPhrase = this.HashText(passPhrase);
+            if (string.IsNullOrEmpty(passPhrase) || passPhrase?.Length < 8) {
+                passPhrase = this.HashText(this._app.AppName);
             }
             // Get the complete stream of bytes that represent:
             // [32 bytes of Salt] + [32 bytes of IV] + [n bytes of CipherText]
