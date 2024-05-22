@@ -35,6 +35,7 @@ namespace bifeldy_sd3_lib_60.Services {
         T XmlJsonToObject<T>(string type, string text);
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
         Dictionary<string, T> ClassToDictionary<T>(object obj);
+        List<T> Csv2List<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null);
     }
 
     public sealed class CConverterService : IConverterService {
@@ -129,6 +130,83 @@ namespace bifeldy_sd3_lib_60.Services {
                             return default;
                         }
                     });
+        }
+
+        public List<T> Csv2List<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null) {
+            using (var reader = new StreamReader(stream)) {
+                int i = 0;
+                List<string> col = csvColumn ?? new();
+                var row = new List<T>();
+
+                if (skipHeader && csvColumn != null) {
+                    i++;
+                    _ = reader.ReadLine();
+                }
+
+                while (!reader.EndOfStream) {
+                    string? line = reader.ReadLine();
+                    if (!string.IsNullOrEmpty(line)) {
+                        string[] values = line.Split(delimiter).Select(v => v.StartsWith("\"") && v.EndsWith("\"") ? v[1..^1] : v).ToArray();
+
+                        if (i == 0) {
+                            if (csvColumn == null) {
+                                col.AddRange(values);
+                            }
+                            else {
+                                var temp = new List<string>();
+                                for (int j = 0; j < values.Length; j++) {
+                                    if (csvColumn.Select(ac => ac.ToUpper()).Contains(values[j].ToUpper())) {
+                                        temp.Add(values[j]);
+                                    }
+                                }
+
+                                if (temp.Count != col.Count) {
+                                    throw new Exception("Data kolom yang tersedia tidak lengkap");
+                                }
+
+                                col = temp;
+                            }
+                        }
+                        else if (values.Length != col.Count) {
+                            throw new Exception("Jumlah kolom data tidak sesuai dengan kolom header");
+                        }
+                        else {
+                            PropertyInfo[] properties = typeof(T).GetProperties();
+                            T objT = Activator.CreateInstance<T>();
+
+                            for (int j = 0; j < col.Count; j++) {
+                                string colName = col[j].ToUpper();
+                                string rowVal = values[j].ToUpper();
+
+                                if (csvColumn != null && requiredColumn != null) {
+                                    if (requiredColumn.Select(rc => rc.ToUpper()).Contains(colName)) {
+                                        if (string.IsNullOrEmpty(rowVal)) {
+                                            throw new Exception($"Baris {i + 1} kolom {j} :: {colName} tidak boleh kosong");
+                                        }
+                                    }
+                                }
+
+                                foreach (PropertyInfo pro in properties) {
+                                    if (pro.Name.ToUpper() == colName) {
+                                        try {
+                                            pro.SetValue(objT, rowVal);
+                                        }
+                                        catch {
+                                            //
+                                        }
+                                    }
+                                }
+                            }
+
+                            row.Add(objT);
+                        }
+                    }
+
+                    i++;
+                }
+
+                return row;
+            }
         }
 
     }
