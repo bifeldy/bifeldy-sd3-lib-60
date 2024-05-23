@@ -34,8 +34,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string XmlToJson(string xml);
         T XmlJsonToObject<T>(string type, string text);
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
-        Dictionary<string, T> ClassToDictionary<T>(object obj);
-        List<T> Csv2List<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null);
+        List<T> CsvToList<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null);
     }
 
     public sealed class CConverterService : IConverterService {
@@ -105,34 +104,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return $"{(decimal) bytes / digit:0.00} {ext}";
         }
 
-        public Dictionary<string, T> ClassToDictionary<T>(object obj) {
-            return obj.GetType()
-                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                    .ToDictionary(prop => prop.Name, prop => {
-                        try {
-                            dynamic data = prop.GetValue(obj, null);
-                            if (typeof(T) == typeof(string)) {
-                                if (data.GetType() == typeof(DateTime)) {
-                                    data = ((DateTime) data).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-                                }
-
-                                if (typeof(T) == typeof(object)) {
-                                    data = ObjectToJson(data);
-                                }
-                                else {
-                                    data = $"{data}";
-                                }
-                            }
-
-                            return (T) data;
-                        }
-                        catch {
-                            return default;
-                        }
-                    });
-        }
-
-        public List<T> Csv2List<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null) {
+        public List<T> CsvToList<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null) {
             using (var reader = new StreamReader(stream)) {
                 int i = 0;
                 List<string> col = csvColumn ?? new();
