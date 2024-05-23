@@ -29,7 +29,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             pro.SetValue(objT, row[pro.Name]);
                         }
                         catch {
-                            //
+                            // null / default
                         }
                     }
                 }

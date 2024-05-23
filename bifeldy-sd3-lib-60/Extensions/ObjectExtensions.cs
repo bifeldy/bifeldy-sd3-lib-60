@@ -17,14 +17,19 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class ObjectExtensions {
 
+        //
+        // Rekursif se dalam - dalamnya
+        // Rawan sTaCkOvErFlOw ..
+        // Semoga gak kena :: max call stack
+        // Wkwkwk ~
+        //
+
         private static readonly BindingFlags bf = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
 
         private static Dictionary<string, object> ConvertIEnumerableToDictionary(IEnumerable enumerable) {
             int index = 0;
             var items = new Dictionary<string, object>();
             foreach (object item in enumerable) {
-
-                // If property is a string stop traversal
                 if (item.GetType().IsPrimitive || item is string) {
                     items.Add(index.ToString(), item);
                 }
@@ -52,16 +57,17 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 return propertyValue;
             }
 
-            // If property is a collection don't traverse collection properties but the items instead
+            // Khusus collection / yang bisa di looping (list, array, enum, dict)
             if (!propertyType.Equals(typeof(string)) && typeof(IEnumerable).IsAssignableFrom(propertyType)) {
                 return ConvertIEnumerableToDictionary((IEnumerable) propertyInfo.GetValue(owner));
             }
 
-            // If property is a string stop traversal
+            // Khusus tipe data standar (int, bool, ...) + string, udahan
             if (propertyType.IsPrimitive || propertyType.Equals(typeof(string))) {
                 return propertyValue;
             }
 
+            // masih object / class
             PropertyInfo[] properties = propertyType.GetProperties(bf);
             if (properties.Any()) {
                 var resultDictionary = properties.ToDictionary(
