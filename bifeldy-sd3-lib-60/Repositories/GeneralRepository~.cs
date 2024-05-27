@@ -284,6 +284,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 SELECT
                     a.dc_kode,
                     a.ip_nginx,
+                    b.api_host,
                     b.api_path
                 FROM
                     dc_tabel_ip_t a
@@ -300,7 +301,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             var listApiDcs = dt.ToList<ListApiDc>();
 
             ListApiDc dbi = listApiDcs.FirstOrDefault();
-            if (dbi == null || string.IsNullOrEmpty(dbi?.IP_NGINX)) {
+            string hostApiDc = string.IsNullOrEmpty(dbi?.API_HOST) ? dbi?.IP_NGINX : dbi?.API_HOST;
+            if (dbi == null || string.IsNullOrEmpty(hostApiDc)) {
                 Callback($"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!", null);
             }
             else {
@@ -332,7 +334,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 }
 
                 string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? currentPath : $"{dbi.API_PATH}{currentPath?.Split(separator).Last()}";
-                var urlApiDc = new Uri($"http://{dbi.IP_NGINX}{pathApiDc}{request.QueryString.Value}");
+                var urlApiDc = new Uri($"http://{hostApiDc}{pathApiDc}{request.QueryString.Value}");
 
                 string hashText = this._chiper.HashText(this._as.AppName);
                 request.Headers["x-api-key"] = hashText;
