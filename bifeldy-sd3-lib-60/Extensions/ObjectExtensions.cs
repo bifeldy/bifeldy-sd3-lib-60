@@ -83,12 +83,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         public static Dictionary<string, object> ToDictionary(this object instanceToConvert) {
             var resultDictionary = instanceToConvert.GetType()
-              .GetProperties(bf)
-                  .Where(propertyInfo => !propertyInfo.GetIndexParameters().Any())
-                    .ToDictionary(
-                        propertyInfo => propertyInfo.Name,
-                        propertyInfo => ConvertPropertyToDictionary(propertyInfo, instanceToConvert)
-                    );
+                .GetProperties(bf)
+                .Where(propertyInfo => !propertyInfo.GetIndexParameters().Any())
+                .ToDictionary(
+                    propertyInfo => propertyInfo.Name,
+                    propertyInfo => ConvertPropertyToDictionary(propertyInfo, instanceToConvert)
+                );
             resultDictionary.Add("IsCollection", false);
             return resultDictionary;
         }
