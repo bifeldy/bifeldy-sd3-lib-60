@@ -35,6 +35,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         string DbName { get; }
         Task<string> GetURLWebService(string webType);
         Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
+        Task<KAFKA_SERVER_T> GetKafkaServerInfo(string topicName);
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
         Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
         Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
@@ -194,6 +195,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 new() { NAME = "value", VALUE = msg.Value },
                 new() { NAME = "tmstmp", VALUE = msg.Timestamp.UtcDateTime }
             });
+        }
+
+        public async Task<KAFKA_SERVER_T> GetKafkaServerInfo(string topicName) {
+            return await this._orapg.Set<KAFKA_SERVER_T>().Where(k => k.TOPIC.ToUpper() == topicName.ToUpper()).FirstOrDefaultAsync();
         }
 
         /* ** */

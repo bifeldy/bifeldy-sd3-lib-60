@@ -18,8 +18,9 @@ using Confluent.Kafka;
 
 using System.Reactive.Subjects;
 
-using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Repositories;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Tables;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
@@ -33,10 +34,10 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private readonly IGeneralRepository _generalRepo;
 
-        private readonly string _hostPort;
+        private string _hostPort;
         private string _topicName;
-        private readonly short _replication;
-        private readonly int _partition;
+        private short _replication;
+        private int _partition;
 
         private readonly bool _suffixKodeDc;
         private readonly string _pubSubName;
@@ -85,6 +86,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             try {
                 await Task.Yield();
 
+                if (string.IsNullOrEmpty(this._hostPort)) {
+                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._topicName);
+                    this._hostPort = $"{kafka.HOST}:{kafka.PORT}";
+                    this._replication = (short) kafka.REPLI;
+                    this._partition = (int) kafka.PARTI;
+                }
+
                 if (this._suffixKodeDc) {
                     string kodeDc = await this._generalRepo.GetKodeDc();
                     if (kodeDc == "DCHO") {
@@ -99,7 +107,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 }
 
                 if (this.producer == null) {
-                    await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName);
+                    await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName, this._replication, this._partition);
                     this.producer = this._kafka.CreateKafkaProducerInstance<string, string>(this._hostPort);
                 }
 

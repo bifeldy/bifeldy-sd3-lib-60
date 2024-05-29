@@ -18,8 +18,9 @@ using Confluent.Kafka;
 
 using System.Reactive.Subjects;
 
-using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Repositories;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Tables;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
@@ -33,7 +34,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private readonly IGeneralRepository _generalRepo;
 
-        private readonly string _hostPort;
+        private string _hostPort;
         private string _groupId;
         private string _topicName;
 
@@ -81,6 +82,11 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
                 await Task.Yield();
+
+                if (string.IsNullOrEmpty(this._hostPort)) {
+                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._topicName);
+                    this._hostPort = $"{kafka.HOST}:{kafka.PORT}";
+                }
 
                 if (this._suffixKodeDc) {
                     string kodeDc = await this._generalRepo.GetKodeDc();
