@@ -86,11 +86,15 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 await Task.Yield();
 
                 if (this._suffixKodeDc) {
+                    string kodeDc = await this._generalRepo.GetKodeDc();
+                    if (kodeDc == "DCHO") {
+                        return;
+                    }
+
                     if (!this._topicName.EndsWith("_")) {
                         this._topicName += "_";
                     }
 
-                    string kodeDc = await this._generalRepo.GetKodeDc();
                     this._topicName += kodeDc;
                 }
 
