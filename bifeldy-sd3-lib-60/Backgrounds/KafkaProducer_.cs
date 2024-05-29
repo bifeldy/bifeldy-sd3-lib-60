@@ -41,6 +41,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private readonly bool _suffixKodeDc;
         private readonly string _pubSubName;
+        private readonly List<string> _excludeJenisDc;
 
         private IProducer<string, string> producer = null;
 
@@ -55,7 +56,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         public CKafkaProducer(
             IServiceProvider serviceProvider,
             string hostPort, string topicName, short replication = 1, int partition = 1,
-            bool suffixKodeDc = false, string pubSubName = null
+            bool suffixKodeDc = false, List<string> excludeJenisDc = null, string pubSubName = null
         ) {
             this._logger = serviceProvider.GetRequiredService<ILogger<CKafkaProducer>>();
             this._converter = serviceProvider.GetRequiredService<IConverterService>();
@@ -73,6 +74,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
             this._suffixKodeDc = suffixKodeDc;
             this._pubSubName = pubSubName;
+            this._excludeJenisDc = excludeJenisDc;
         }
 
         public override void Dispose() {
@@ -85,6 +87,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
                 await Task.Yield();
+
+                if (this._excludeJenisDc != null) {
+                    string jenisDc = await _generalRepo.GetJenisDc();
+                    if (this._excludeJenisDc.Contains(jenisDc)) {
+                        return;
+                    }
+                }
 
                 if (string.IsNullOrEmpty(this._hostPort)) {
                     KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._topicName);

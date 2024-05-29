@@ -21,6 +21,7 @@ namespace bifeldy_sd3_lib_60.Models {
         public bool SUFFIX_KODE_DC { get; set; }
         public short REPLICATION { get; set; } = -1;
         public int PARTITION { get; set; } = -1;
+        public string EXCLUDE_JENIS_DC { get; set; }
     }
 
 }

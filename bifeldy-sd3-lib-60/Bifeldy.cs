@@ -219,15 +219,25 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddKafkaProducerBackground(string hostPort, string topicName, short replication = 1, int partition = 1, bool suffixKodeDc = false, string pubSubName = null) {
+        public static void AddKafkaProducerBackground(string hostPort, string topicName, short replication = 1, int partition = 1, bool suffixKodeDc = false, string excludeJenisDc = null, string pubSubName = null) {
             _ = Services.AddHostedService(sp => {
-                return new CKafkaProducer(sp, hostPort, topicName, replication, partition, suffixKodeDc, pubSubName);
+                List<string> ls = null;
+                if (!string.IsNullOrEmpty(excludeJenisDc)) {
+                    ls = new List<string>(excludeJenisDc.Split(",").Select(d => d.Trim().ToUpper()));
+                }
+
+                return new CKafkaProducer(sp, hostPort, topicName, replication, partition, suffixKodeDc, ls, pubSubName);
             });
         }
 
-        public static void AddKafkaConsumerBackground(string hostPort, string topicName, string logTableName = null, string groupId = null, bool suffixKodeDc = false, string pubSubName = null) {
+        public static void AddKafkaConsumerBackground(string hostPort, string topicName, string logTableName = null, string groupId = null, bool suffixKodeDc = false, string excludeJenisDc = null, string pubSubName = null) {
             _ = Services.AddHostedService(sp => {
-                return new CKafkaConsumer(sp, hostPort, topicName, logTableName, groupId, suffixKodeDc, pubSubName);
+                List<string> ls = null;
+                if (!string.IsNullOrEmpty(excludeJenisDc)) {
+                    ls = new List<string>(excludeJenisDc.Split(",").Select(d => d.Trim().ToUpper()));
+                }
+
+                return new CKafkaConsumer(sp, hostPort, topicName, logTableName, groupId, suffixKodeDc, ls, pubSubName);
             });
         }
 
@@ -236,13 +246,13 @@ namespace bifeldy_sd3_lib_60 {
             if (kafkaSettings != null) {
                 foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
                     if (ks.Key.StartsWith("PRODUCER_")) {
-                        AddKafkaProducerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.REPLICATION, ks.Value.PARTITION, ks.Value.SUFFIX_KODE_DC, ks.Key);
+                        AddKafkaProducerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.REPLICATION, ks.Value.PARTITION, ks.Value.SUFFIX_KODE_DC, ks.Value.EXCLUDE_JENIS_DC, ks.Key);
                     }
                 }
 
                 foreach (KeyValuePair<string, KafkaInstance> ks in kafkaSettings) {
                     if (ks.Key.StartsWith("CONSUMER_")) {
-                        AddKafkaConsumerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.LOG_TABLE_NAME, ks.Value.GROUP_ID, ks.Value.SUFFIX_KODE_DC, ks.Key);
+                        AddKafkaConsumerBackground(ks.Value.HOST_PORT, ks.Value.TOPIC, ks.Value.LOG_TABLE_NAME, ks.Value.GROUP_ID, ks.Value.SUFFIX_KODE_DC, ks.Value.EXCLUDE_JENIS_DC, ks.Key);
                     }
                 }
             }

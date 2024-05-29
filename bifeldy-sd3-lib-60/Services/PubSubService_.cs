@@ -23,6 +23,7 @@ namespace bifeldy_sd3_lib_60.Services {
         BehaviorSubject<T> GetGlobalAppBehaviorSubject<T>(string key);
         BehaviorSubject<T> CreateGlobalAppBehaviorSubject<T>(string key, T initialValue);
         void DisposeAndRemoveSubscriber(string key);
+        List<string> ListAllKeys();
     }
 
     public sealed class CPubSubService : IPubSubService {
@@ -68,6 +69,14 @@ namespace bifeldy_sd3_lib_60.Services {
                 this.keyValuePairs[key].Dispose();
                 _ = this.keyValuePairs.Remove(key);
             }
+        }
+
+        public List<string> ListAllKeys() {
+            var lsKvp = new List<string>();
+            foreach (KeyValuePair<string, dynamic> kvp in this.keyValuePairs) {
+                lsKvp.Add(kvp.Key);
+            }
+            return lsKvp;
         }
 
     }
