@@ -67,7 +67,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 return propertyValue;
             }
 
-            // masih object / class
+            // Masih object / class
             PropertyInfo[] properties = propertyType.GetProperties(bf);
             if (properties.Any()) {
                 var resultDictionary = properties.ToDictionary(
