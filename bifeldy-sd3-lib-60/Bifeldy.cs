@@ -82,6 +82,18 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
+        public static void UseSerilog() {
+            _ = App.UseSerilogRequestLogging(o => {
+                o.MessageTemplate = "{RemoteIpAddress} :: {RequestScheme} :: {RequestHost} :: {RequestMethod} :: {RequestPath} :: {StatusCode} :: {Elapsed:0.0000} ms";
+                // o.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Error;
+                o.EnrichDiagnosticContext = (diagnosticContext, httpContext) => {
+                    diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+                    diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+                    diagnosticContext.Set("RemoteIpAddress", httpContext.Connection.RemoteIpAddress);
+                };
+            });
+        }
+
         /* ** */
 
         public static void AddSwagger(
