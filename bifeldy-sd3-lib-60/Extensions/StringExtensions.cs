@@ -14,17 +14,17 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class StringExtensions {
 
-        public static byte[] ToByte(this string hex, string separator = null) {
+        public static byte[] ParseHexTextToByte(this string hex, string separator = null) {
             byte[] array;
             if (string.IsNullOrEmpty(separator)) {
-                int length = (hex.Length + 1) / 3;
-                array = new byte[length];
-                for (int i = 0; i < length; i++) {
-                    array[i] = Convert.ToByte(hex.Substring(3 * i, 2), 16);
+                int numberChars = hex.Length;
+                array = new byte[numberChars / 2];
+                for (int i = 0; i < numberChars; i += 2) {
+                    array[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
                 }
             }
             else {
-                string[] arr = hex.Split('-');
+                string[] arr = hex.Split(separator);
                 array = new byte[arr.Length];
                 for (int i = 0; i < arr.Length; i++) {
                     array[i] = Convert.ToByte(arr[i], 16);

@@ -23,7 +23,9 @@ using Microsoft.IdentityModel.Tokens;
 
 using Ionic.Crc;
 
+using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
+using System.Security.Cryptography.X509Certificates;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -37,6 +39,8 @@ namespace bifeldy_sd3_lib_60.Services {
         string HashText(string text);
         string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1);
         IEnumerable<Claim> DecodeJWT(string token);
+        Task<string> SignText(string textMessage);
+        Task<bool> VerifyText(string signature, string textMessage);
     }
 
     public sealed class CChiperService : IChiperService {
@@ -45,18 +49,32 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IApplicationService _app;
 
         private readonly IStreamService _stream;
+        private readonly IConverterService _converter;
 
         // This constant is used to determine the keysize of the encryption algorithm in bits.
         // We divide this by 8 within the code below to get the equivalent number of bytes.
         private const int Keysize = 128;
+        private const int Blocksize = 128;
 
         // This constant determines the number of iterations for the password bytes generation function.
         private const int DerivationIterations = 1000;
 
-        public CChiperService(IOptions<EnvVar> envVar, IApplicationService app, IStreamService stream) {
+        private string pubKeyPath { get; }
+        private string privKeyPath { get; }
+
+        public CChiperService(
+            IOptions<EnvVar> envVar,
+            IApplicationService app,
+            IStreamService stream,
+            IConverterService converter
+        ) {
             this._envVar = envVar.Value;
             this._app = app;
             this._stream = stream;
+            this._converter = converter;
+            //
+            this.pubKeyPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "public.key");
+            this.privKeyPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "private.key");
         }
 
         private byte[] Generate128BitsOfRandomEntropy() {
@@ -80,8 +98,8 @@ namespace bifeldy_sd3_lib_60.Services {
             byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
             using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (var symmetricKey = new RijndaelManaged()) {
-                    symmetricKey.BlockSize = 128;
+                using (var symmetricKey = Aes.Create()) {
+                    symmetricKey.BlockSize = Blocksize;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform encryptor = symmetricKey.CreateEncryptor(keyBytes, ivStringBytes)) {
@@ -118,8 +136,8 @@ namespace bifeldy_sd3_lib_60.Services {
             byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip(Keysize / 8 * 2).Take(cipherTextBytesWithSaltAndIv.Length - (Keysize / 8 * 2)).ToArray();
             using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
                 byte[] keyBytes = password.GetBytes(Keysize / 8);
-                using (var symmetricKey = new RijndaelManaged()) {
-                    symmetricKey.BlockSize = 128;
+                using (var symmetricKey = Aes.Create()) {
+                    symmetricKey.BlockSize = Blocksize;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes)) {
@@ -139,7 +157,7 @@ namespace bifeldy_sd3_lib_60.Services {
             using (var md5 = MD5.Create()) {
                 using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                     byte[] hash = md5.ComputeHash(ms.ToArray());
-                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                    return hash.ToStringHex();
                 }
             }
         }
@@ -218,14 +236,9 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string HashText(string text) {
-            using (var sha1 = new SHA1Managed()) {
+            using (var sha1 = SHA1.Create()) {
                 byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(text));
-                var sb = new StringBuilder(hash.Length * 2);
-                foreach (byte b in hash) {
-                    _ = sb.Append(b.ToString("x2"));
-                }
-
-                return sb.ToString();
+                return hash.ToStringHex();
             }
         }
 
@@ -261,6 +274,54 @@ namespace bifeldy_sd3_lib_60.Services {
 
             var jwtToken = (JwtSecurityToken) validateToken;
             return jwtToken.Claims;
+        }
+
+        private async Task<RSA> GenerateAndLoadRsa() {
+            var rsa = RSA.Create();
+            rsa.KeySize = 4096;
+
+            if (!File.Exists(this.privKeyPath)) {
+                string privateKey = rsa.ToXmlString(true);
+                await File.WriteAllTextAsync(this.privKeyPath, privateKey);
+
+                string publicKey = rsa.ToXmlString(false);
+                await File.WriteAllTextAsync(this.pubKeyPath, publicKey);
+
+                return rsa;
+            }
+
+            string privateKeyString = await File.ReadAllTextAsync(this.privKeyPath);
+            rsa.FromXmlString(privateKeyString);
+
+            return rsa;
+        }
+
+        public async Task<string> SignText(string textMessage) {
+            using (var alg = SHA256.Create()) {
+                using (RSA rsa = await this.GenerateAndLoadRsa()) {
+                    var rsaFormatter = new RSAPKCS1SignatureFormatter(rsa);
+                    rsaFormatter.SetHashAlgorithm(nameof(SHA256));
+
+                    byte[] data = Encoding.UTF8.GetBytes(textMessage);
+                    byte[] hash = alg.ComputeHash(data);
+                    byte[] signHash = rsaFormatter.CreateSignature(hash);
+                    return signHash.ToStringHex();
+                }
+            }
+        }
+
+        public async Task<bool> VerifyText(string signature, string textMessage) {
+            using (var alg = SHA256.Create()) {
+                using (RSA rsa = await this.GenerateAndLoadRsa()) {
+                    byte[] data = Encoding.UTF8.GetBytes(textMessage);
+                    byte[] hash = alg.ComputeHash(data);
+                    byte[] signHash = signature.ParseHexTextToByte();
+
+                    var rsaDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
+                    rsaDeformatter.SetHashAlgorithm(nameof(SHA256));
+                    return rsaDeformatter.VerifySignature(hash, signHash);
+                }
+            }
         }
 
     }

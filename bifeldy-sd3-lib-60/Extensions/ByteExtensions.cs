@@ -14,9 +14,10 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class ByteExtensions {
 
-        public static string ToStringHex(this byte[] bytes, bool removeHypens = true) {
+        public static string ToStringHex(this byte[] bytes, bool removeHypens = true, bool lower = true) {
             string hex = BitConverter.ToString(bytes);
-            return removeHypens ? hex.Replace("-", "") : hex;
+            string ret = removeHypens ? hex.Replace("-", "") : hex;
+            return lower ? ret.ToLower() : ret;
         }
 
         public static IEnumerable<byte[]> Split(this byte[] value, int bufferLength) {
