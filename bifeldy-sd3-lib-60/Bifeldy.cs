@@ -240,8 +240,6 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddDistributedMemoryCache() => Services.AddDistributedMemoryCache();
-
         public static void UseCultureLocalization() {
             CultureInfo[] supportedCultures = new[] {
                new CultureInfo("en-US")
@@ -252,16 +250,6 @@ namespace bifeldy_sd3_lib_60 {
                 SupportedUICultures = supportedCultures
             });
         }
-
-        /* ** */
-
-        public static void AddSession(TimeSpan idleTimeout) {
-            _ = Services.AddSession(o => {
-                o.IdleTimeout = idleTimeout;
-            });
-        }
-
-        public static void UseSession() => App.UseSession();
 
         /* ** */
 
