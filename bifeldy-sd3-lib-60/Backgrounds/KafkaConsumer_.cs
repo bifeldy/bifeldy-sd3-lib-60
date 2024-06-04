@@ -124,25 +124,25 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
-                    ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
-                    this._logger.LogInformation("[KAFKA_CONSUMER_MESSAGE] 🏗 {Key} :: {Value}", result.Message.Key, result.Message.Value);
                     try {
+                        ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
                         _ = await this._generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
+
+                        var msg = new Message<string, dynamic> {
+                            Headers = result.Message.Headers,
+                            Key = result.Message.Key,
+                            Value = result.Message.Value.StartsWith("{") ? this._converter.JsonToObject<dynamic>(result.Message.Value) : result.Message.Value,
+                            Timestamp = result.Message.Timestamp
+                        };
+
+                        this.observeable.OnNext(msg);
+                        if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
+                            _ = this.consumer.Commit();
+                            i = 0;
+                        }
                     }
                     catch (Exception e) {
-                        this._logger.LogError("[KAFKA_CONSUMER_SAVEDB] 🏗 {e}", e.Message);
-                    }
-
-                    var msg = new Message<string, dynamic> {
-                        Headers = result.Message.Headers,
-                        Key = result.Message.Key,
-                        Value = result.Message.Value.StartsWith("{") ? this._converter.JsonToObject<dynamic>(result.Message.Value) : result.Message.Value,
-                        Timestamp = result.Message.Timestamp
-                    };
-                    this.observeable.OnNext(msg);
-                    if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
-                        _ = this.consumer.Commit();
-                        i = 0;
+                        this._logger.LogError("[KAFKA_CONSUMER_MESSAGE] 🏗 {e}", e.Message);
                     }
                 }
 
