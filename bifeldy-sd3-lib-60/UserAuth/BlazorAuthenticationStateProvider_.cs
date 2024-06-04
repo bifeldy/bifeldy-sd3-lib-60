@@ -56,7 +56,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
                 return new AuthenticationState(this.GetUserClaimPrincipal(userSession));
             }
             catch (Exception ex) {
-                this._logger.LogError("[CUSTOM_AUTHENTICATION_STATE_PROVIDER_ERROR] 🔓 {ex}", ex.Message);
+                this._logger.LogError("[BLAZOR_AUTHENTICATION_STATE_PROVIDER_ERROR] 🔓 {ex}", ex.Message);
                 return new AuthenticationState(_anonymousPrincipal);
             }
         }
