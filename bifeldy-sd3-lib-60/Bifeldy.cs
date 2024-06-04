@@ -10,6 +10,7 @@
  * 
  */
 
+using System.Globalization;
 using System.Reflection;
 
 using Helmet;
@@ -18,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -186,7 +188,7 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void LoadConfig() => Services.Configure<EnvVar>(Config.GetSection("ENV"));
 
-        public static void AddDependencyInjection() {
+        public static void AddDependencyInjection(bool isWebMvcNotBlazor = false) {
             _ = Services.AddHttpContextAccessor();
             // --
             _ = Services.AddDbContext<IOracle, COracle>();
@@ -199,8 +201,15 @@ namespace bifeldy_sd3_lib_60 {
                 EnvVar _envVar = sp.GetRequiredService<IOptions<EnvVar>>().Value;
                 return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<IPostgres>() : sp.GetRequiredService<IOracle>();
             });
-            _ = Services.AddScoped<ProtectedSessionStorage>();
-            _ = Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+
+            if (isWebMvcNotBlazor) {
+                throw new NotImplementedException("Untuk Versi WebMVC Masih Belum Tersedia ...");
+            }
+            else {
+                _ = Services.AddScoped<ProtectedSessionStorage>();
+                _ = Services.AddScoped<AuthenticationStateProvider, BlazorAuthenticationStateProvider>();
+            }
+
             _ = Services.AddScoped<IGeneralRepository, CGeneralRepository>();
             _ = Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
             _ = Services.AddScoped<IApiTokenRepository, CApiTokenRepository>();
@@ -228,6 +237,31 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton<IKafkaService, CKafkaService>();
             _ = Services.AddSingleton<IRdlcService, CRdlcService>();
         }
+
+        /* ** */
+
+        public static void AddDistributedMemoryCache() => Services.AddDistributedMemoryCache();
+
+        public static void UseCultureLocalization() {
+            CultureInfo[] supportedCultures = new[] {
+               new CultureInfo("en-US")
+            };
+            _ = App.UseRequestLocalization(new RequestLocalizationOptions {
+                DefaultRequestCulture = new RequestCulture("en-US"),
+                SupportedCultures = supportedCultures,
+                SupportedUICultures = supportedCultures
+            });
+        }
+
+        /* ** */
+
+        public static void AddSession(TimeSpan idleTimeout) {
+            _ = Services.AddSession(o => {
+                o.IdleTimeout = idleTimeout;
+            });
+        }
+
+        public static void UseSession() => App.UseSession();
 
         /* ** */
 
@@ -274,9 +308,9 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void AddJobScheduler() {
             _ = Services.AddQuartz(opt => {
-#pragma warning disable CS0618 // Type or member is obsolete
+                #pragma warning disable CS0618
                 opt.UseMicrosoftDependencyInjectionJobFactory();
-#pragma warning restore CS0618 // Type or member is obsolete
+                #pragma warning restore CS0618
             });
             _ = Services.AddQuartzHostedService(opt => {
                 opt.WaitForJobsToComplete = true;

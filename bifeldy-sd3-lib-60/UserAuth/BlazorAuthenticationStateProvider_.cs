@@ -21,9 +21,9 @@ using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.UserAuth {
 
-    public sealed class CustomAuthenticationStateProvider : AuthenticationStateProvider {
+    public sealed class BlazorAuthenticationStateProvider : AuthenticationStateProvider {
 
-        private readonly ILogger<CustomAuthenticationStateProvider> _logger;
+        private readonly ILogger<BlazorAuthenticationStateProvider> _logger;
         private readonly ProtectedSessionStorage _protectedSessionStorage;
 
         private static readonly ClaimsIdentity _anonymousClaimsIdentity = new();
@@ -31,8 +31,8 @@ namespace bifeldy_sd3_lib_60.UserAuth {
 
         public string SessionKey { get; } = "user-session";
 
-        public CustomAuthenticationStateProvider(
-            ILogger<CustomAuthenticationStateProvider> logger,
+        public BlazorAuthenticationStateProvider(
+            ILogger<BlazorAuthenticationStateProvider> logger,
             ProtectedSessionStorage protectedSessionStorage
         ) {
             this._logger = logger;
