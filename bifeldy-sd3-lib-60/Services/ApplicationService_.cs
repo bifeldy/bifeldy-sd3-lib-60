@@ -16,6 +16,7 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
@@ -36,6 +37,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public sealed class CApplicationService : IApplicationService {
 
+        private readonly ILogger<CApplicationService> _logger;
+
         public DateTime? BuildTime {
             get {
                 var prgAsm = Assembly.GetEntryAssembly();
@@ -53,7 +56,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IDictionary<string, dynamic> DbConfig = new ExpandoObject();
 
-        public CApplicationService() {
+        public CApplicationService(ILogger<CApplicationService> logger) {
+            this._logger = logger;
             this._SettingLibb = new SettingLibb.Class1();
         }
 
@@ -67,13 +71,14 @@ namespace bifeldy_sd3_lib_60.Services {
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
                 string result = this._SettingLibb.GetVariabel(key, kunci);
                 if (result.ToUpper().Contains("ERROR")) {
-                    throw new Exception("SettingLibb Gagal");
+                    throw new Exception(result);
                 }
 
                 this.DbConfig.Add(key, result);
                 return this.DbConfig[key];
             }
-            catch {
+            catch (Exception ex) {
+                this._logger.LogError("[SETTINGLIBB] {ex}", ex.Message);
                 return null;
             }
         }
