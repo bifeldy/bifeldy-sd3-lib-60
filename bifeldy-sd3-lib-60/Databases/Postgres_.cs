@@ -348,12 +348,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.ExecReaderAsync(cmd);
         }
 
-        public override async Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null) {
+        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null) {
             var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.RetrieveBlob(cmd, stringPathDownload, stringFileName);
+            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName);
         }
 
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {

@@ -46,7 +46,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
         Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
-        Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null);
+        Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null);
     }
 
     public abstract partial class CDatabase : DbContext, IDatabase, ICloneable {
@@ -254,12 +254,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         /// <summary> Saat Setelah Selesai Baca Dan Tidak Digunakan Lagi </summary>
         /// <summary> Bisa Pakai Manual Panggil Fungsi Close / Commit / Rollback Di Atas </summary>
-        protected virtual async Task<DbDataReader> ExecReaderAsync(DbCommand databaseCommand) {
+        protected virtual async Task<DbDataReader> ExecReaderAsync(DbCommand databaseCommand, CommandBehavior commandBehavior = CommandBehavior.Default) {
             DbDataReader result = null;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                result = await databaseCommand.ExecuteReaderAsync();
+                result = await databaseCommand.ExecuteReaderAsync(commandBehavior);
             }
             catch (Exception ex) {
                 this._logger.LogError("[EXEC_READER] {ex}", ex.Message);
@@ -273,40 +273,66 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<string> RetrieveBlob(DbCommand databaseCommand, string stringPathDownload, string stringFileName) {
-            string result = null;
+        protected virtual async Task<List<string>> RetrieveBlob(DbCommand databaseCommand, string stringPathDownload, string stringFileName) {
+            var result = new List<string>();
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                string filePathResult = $"{stringPathDownload}/{stringFileName}";
-                DbDataReader rdrGetBlob = await databaseCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
-                if (!rdrGetBlob.HasRows) {
+
+                string _oldCmdTxt = databaseCommand.CommandText;
+                databaseCommand.CommandText = $"SELECT COUNT(*) FROM ( {_oldCmdTxt} ) RetrieveBlob_{DateTime.Now.Ticks}";
+                ulong _totalFiles = await this.ExecScalarAsync<ulong>(databaseCommand);
+                if (_totalFiles <= 0) {
                     throw new Exception("File Tidak Ditemukan");
                 }
 
-                while (await rdrGetBlob.ReadAsync()) {
-                    var fs = new FileStream(filePathResult, FileMode.OpenOrCreate, FileAccess.Write);
-                    var bw = new BinaryWriter(fs);
-                    long startIndex = 0;
-                    int bufferSize = 8192;
-                    byte[] outbyte = new byte[bufferSize - 1];
-                    int retval = (int) rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
-                    while (retval != bufferSize) {
-                        bw.Write(outbyte);
-                        bw.Flush();
-                        Array.Clear(outbyte, 0, bufferSize);
-                        startIndex += bufferSize;
-                        retval = (int) rdrGetBlob.GetBytes(0, startIndex, outbyte, 0, bufferSize);
+                databaseCommand.CommandText = _oldCmdTxt;
+                using (DbDataReader rdrGetBlob = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess)) {
+                    if (string.IsNullOrEmpty(stringFileName) && rdrGetBlob.FieldCount != 2) {
+                        throw new Exception($"Jika Nama File Kosong Maka Harus Berjumlah 2 Kolom{Environment.NewLine}SELECT kolom_blob_data, kolom_nama_file FROM ...");
+                    }
+                    else if (!string.IsNullOrEmpty(stringFileName) && rdrGetBlob.FieldCount > 1) {
+                        throw new Exception($"Harus Berjumlah 1 Kolom{Environment.NewLine}SELECT kolom_blob_data FROM ...");
                     }
 
-                    bw.Write(outbyte, 0, (retval > 0 ? retval : 1) - 1);
-                    bw.Flush();
-                    bw.Close();
-                }
+                    int bufferSize = 1024;
+                    byte[] outByte = new byte[bufferSize];
 
-                rdrGetBlob.Close();
-                rdrGetBlob = null;
-                result = filePathResult;
+                    while (await rdrGetBlob.ReadAsync()) {
+                        string filePath = Path.Combine(stringPathDownload, stringFileName);
+
+                        if (rdrGetBlob.FieldCount == 2) {
+                            string fileMultipleName = rdrGetBlob.GetString(1);
+                            if (string.IsNullOrEmpty(fileMultipleName)) {
+                                fileMultipleName = $"{DateTime.Now.Ticks}";
+                            }
+
+                            filePath = Path.Combine(stringPathDownload, fileMultipleName);
+                        }
+
+                        using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write)) {
+                            using (var bw = new BinaryWriter(fs)) {
+                                long startIndex = 0;
+                                long retval = rdrGetBlob.GetBytes(0, startIndex, outByte, 0, bufferSize);
+
+                                while (retval == bufferSize) {
+                                    bw.Write(outByte);
+                                    bw.Flush();
+                                    startIndex += bufferSize;
+                                    retval = rdrGetBlob.GetBytes(0, startIndex, outByte, 0, bufferSize);
+                                }
+
+                                if (retval > 0) {
+                                    bw.Write(outByte, 0, (int)retval);
+                                }
+
+                                bw.Flush();
+                            }
+                        }
+
+                        result.Add(filePath);
+                    }
+                }
             }
             catch (Exception ex) {
                 this._logger.LogError("[RETRIEVE_BLOB] {ex}", ex.Message);
@@ -330,7 +356,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
         public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
-        public abstract Task<string> RetrieveBlob(string stringPathDownload, string stringFileName, string queryString, List<CDbQueryParamBind> bindParam = null);
+        public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null);
 
     }
 
