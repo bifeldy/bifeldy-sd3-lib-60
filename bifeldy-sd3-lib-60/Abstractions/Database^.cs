@@ -267,7 +267,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             }
             finally {
                 // Kalau Koneksinya Di Close Dari Sini Tidak Akan Bisa Pakai Reader Untuk Baca Lagi
-                // await CloseConnection();
+                // await this.CloseConnection();
             }
 
             return (exception == null) ? result : throw exception;
@@ -277,8 +277,6 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             var result = new List<string>();
             Exception exception = null;
             try {
-                await this.OpenConnection();
-
                 string _oldCmdTxt = databaseCommand.CommandText;
                 databaseCommand.CommandText = $"SELECT COUNT(*) FROM ( {_oldCmdTxt} ) RetrieveBlob_{DateTime.Now.Ticks}";
                 ulong _totalFiles = await this.ExecScalarAsync<ulong>(databaseCommand);
@@ -323,7 +321,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                                 }
 
                                 if (retval > 0) {
-                                    bw.Write(outByte, 0, (int)retval);
+                                    bw.Write(outByte, 0, (int) retval);
                                 }
 
                                 bw.Flush();
@@ -332,6 +330,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
                         result.Add(filePath);
                     }
+
+                    await rdrGetBlob.CloseAsync();
                 }
             }
             catch (Exception ex) {
