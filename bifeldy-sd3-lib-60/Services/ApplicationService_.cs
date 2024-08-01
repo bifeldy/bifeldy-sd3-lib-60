@@ -67,7 +67,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
                 string result = this._SettingLibb.GetVariabel(key, kunci);
                 if (result.ToUpper().Contains("ERROR")) {
-                    throw new Exception("SettingLibb Gagal");
+                    throw new Exception(result);
                 }
 
                 this.DbConfig.Add(key, result);
