@@ -246,7 +246,6 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void UseCultureLocalization() {
-
             CultureInfo[] supportedCultures = new[] {
                 CultureInfo.InvariantCulture,
                 new CultureInfo("en-US"),
