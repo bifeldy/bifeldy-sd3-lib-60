@@ -240,9 +240,17 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
+        public static void UseInvariantCulture() {
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+        }
+
         public static void UseCultureLocalization() {
+
             CultureInfo[] supportedCultures = new[] {
-               new CultureInfo("en-US")
+                CultureInfo.InvariantCulture,
+                new CultureInfo("en-US"),
+                new CultureInfo("id-ID")
             };
             _ = App.UseRequestLocalization(new RequestLocalizationOptions {
                 DefaultRequestCulture = new RequestCulture("en-US"),
