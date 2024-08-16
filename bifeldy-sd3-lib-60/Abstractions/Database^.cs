@@ -76,20 +76,20 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             base.OnModelCreating(modelBuilder);
             var libAsm = Assembly.GetExecutingAssembly();
             var prgAsm = Assembly.GetEntryAssembly();
+
             modelBuilder.RegisterAllEntities<EntityTable>(libAsm);
             modelBuilder.RegisterAllEntities<EntityTable>(prgAsm);
+
             // DbSet<T> Case Sensitive ~
             foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
                 string tblName = entityType.GetTableName();
-                if (this._envVar.IS_USING_POSTGRES) {
-                    entityType.SetTableName(tblName.ToLower());
-                }
+                tblName = this._envVar.IS_USING_POSTGRES ? tblName.ToLower() : tblName.ToUpper();
+                entityType.SetTableName(tblName);
 
                 foreach (IMutableProperty property in entityType.GetProperties()) {
                     string colName = property.GetColumnBaseName();
-                    if (this._envVar.IS_USING_POSTGRES) {
-                        property.SetColumnName(colName.ToLower());
-                    }
+                    colName = this._envVar.IS_USING_POSTGRES ? colName.ToLower() : colName.ToUpper();
+                    property.SetColumnName(colName);
                 }
             }
         }

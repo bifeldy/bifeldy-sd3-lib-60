@@ -17,7 +17,6 @@ using bifeldy_sd3_lib_60.Abstractions;
 
 namespace bifeldy_sd3_lib_60.Tables {
 
-    // [Keyless]
     public sealed class KAFKA_CONSUMER_AUTO_LOG : EntityTable {
         [Key] public string TPC { set; get; }
         [Key] public decimal? OFFS { set; get; }
