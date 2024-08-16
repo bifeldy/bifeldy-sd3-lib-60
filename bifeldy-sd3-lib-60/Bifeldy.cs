@@ -301,11 +301,10 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
+        [Obsolete("Defaultnya Sudah Pakai Microsoft Dependency Injection")]
         public static void AddJobScheduler() {
             _ = Services.AddQuartz(opt => {
-                #pragma warning disable CS0618
                 opt.UseMicrosoftDependencyInjectionJobFactory();
-                #pragma warning restore CS0618
             });
             _ = Services.AddQuartzHostedService(opt => {
                 opt.WaitForJobsToComplete = true;
