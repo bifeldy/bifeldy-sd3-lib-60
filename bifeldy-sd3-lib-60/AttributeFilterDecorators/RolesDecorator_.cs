@@ -47,9 +47,9 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         }
 
         public static void Failed(AuthorizationFilterContext context) {
-            context.Result = new JsonResult(new {
+            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonError> {
                 info = "401 - API Authorization :: Gagal Authentikasi Pengguna",
-                result = new {
+                result = new ResponseJsonError {
                     message = "Silahkan Login Terlebih Dahulu!"
                 }
             }) {

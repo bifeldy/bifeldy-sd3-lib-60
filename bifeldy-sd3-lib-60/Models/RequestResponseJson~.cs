@@ -37,4 +37,10 @@ namespace bifeldy_sd3_lib_60.Models {
         [JsonPropertyOrder(4)] public decimal? count { get; set; }
     }
 
+    public class ResponseJsonError {
+        [JsonPropertyOrder(0)] public string message { get; set; }
+        [JsonPropertyOrder(1)][SwaggerIgnore] public string api_key { get; set; }
+        [JsonPropertyOrder(2)][SwaggerIgnore] public string ip_origin { get; set; }
+    }
+
 }

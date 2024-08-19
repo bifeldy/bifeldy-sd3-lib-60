@@ -76,9 +76,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 if (!string.IsNullOrEmpty(token)) {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
-                    await response.WriteAsJsonAsync(new {
+                    await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
                         info = "401 - JWT :: Tidak Dapat Digunakan",
-                        result = new {
+                        result = new ResponseJsonError {
                             message = "Format Token Salah / Expired!"
                         }
                     });

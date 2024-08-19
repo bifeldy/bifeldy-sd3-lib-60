@@ -115,9 +115,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 else {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
-                    await response.WriteAsJsonAsync(new {
+                    await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
                         info = "401 - Secret :: Tidak Dapat Digunakan",
-                        result = new {
+                        result = new ResponseJsonError {
                             message = "Secret salah / tidak dikenali!"
                         }
                     });

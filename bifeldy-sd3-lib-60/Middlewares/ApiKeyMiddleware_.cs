@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
@@ -86,9 +87,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             else {
                 response.Clear();
                 response.StatusCode = StatusCodes.Status401Unauthorized;
-                await response.WriteAsJsonAsync(new {
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
                     info = "401 - API Key :: Tidak Dapat Digunakan",
-                    result = new {
+                    result = new ResponseJsonError {
                         message = "Api Key Salah / Tidak Terdaftar!",
                         api_key = apiKey,
                         ip_origin = ipOrigin
