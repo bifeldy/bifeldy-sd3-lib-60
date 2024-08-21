@@ -14,13 +14,13 @@
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Routing;
 
-namespace bifeldy_sd3_lib_60.Utilities {
+namespace bifeldy_sd3_lib_60.Conventions {
 
-    public sealed class RoutePrefix : IApplicationModelConvention {
+    public sealed class RoutePrefixConvention : IApplicationModelConvention {
 
         private readonly AttributeRouteModel _routePrefix;
 
-        public RoutePrefix(IRouteTemplateProvider route) {
+        public RoutePrefixConvention(IRouteTemplateProvider route) {
             this._routePrefix = new AttributeRouteModel(route);
         }
 

@@ -22,13 +22,13 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-    public class RolesDecorator : Attribute, IAuthorizationFilter {
+    public class RolesDecoratorAttribute : Attribute, IAuthorizationFilter {
 
         protected readonly IList<UserSessionRole> _roles = new List<UserSessionRole>() { 0 };
 
         protected UserApiSession user = null;
 
-        public RolesDecorator(params UserSessionRole[] roles) {
+        public RolesDecoratorAttribute(params UserSessionRole[] roles) {
             foreach (UserSessionRole role in roles) {
                 if (!this._roles.Contains(role)) {
                     this._roles.Add(role);
@@ -58,10 +58,10 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         }
 
         public static void RejectRole(AuthorizationFilterContext context, string message) {
-            context.Result = new JsonResult(new {
+            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonError> {
                 info = "403 - API Authorization :: Whoops, Akses Ditolak",
-                result = new {
-                    message
+                result = new ResponseJsonError {
+                    message = message
                 }
             }) {
                 StatusCode = StatusCodes.Status403Forbidden
@@ -72,7 +72,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
     // [MinRole(UserSessionRole.ADMIN)] attribute @ classes / functions controllers
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
-    public sealed class MinRole : RolesDecorator {
+    public sealed class MinRole : RolesDecoratorAttribute {
 
         public MinRole(UserSessionRole role) : base(new UserSessionRole[] { role }) { }
 
@@ -93,7 +93,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
     // [AllowedRoles(..., UserSessionRole.ADMIN, ...)] attribute @ classes / functions controllers
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
-    public sealed class AllowedRoles : RolesDecorator {
+    public sealed class AllowedRoles : RolesDecoratorAttribute {
 
         public AllowedRoles(params UserSessionRole[] roles) : base(roles) { }
 

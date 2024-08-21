@@ -28,7 +28,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public sealed class LoginInfo {
         public string user_name { get; set; }
         public string password { get; set; }
-        [SwaggerIgnore] public string secret { get; set; }
+        [SwaggerHideJsonProperty] public string secret { get; set; }
     }
 
     [ApiController]

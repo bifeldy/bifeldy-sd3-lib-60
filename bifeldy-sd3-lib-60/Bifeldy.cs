@@ -148,7 +148,7 @@ namespace bifeldy_sd3_lib_60 {
                 }
 
                 c.OperationFilter<SwaggerMediaTypesOperationFilter>();
-                c.SchemaFilter<SwaggerSkipPropertyFilter>();
+                c.SchemaFilter<SwaggerHideJsonPropertyFilter>();
             });
         }
 

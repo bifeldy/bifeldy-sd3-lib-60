@@ -19,20 +19,20 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
-    public sealed class SwaggerSkipPropertyFilter : ISchemaFilter {
+    public sealed class SwaggerHideJsonPropertyFilter : ISchemaFilter {
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context) {
             if (schema?.Properties == null) {
                 return;
             }
 
-            var skipProperties = context.Type.GetProperties().Where(t => t.GetCustomAttribute<SwaggerIgnoreAttribute>() != null);
+            IEnumerable<PropertyInfo> skipProperties = context.Type.GetProperties().Where(t => t.GetCustomAttribute<SwaggerHideJsonPropertyAttribute>() != null);
 
-            foreach (var skipProperty in skipProperties) {
-                var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
+            foreach (PropertyInfo skipProperty in skipProperties) {
+                string propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
 
                 if (propertyToSkip != null) {
-                    schema.Properties.Remove(propertyToSkip);
+                    _ = schema.Properties.Remove(propertyToSkip);
                 }
             }
         }

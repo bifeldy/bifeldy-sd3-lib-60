@@ -18,9 +18,9 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 namespace bifeldy_sd3_lib_60.Models {
 
     public class RequestJson {
-        [JsonPropertyOrder(0)][SwaggerIgnore] public string secret { get; set; }
-        [JsonPropertyOrder(1)][SwaggerIgnore] public string key { get; set; }
-        [JsonPropertyOrder(2)][SwaggerIgnore] public string token { get; set; }
+        [JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
+        [JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
+        [JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
     }
 
     public abstract class ResponseJson<T> {
@@ -39,8 +39,11 @@ namespace bifeldy_sd3_lib_60.Models {
 
     public class ResponseJsonError {
         [JsonPropertyOrder(0)] public string message { get; set; }
-        [JsonPropertyOrder(1)][SwaggerIgnore] public string api_key { get; set; }
-        [JsonPropertyOrder(2)][SwaggerIgnore] public string ip_origin { get; set; }
+    }
+
+    public class ResponseJsonErrorApiKeyIpOrigin : ResponseJsonError {
+        [JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string api_key { get; set; }
+        [JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
     }
 
 }
