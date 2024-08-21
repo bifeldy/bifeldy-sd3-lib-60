@@ -29,16 +29,16 @@ namespace bifeldy_sd3_lib_60.Conventions {
 
         private void SwaggerHide(Type hideType, ActionModel action, string kodeDc, string jenisDc) {
             if (
-                (hideType == typeof(SwaggerHideHoAttribute) && kodeDc == "DCHO") ||
-                (hideType == typeof(SwaggerHideDcAttribute) && kodeDc != "DCHO") ||
-                (hideType == typeof(SwaggerHideIndukAttribute) && jenisDc == "INDUK") ||
-                (hideType == typeof(SwaggerHideDepoAttribute) && jenisDc == "DEPO") ||
-                (hideType == typeof(SwaggerHideKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||
-                (hideType == typeof(SwaggerHideIplazaAttribute) && jenisDc == "IPLAZA") ||
-                (hideType == typeof(SwaggerHideFrozenAttribute) && jenisDc == "FROZEN") ||
-                (hideType == typeof(SwaggerHidePerishableAttribute) && jenisDc == "PERISHABLE") ||
-                (hideType == typeof(SwaggerHideLpgAttribute) && jenisDc == "LPG") ||
-                (hideType == typeof(SwaggerHideSewaAttribute) && jenisDc == "SEWA")
+                (hideType == typeof(SwaggerExcludeHoAttribute) && kodeDc == "DCHO") ||
+                (hideType == typeof(SwaggerExcludeDcAttribute) && kodeDc != "DCHO") ||
+                (hideType == typeof(SwaggerExcludeIndukAttribute) && jenisDc == "INDUK") ||
+                (hideType == typeof(SwaggerExcludeDepoAttribute) && jenisDc == "DEPO") ||
+                (hideType == typeof(SwaggerExcludeKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||
+                (hideType == typeof(SwaggerExcludeIplazaAttribute) && jenisDc == "IPLAZA") ||
+                (hideType == typeof(SwaggerExcludeFrozenAttribute) && jenisDc == "FROZEN") ||
+                (hideType == typeof(SwaggerExcludePerishableAttribute) && jenisDc == "PERISHABLE") ||
+                (hideType == typeof(SwaggerExcludeLpgAttribute) && jenisDc == "LPG") ||
+                (hideType == typeof(SwaggerExcludeSewaAttribute) && jenisDc == "SEWA")
             ) {
                 action.ApiExplorer.IsVisible = false;
             }
@@ -48,19 +48,19 @@ namespace bifeldy_sd3_lib_60.Conventions {
 
             // Paksa Mode SYNC
             string kodeDc = this._generalRepository.GetKodeDc().Result;
-            string jenisDc = "DEPO"; // this._generalRepository.GetJenisDc().Result;
+            string jenisDc = this._generalRepository.GetJenisDc().Result;
 
             Type[] typesToCheck = new[] {
-                typeof(SwaggerHideHoAttribute),
-                typeof(SwaggerHideDcAttribute),
-                typeof(SwaggerHideIndukAttribute),
-                typeof(SwaggerHideDepoAttribute),
-                typeof(SwaggerHideKonvinienceAttribute),
-                typeof(SwaggerHideIplazaAttribute),
-                typeof(SwaggerHideFrozenAttribute),
-                typeof(SwaggerHidePerishableAttribute),
-                typeof(SwaggerHideLpgAttribute),
-                typeof(SwaggerHideSewaAttribute)
+                typeof(SwaggerExcludeHoAttribute),
+                typeof(SwaggerExcludeDcAttribute),
+                typeof(SwaggerExcludeIndukAttribute),
+                typeof(SwaggerExcludeDepoAttribute),
+                typeof(SwaggerExcludeKonvinienceAttribute),
+                typeof(SwaggerExcludeIplazaAttribute),
+                typeof(SwaggerExcludeFrozenAttribute),
+                typeof(SwaggerExcludePerishableAttribute),
+                typeof(SwaggerExcludeLpgAttribute),
+                typeof(SwaggerExcludeSewaAttribute)
             };
 
             foreach (ControllerModel controller in application.Controllers) {
