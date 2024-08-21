@@ -17,4 +17,44 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         //
     }
 
+    public class SwaggerHideHoAttribute : Attribute {
+        //
+    }
+
+    public class SwaggerHideDcAttribute : Attribute {
+        //
+    }
+
+    public class SwaggerHideIndukAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHideDepoAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHideKonvinienceAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHideIplazaAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHideFrozenAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHidePerishableAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHideLpgAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
+    public class SwaggerHideSewaAttribute : SwaggerHideDcAttribute {
+        //
+    }
+
 }
