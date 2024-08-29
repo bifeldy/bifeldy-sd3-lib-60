@@ -25,21 +25,23 @@ using Ionic.Crc;
 
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
-using System.Security.Cryptography.X509Certificates;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IChiperService {
         string EncryptText(string plainText, string passPhrase = null);
         string DecryptText(string cipherText, string passPhrase = null);
-        string CalculateMD5(string filePath);
-        string CalculateCRC32(string filePath);
-        string CalculateSHA1(string filePath);
-        string GetMimeFromFile(string filename);
-        string HashText(string text);
+        string CalculateMD5File(string filePath);
+        string CalculateCRC32File(string filePath);
+        string CalculateSHA1File(string filePath);
+        string GetMimeFile(string filePath);
+        string HashByte(byte[] data);
+        string HashText(string textMessage);
         string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1);
         IEnumerable<Claim> DecodeJWT(string token);
+        Task<string> SignByte(byte[] data);
         Task<string> SignText(string textMessage);
+        Task<bool> VerifyByte(string signature, byte[] data);
         Task<bool> VerifyText(string signature, string textMessage);
     }
 
@@ -153,7 +155,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string CalculateMD5(string filePath) {
+        public string CalculateMD5File(string filePath) {
             using (var md5 = MD5.Create()) {
                 using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                     byte[] hash = md5.ComputeHash(ms.ToArray());
@@ -162,7 +164,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string CalculateCRC32(string filePath) {
+        public string CalculateCRC32File(string filePath) {
             var crc32 = new CRC32();
             using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                 byte[] data = ms.ToArray();
@@ -171,7 +173,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string CalculateSHA1(string filePath) {
+        public string CalculateSHA1File(string filePath) {
             using (var sha1 = SHA1.Create()) {
                 using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
                     byte[] hash = sha1.ComputeHash(ms.ToArray());
@@ -198,14 +200,14 @@ namespace bifeldy_sd3_lib_60.Services {
             int dwReserved
         );
 
-        public string GetMimeFromFile(string filename) {
-            if (!File.Exists(filename)) {
-                throw new FileNotFoundException(filename + " Not Found");
+        public string GetMimeFile(string filePath) {
+            if (!File.Exists(filePath)) {
+                throw new FileNotFoundException(filePath + " Not Found");
             }
 
             const int maxContent = 256;
             byte[] buffer = new byte[maxContent];
-            using (var fs = new FileStream(filename, FileMode.Open)) {
+            using (var fs = new FileStream(filePath, FileMode.Open)) {
                 if (fs.Length >= maxContent) {
                     _ = fs.Read(buffer, 0, maxContent);
                 }
@@ -235,11 +237,16 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string HashText(string text) {
+        public string HashByte(byte[] data) {
             using (var sha1 = SHA1.Create()) {
-                byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(text));
+                byte[] hash = sha1.ComputeHash(data);
                 return hash.ToStringHex();
             }
+        }
+
+        public string HashText(string textMessage) {
+            byte[] data = Encoding.UTF8.GetBytes(textMessage);
+            return this.HashByte(data);
         }
 
         public string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1) {
@@ -296,13 +303,12 @@ namespace bifeldy_sd3_lib_60.Services {
             return rsa;
         }
 
-        public async Task<string> SignText(string textMessage) {
+        public async Task<string> SignByte(byte[] data) {
             using (var alg = SHA256.Create()) {
                 using (RSA rsa = await this.GenerateAndLoadRsa()) {
                     var rsaFormatter = new RSAPKCS1SignatureFormatter(rsa);
                     rsaFormatter.SetHashAlgorithm(nameof(SHA256));
 
-                    byte[] data = Encoding.UTF8.GetBytes(textMessage);
                     byte[] hash = alg.ComputeHash(data);
                     byte[] signHash = rsaFormatter.CreateSignature(hash);
                     return signHash.ToStringHex();
@@ -310,10 +316,14 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public async Task<bool> VerifyText(string signature, string textMessage) {
+        public async Task<string> SignText(string textMessage) {
+            byte[] data = Encoding.UTF8.GetBytes(textMessage);
+            return await this.SignByte(data);
+        }
+
+        public async Task<bool> VerifyByte(string signature, byte[] data) {
             using (var alg = SHA256.Create()) {
                 using (RSA rsa = await this.GenerateAndLoadRsa()) {
-                    byte[] data = Encoding.UTF8.GetBytes(textMessage);
                     byte[] hash = alg.ComputeHash(data);
                     byte[] signHash = signature.ParseHexTextToByte();
 
@@ -322,6 +332,11 @@ namespace bifeldy_sd3_lib_60.Services {
                     return rsaDeformatter.VerifySignature(hash, signHash);
                 }
             }
+        }
+
+        public async Task<bool> VerifyText(string signature, string textMessage) {
+            byte[] data = Encoding.UTF8.GetBytes(textMessage);
+            return await this.VerifyByte(signature, data);
         }
 
     }

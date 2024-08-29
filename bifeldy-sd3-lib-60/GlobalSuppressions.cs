@@ -19,4 +19,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~P:bifeldy_sd3_lib_60.Models.ResponseJsonMulti`1.pages")]
 [assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~P:bifeldy_sd3_lib_60.Models.ResponseJsonMulti`1.count")]
 
-[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:bifeldy_sd3_lib_60.Services.CChiperService.GetMimeFromFile(System.String)~System.String")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:bifeldy_sd3_lib_60.Services.CChiperService.GetMimeFile(System.String)~System.String")]
