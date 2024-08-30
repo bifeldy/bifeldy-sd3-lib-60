@@ -95,7 +95,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                             }
 
                             bindStr += $"{prefix}{pName}_{id}";
-                            _ = cmd.Parameters.Add(new NpgsqlParameter {
+                            _ = cmd.Parameters.Add(new NpgsqlParameter() {
                                 ParameterName = $"{pName}_{id}",
                                 Value = data ?? DBNull.Value
                             });
@@ -106,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                         cmd.CommandText = regex.Replace(cmd.CommandText, bindStr, 1);
                     }
                     else {
-                        var param = new NpgsqlParameter {
+                        var param = new NpgsqlParameter() {
                             ParameterName = pName,
                             Value = pVal ?? DBNull.Value
                         };

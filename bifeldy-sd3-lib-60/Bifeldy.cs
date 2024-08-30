@@ -107,42 +107,42 @@ namespace bifeldy_sd3_lib_60 {
         ) {
             _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
-                c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo {
+                c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo() {
                     Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
                     Description = docsDescription ?? "API Documentation ~"
                 });
                 if (enableApiKey) {
-                    var apiKey = new OpenApiSecurityScheme {
+                    var apiKey = new OpenApiSecurityScheme() {
                         Description = @"API-Key Origin. Example: 'http://.../...?key=000...'",
                         Name = "key",
                         In = ParameterLocation.Query,
                         Type = SecuritySchemeType.ApiKey,
                         Scheme = "ApiKey",
-                        Reference = new OpenApiReference {
+                        Reference = new OpenApiReference() {
                             Id = "api_key",
                             Type = ReferenceType.SecurityScheme
                         }
                     };
                     c.AddSecurityDefinition(apiKey.Reference.Id, apiKey);
-                    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                    c.AddSecurityRequirement(new OpenApiSecurityRequirement() {
                         { apiKey, Array.Empty<string>() }
                     });
                 }
 
                 if (enableJwt) {
-                    var jwt = new OpenApiSecurityScheme {
+                    var jwt = new OpenApiSecurityScheme() {
                         Description = @"Authorization Header. Example: 'Bearer eyj...'",
                         Name = "Authorization",
                         In = ParameterLocation.Header,
                         Type = SecuritySchemeType.Http,
                         Scheme = "Bearer",
-                        Reference = new OpenApiReference {
+                        Reference = new OpenApiReference() {
                             Id = "jwt",
                             Type = ReferenceType.SecurityScheme
                         }
                     };
                     c.AddSecurityDefinition(jwt.Reference.Id, jwt);
-                    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                    c.AddSecurityRequirement(new OpenApiSecurityRequirement() {
                         { jwt, Array.Empty<string>() }
                     });
                 }
@@ -164,13 +164,13 @@ namespace bifeldy_sd3_lib_60 {
 
                     string proxyPath = request.Headers[proxyHeaderName];
                     if (!string.IsNullOrEmpty(proxyPath)) {
-                        openApiServers.Add(new OpenApiServer {
+                        openApiServers.Add(new OpenApiServer() {
                             Description = "Reverse Proxy Path",
                             Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
                         });
                     }
 
-                    openApiServers.Add(new OpenApiServer {
+                    openApiServers.Add(new OpenApiServer() {
                         Description = "Direct IP Server",
                         Url = "/"
                     });
@@ -251,7 +251,7 @@ namespace bifeldy_sd3_lib_60 {
                 new CultureInfo("en-US"),
                 new CultureInfo("id-ID")
             };
-            _ = App.UseRequestLocalization(new RequestLocalizationOptions {
+            _ = App.UseRequestLocalization(new RequestLocalizationOptions() {
                 DefaultRequestCulture = new RequestCulture("en-US"),
                 SupportedCultures = supportedCultures,
                 SupportedUICultures = supportedCultures
@@ -353,9 +353,9 @@ namespace bifeldy_sd3_lib_60 {
 
             response.Clear();
             response.StatusCode = StatusCodes.Status404NotFound;
-            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
+            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
                 info = "404 - Whoops :: API Tidak Ditemukan",
-                result = new ResponseJsonError {
+                result = new ResponseJsonError() {
                     message = $"Silahkan Periksa Kembali Dokumentasi API"
                 }
             });
@@ -404,9 +404,9 @@ namespace bifeldy_sd3_lib_60 {
 
                             response.Clear();
                             response.StatusCode = StatusCodes.Status500InternalServerError;
-                            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
+                            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
                                 info = "500 - Whoops :: Terjadi Kesalahan",
-                                result = new ResponseJsonError {
+                                result = new ResponseJsonError() {
                                     message = App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data"
                                 }
                             });

@@ -30,7 +30,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             // Tabel hanya punya 1 kolom
             // create table `tblNm` ( `tblCl` varchar(255) );
             //
-            // List<string> ls = new List<string> { "Row1", "Row2", "Row3" };
+            // List<string> ls = new List<string>() { "Row1", "Row2", "Row3" };
             // ListToDataTable(ls, "tblNm", "tblCl");
             //
 

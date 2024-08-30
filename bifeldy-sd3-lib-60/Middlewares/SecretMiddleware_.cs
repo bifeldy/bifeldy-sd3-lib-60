@@ -86,7 +86,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
                         ? this._gs.GetIpOriginData(connection, request)
                         : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
-                    string token = this._chiper.EncodeJWT(new UserApiSession {
+                    string token = this._chiper.EncodeJWT(new UserApiSession() {
                         name = this._gs.CleanIpOrigin(maskIp),
                         role = UserSessionRole.PROGRAM_SERVICE
                     });
@@ -115,9 +115,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 else {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
-                    await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
+                    await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
                         info = "401 - Secret :: Tidak Dapat Digunakan",
-                        result = new ResponseJsonError {
+                        result = new ResponseJsonError() {
                             message = "Secret salah / tidak dikenali!"
                         }
                     });

@@ -252,7 +252,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1) {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.HashText(this._envVar.JWT_SECRET)));
             var credetial = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var userClaim = new List<Claim> {
+            var userClaim = new List<Claim>() {
                 new(ClaimTypes.Name, userSession.name),
                 new(ClaimTypes.Role, userSession.role.ToString())
             };

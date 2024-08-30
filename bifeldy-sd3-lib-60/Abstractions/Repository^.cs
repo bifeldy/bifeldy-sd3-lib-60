@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     SELECT {(this._envVar.IS_USING_POSTGRES ? "CURRENT_DATE" : "TRUNC(SYSDATE)")} {(lastDay >= 0 ? "+" : "-")} :last_day
                     {(this._envVar.IS_USING_POSTGRES ? "" : "FROM DUAL")}
                 ",
-                new List<CDbQueryParamBind> {
+                new List<CDbQueryParamBind>() {
                     new() { NAME = "last_day", VALUE = lastDay }
                 }
             );
@@ -110,7 +110,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     SELECT TRUNC(add_months({(this._envVar.IS_USING_POSTGRES ? "CURRENT_DATE" : "SYSDATE")}, {(lastMonth >= 0 ? "+" : "-")} :last_month))
                     {(this._envVar.IS_USING_POSTGRES ? "" : "FROM DUAL")}
                 ",
-                new List<CDbQueryParamBind> {
+                new List<CDbQueryParamBind>() {
                     new() { NAME = "last_month", VALUE = lastMonth }
                 }
             );

@@ -120,7 +120,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     this.observeable = this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(this.KAFKA_NAME);
                     this.kafkaSubs = this.observeable.Subscribe(async data => {
                         if (data != null) {
-                            var msg = new Message<string, string> {
+                            var msg = new Message<string, string>() {
                                 Key = data.Key,
                                 Value = typeof(string) == data.Value.GetType() ? data.Value : this._converter.ObjectToJson(data.Value)
                             };

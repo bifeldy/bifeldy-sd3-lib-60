@@ -40,7 +40,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
         }
 
         public ClaimsPrincipal GetUserClaimPrincipal(UserWebSession userSession) {
-            var userClaim = new List<Claim> {
+            var userClaim = new List<Claim>() {
                 new(ClaimTypes.Sid, userSession.nik),
                 new(ClaimTypes.Name, userSession.name),
                 new(ClaimTypes.Role, userSession.role.ToString())

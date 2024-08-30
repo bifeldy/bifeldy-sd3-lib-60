@@ -131,7 +131,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                                 UPPER(dc_kode) = :dc_kode
                                 AND UPPER(nama_prog) LIKE :nama_prog
                         ",
-                        new List<CDbQueryParamBind> {
+                        new List<CDbQueryParamBind>() {
                             new() { NAME = "dc_kode", VALUE = await this.GetKodeDc() },
                             new() { NAME = "nama_prog", VALUE = $"%{this._as.AppName}%" }
                         }
@@ -165,7 +165,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         (UPPER(user_name) = :user_name OR UPPER(user_nik) = :user_nik)
                         AND UPPER(user_password) = :password
                 ",
-                new List<CDbQueryParamBind> {
+                new List<CDbQueryParamBind>() {
                     new() { NAME = "user_name", VALUE = userNameNik },
                     new() { NAME = "user_nik", VALUE = userNameNik },
                     new() { NAME = "password", VALUE = password }
@@ -177,7 +177,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<string> GetURLWebService(string webType) {
             return await this._orapg.ExecScalarAsync<string>(
                 $@"SELECT WEB_URL FROM DC_WEBSERVICE_T WHERE WEB_TYPE = :web_type",
-                new List<CDbQueryParamBind> {
+                new List<CDbQueryParamBind>() {
                     new() { NAME = "web_type", VALUE = webType }
                 }
             );
@@ -187,7 +187,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return await this._orapg.ExecQueryAsync($@"
                 INSERT INTO {logTableName} (TPC, OFFS, PARTT, KEY, VAL, TMSTAMP)
                 VALUES (:tpc, :offs, :partt, :key, :value, :tmstmp)
-            ", new List<CDbQueryParamBind> {
+            ", new List<CDbQueryParamBind>() {
                 new() { NAME = "tpc", VALUE = topic },
                 new() { NAME = "offs", VALUE = offset },
                 new() { NAME = "partt", VALUE = partition },

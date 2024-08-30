@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Services {
                         }
                     }
 
-                    IpMacAddress.Add(new CIpMacAddress {
+                    IpMacAddress.Add(new CIpMacAddress() {
                         NAME = nic.Name,
                         DESCRIPTION = nic.Description,
                         MAC_ADDRESS = string.IsNullOrEmpty(mac.ToString()) ? null : mac.ToString(),

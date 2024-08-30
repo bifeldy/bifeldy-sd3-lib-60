@@ -128,7 +128,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
                         _ = await this._generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
 
-                        var msg = new Message<string, dynamic> {
+                        var msg = new Message<string, dynamic>() {
                             Headers = result.Message.Headers,
                             Key = result.Message.Key,
                             Value = result.Message.Value.StartsWith("{") ? this._converter.JsonToObject<dynamic>(result.Message.Value) : result.Message.Value,

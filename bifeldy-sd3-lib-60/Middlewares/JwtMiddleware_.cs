@@ -65,7 +65,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
                 context.User = new ClaimsPrincipal(userClaimIdentity);
 
-                context.Items["user"] = new UserApiSession {
+                context.Items["user"] = new UserApiSession() {
                     name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
                     role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
                 };
@@ -76,9 +76,9 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 if (!string.IsNullOrEmpty(token)) {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
-                    await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError> {
+                    await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
                         info = "401 - JWT :: Tidak Dapat Digunakan",
-                        result = new ResponseJsonError {
+                        result = new ResponseJsonError() {
                             message = "Format Token Salah / Expired!"
                         }
                     });

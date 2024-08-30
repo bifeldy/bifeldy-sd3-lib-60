@@ -38,7 +38,7 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IWebHostEnvironment _he;
         private readonly IConverterService _converter;
 
-        public IDictionary<string, dynamic> FileType { get; } = new Dictionary<string, dynamic> {
+        public IDictionary<string, dynamic> FileType { get; } = new Dictionary<string, dynamic>() {
             {
                 "PDF", new {
                     contentType = "application/pdf",
@@ -71,7 +71,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null) {
-            var report = new LocalReport {
+            var report = new LocalReport() {
                 ReportPath = $"{this._he.ContentRootPath}/wwwroot/rdlcs/{rdlcPath}"
             };
             if (ds != null) {
@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public HtmlToPdfDocument GenerateHtmlReport(RdlcReport reportModel) {
-            return new HtmlToPdfDocument {
+            return new HtmlToPdfDocument() {
                 GlobalSettings = {
                     ColorMode = ColorMode.Color,
                     Orientation = reportModel.PageOrientation,
@@ -106,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     DocumentTitle = reportModel.DisplayName,
                 },
                 Objects = {
-                    new ObjectSettings {
+                    new ObjectSettings() {
                         HtmlContent = Encoding.UTF8.GetString(reportModel.Report),
                         WebSettings = {
                             DefaultEncoding = "utf-8"
@@ -130,7 +130,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 throw new Exception("PDF Asli Hanya Dapat Dijalankan Pada OS Windows");
             }
 
-            margin ??= new MarginSettings {
+            margin ??= new MarginSettings() {
                 Top = 1,
                 Bottom = 1,
                 Left = 1,
@@ -140,7 +140,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
             ReportDataSource ds = this.CreateReportDataSource(dsName, dt);
             LocalReport report = this.CreateLocalReport(rdlcPath, ds, param);
-            var model = new RdlcReport {
+            var model = new RdlcReport() {
                 DisplayName = report.DisplayName,
                 Margins = margin,
                 PageOrientation = pageOrientation,

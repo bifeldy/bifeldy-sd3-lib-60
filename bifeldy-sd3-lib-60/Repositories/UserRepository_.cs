@@ -102,7 +102,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             DC_USER_T dcUserT = await this.GetByUserNameNikPassword(userNameNik, password);
             if (dcUserT != null) {
                 var casp = (BlazorAuthenticationStateProvider) this._asp;
-                await casp.UpdateAuthenticationState(new UserWebSession {
+                await casp.UpdateAuthenticationState(new UserWebSession() {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
                     role = UserSessionRole.USER_SD_SSD_3,

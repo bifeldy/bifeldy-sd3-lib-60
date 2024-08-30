@@ -110,7 +110,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                             }
 
                             bindStr += $"{prefix}{pName}_{id}";
-                            _ = cmd.Parameters.Add(new OracleParameter {
+                            _ = cmd.Parameters.Add(new OracleParameter() {
                                 ParameterName = $"{pName}_{id}",
                                 Value = data ?? DBNull.Value
                             });
@@ -121,7 +121,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                         cmd.CommandText = regex.Replace(cmd.CommandText, bindStr, 1);
                     }
                     else {
-                        var param = new OracleParameter {
+                        var param = new OracleParameter() {
                             ParameterName = pName,
                             Value = pVal ?? DBNull.Value
                         };

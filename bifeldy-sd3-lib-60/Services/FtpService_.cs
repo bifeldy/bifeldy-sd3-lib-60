@@ -44,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public async Task<FtpClient> CreateFtpConnection(string ipDomainHost, int portNumber, string userName, string password, string remoteWorkDir) {
             FtpClient ftpClient;
             try {
-                ftpClient = new FtpClient {
+                ftpClient = new FtpClient() {
                     Host = ipDomainHost,
                     Port = portNumber,
                     Credentials = new NetworkCredential(userName, password),
@@ -83,7 +83,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     progress?.Invoke(data.Progress);
                 });
                 FtpStatus ftpStatus = await ftpConnection.UploadFileAsync(fi.FullName, fn, progress: ftpProgress);
-                var resultSend = new CFtpResultSendGet {
+                var resultSend = new CFtpResultSendGet() {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = fi
                 };
@@ -115,7 +115,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 List<FtpResult> ftpResult = await ftpConnection.DownloadDirectoryAsync(saveDownloadTo, localDirFilePath, FtpFolderSyncMode.Update, FtpLocalExists.Overwrite, progress: ftpProgress);
                 foreach (FtpResult fr in ftpResult) {
                     string fileGet = "Fail";
-                    var resultGet = new CFtpResultSendGet {
+                    var resultGet = new CFtpResultSendGet() {
                         FtpStatusSendGet = fr.IsSuccess,
                         FileInformation = new FileInfo(Path.Combine(saveDownloadTo, fr.Name))
                     };
@@ -133,7 +133,7 @@ namespace bifeldy_sd3_lib_60.Services {
             else {
                 string fileGet = "Fail";
                 FtpStatus ftpStatus = await ftpConnection.DownloadFileAsync(this._bs.DownloadFolderPath, localDirFilePath, FtpLocalExists.Overwrite, progress: ftpProgress);
-                var resultGet = new CFtpResultSendGet {
+                var resultGet = new CFtpResultSendGet() {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = new FileInfo(saveDownloadTo)
                 };

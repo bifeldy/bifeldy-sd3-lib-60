@@ -89,7 +89,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                             }
 
                             bindStr += $"{prefix}{pName}_{id}";
-                            _ = cmd.Parameters.Add(new SqlParameter {
+                            _ = cmd.Parameters.Add(new SqlParameter() {
                                 ParameterName = $"{pName}_{id}",
                                 Value = data ?? DBNull.Value
                             });
@@ -100,7 +100,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                         cmd.CommandText = regex.Replace(cmd.CommandText, bindStr, 1);
                     }
                     else {
-                        var param = new SqlParameter {
+                        var param = new SqlParameter() {
                             ParameterName = pName,
                             Value = pVal ?? DBNull.Value
                         };

@@ -93,7 +93,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             string dcKode = await this.GetKodeDc();
             DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
             int port = int.Parse(mailServer.MAIL_PORT);
-            return new SmtpClient {
+            return new SmtpClient() {
                 Host = mailServer.MAIL_HOSTNAME ?? this._envVar.SMTP_SERVER_IP_DOMAIN,
                 Port = (port > 0) ? port : this._envVar.SMTP_SERVER_PORT,
                 Credentials = new NetworkCredential(
@@ -136,7 +136,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             List<MailAddress> bcc = null,
             List<Attachment> attachments = null
         ) {
-            var mailMessage = new MailMessage {
+            var mailMessage = new MailMessage() {
                 Subject = subject,
                 SubjectEncoding = Encoding.UTF8,
                 Body = body,

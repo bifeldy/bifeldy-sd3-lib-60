@@ -229,7 +229,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         protected virtual async Task<CDbExecProcResult> ExecProcedureAsync(DbCommand databaseCommand) {
-            var result = new CDbExecProcResult {
+            var result = new CDbExecProcResult() {
                 STATUS = false,
                 QUERY = databaseCommand.CommandText,
                 PARAMETERS = databaseCommand.Parameters

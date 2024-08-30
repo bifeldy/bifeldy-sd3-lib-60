@@ -54,7 +54,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async Task CreateTopicIfNotExist(string hostPort, string topicName, short replication = 1, int partition = 1) {
             try {
-                var adminConfig = new AdminClientConfig {
+                var adminConfig = new AdminClientConfig() {
                     BootstrapServers = hostPort
                 };
                 using (IAdminClient adminClient = new AdminClientBuilder(adminConfig).Build()) {
@@ -62,7 +62,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     List<TopicMetadata> topicsMetadata = metadata.Topics;
                     bool isExist = metadata.Topics.Select(a => a.Topic).Contains(topicName);
                     if (!isExist) {
-                        await adminClient.CreateTopicsAsync(new List<TopicSpecification> {
+                        await adminClient.CreateTopicsAsync(new List<TopicSpecification>() {
                             new() { Name = topicName, ReplicationFactor = replication, NumPartitions = partition }
                         });
                     }
@@ -74,7 +74,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public ProducerConfig GenerateKafkaProducerConfig(string hostPort) {
-            return new ProducerConfig {
+            return new ProducerConfig() {
                 BootstrapServers = hostPort
             };
         }
@@ -88,7 +88,7 @@ namespace bifeldy_sd3_lib_60.Services {
             using (IProducer<string, string> producer = this.CreateKafkaProducerInstance<string, string>(hostPort)) {
                 var results = new List<DeliveryResult<string, string>>();
                 foreach (Message<string, dynamic> d in data) {
-                    var msg = new Message<string, string> {
+                    var msg = new Message<string, string>() {
                         Headers = d.Headers,
                         Key = d.Key,
                         Timestamp = d.Timestamp,
@@ -103,7 +103,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public ConsumerConfig GenerateKafkaConsumerConfig(string hostPort, string groupId, AutoOffsetReset autoOffsetReset) {
-            return new ConsumerConfig {
+            return new ConsumerConfig() {
                 BootstrapServers = hostPort,
                 GroupId = groupId,
                 AutoOffsetReset = autoOffsetReset,
@@ -134,7 +134,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 for (ulong i = 0; i < nMessagesBlock; i++) {
                     ConsumeResult<string, string> result = consumer.Consume(this.timeout);
                     this._logger.LogInformation("[KAFKA_CONSUME] 📝 {Key} :: {Value}", result.Message.Key, result.Message.Value);
-                    var message = new Message<string, T> {
+                    var message = new Message<string, T>() {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
                         Timestamp = result.Message.Timestamp,
@@ -169,7 +169,7 @@ namespace bifeldy_sd3_lib_60.Services {
             IProducer<string, string> producer = this.CreateKafkaProducerInstance<string, string>(hostPort);
             _ = this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).Subscribe(async data => {
                 if (data != null) {
-                    var msg = new Message<string, string> {
+                    var msg = new Message<string, string>() {
                         Headers = data.Headers,
                         Key = data.Key,
                         Timestamp = data.Timestamp,
@@ -216,7 +216,7 @@ namespace bifeldy_sd3_lib_60.Services {
             ulong i = 0;
             while (!stoppingToken.IsCancellationRequested) {
                 ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
-                var message = new Message<string, T> {
+                var message = new Message<string, T>() {
                     Headers = result.Message.Headers,
                     Key = result.Message.Key,
                     Timestamp = result.Message.Timestamp,

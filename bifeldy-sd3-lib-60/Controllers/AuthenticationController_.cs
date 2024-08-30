@@ -69,9 +69,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 string secret = formData?.secret;
 
                 if (string.IsNullOrEmpty(secret) && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))) {
-                    return this.BadRequest(new ResponseJsonSingle<ResponseJsonError> {
+                    return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
                         info = $"400 - {this.GetType().Name} :: Login Gagal",
-                        result = new ResponseJsonError {
+                        result = new ResponseJsonError() {
                             message = "Data tidak lengkap!"
                         }
                     });
@@ -86,9 +86,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     if (apiTokenT == null) {
                         DC_USER_T dcUserT = await _userRepo.GetByUserNameNikPassword(userName, password);
                         if (dcUserT == null) {
-                            return this.BadRequest(new ResponseJsonSingle<ResponseJsonError> {
+                            return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
                                 info = $"400 - {this.GetType().Name} :: Login Gagal",
-                                result = new ResponseJsonError {
+                                result = new ResponseJsonError() {
                                     message = "User name / password salah!"
                                 }
                             });
@@ -109,9 +109,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 else {
                     API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(secret);
                     if (apiKeyT == null) {
-                        return this.BadRequest(new ResponseJsonSingle<ResponseJsonError> {
+                        return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
                             info = $"400 - {this.GetType().Name} :: Login Gagal",
-                            result = new ResponseJsonError {
+                            result = new ResponseJsonError() {
                                 message = "Secret salah / tidak dikenali!"
                             }
                         });
@@ -133,9 +133,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
             catch (Exception ex) {
-                return this.BadRequest(new ResponseJsonSingle<ResponseJsonError> {
+                return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
                     info = $"400 - {this.GetType().Name} :: Login Gagal",
-                    result = new ResponseJsonError {
+                    result = new ResponseJsonError() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"
@@ -158,15 +158,15 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     _ = await this._orapg.SaveChangesAsync();
                 }
 
-                return this.Accepted(new ResponseJsonSingle<UserApiSession> {
+                return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
                     info = $"202 - {this.GetType().Name} :: Logout Berhasil",
                     result = this.UserTokenData
                 });
             }
             catch (Exception ex) {
-                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonError> {
+                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonError>() {
                     info = $"500 - {this.GetType().Name} :: Logout Gagal",
-                    result = new ResponseJsonError {
+                    result = new ResponseJsonError() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"
@@ -181,15 +181,15 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
             try {
-                return this.Accepted(new ResponseJsonSingle<UserApiSession> {
+                return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
                     info = $"202 - {this.GetType().Name} :: Verifikasi Berhasil",
                     result = this.UserTokenData
                 });
             }
             catch (Exception ex) {
-                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonError> {
+                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonError>() {
                     info = $"500 - {this.GetType().Name} :: Verifikasi Gagal",
-                    result = new ResponseJsonError {
+                    result = new ResponseJsonError() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"

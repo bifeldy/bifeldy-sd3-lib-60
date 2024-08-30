@@ -89,7 +89,7 @@ namespace bifeldy_sd3_lib_60.Services {
             dynamic httpContent = null, bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
             string[] contentKeyName = null, string[] contentType = null
         ) {
-            var httpRequestMessage = new HttpRequestMessage {
+            var httpRequestMessage = new HttpRequestMessage() {
                 Method = httpMethod,
                 RequestUri = new Uri(httpUri)
             };
