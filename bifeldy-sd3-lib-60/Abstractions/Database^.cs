@@ -37,8 +37,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
         object Clone();
         Task<IDbContextTransaction> TransactionStart(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
-        Task TransactionCommit(DbTransaction useTrx = null);
-        Task TransactionRollback(DbTransaction useTrx = null);
+        Task TransactionCommit(DbTransaction useTrx = null, bool forceCloseConnection = false);
+        Task TransactionRollback(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
@@ -65,6 +65,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public string DbConnectionString { get; set; }
 
         public bool HasUnCommitRollbackSqlQuery => this.Database.CurrentTransaction != null;
+
+        private DbCommand CurrentActiveCommandTransaction = null;
 
         public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs) : base(options) {
             this._envVar = envVar.Value;
@@ -101,9 +103,19 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         protected virtual DbConnection GetConnection() => this.Database.GetDbConnection();
 
         protected virtual DbCommand CreateCommand() {
-            DbCommand cmd = this.GetConnection().CreateCommand();
-            cmd.CommandTimeout = 1800; // 30 Minutes
-            return cmd;
+            if (this.Database.CurrentTransaction == null) {
+                DbCommand cmd = this.GetConnection().CreateCommand();
+                cmd.CommandTimeout = 1800; // 30 Minutes
+                return cmd;
+            }
+            else {
+                if (CurrentActiveCommandTransaction == null) {
+                    CurrentActiveCommandTransaction = this.GetConnection().CreateCommand();
+                    CurrentActiveCommandTransaction.CommandTimeout = 1800; // 30 Minutes
+                }
+
+                return CurrentActiveCommandTransaction;
+            }
         }
 
         protected async Task OpenConnection() {
@@ -118,6 +130,10 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         /// <summary> Jangan Lupa Di Commit Atau Rollback Sebelum Menjalankan Ini </summary>
         protected async Task CloseConnection(bool force = false) {
+            if (this.Database.CurrentTransaction != null && force) {
+                CurrentActiveCommandTransaction = null;
+            }
+
             if (this.Database.CurrentTransaction == null || force) {
                 if (this.GetConnection().State != ConnectionState.Closed) {
                     await this.Database.CloseConnectionAsync();
@@ -130,18 +146,24 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return await this.Database.BeginTransactionAsync(isolationLevel);
         }
 
-        public async Task TransactionCommit(DbTransaction useTrx = null) {
-            DbTransaction trx = useTrx ?? this.Database.CurrentTransaction.GetDbTransaction();
-            IDbContextTransaction ctx = await this.Database.UseTransactionAsync(trx);
-            await ctx.CommitAsync();
-            await this.CloseConnection(true);
+        public async Task TransactionCommit(DbTransaction useTrx = null, bool forceCloseConnection = false) {
+            DbTransaction trx = useTrx ?? this.Database.CurrentTransaction?.GetDbTransaction();
+            if (trx != null) {
+                IDbContextTransaction ctx = await this.Database.UseTransactionAsync(trx);
+                await ctx.CommitAsync();
+            }
+
+            await this.CloseConnection(forceCloseConnection);
         }
 
-        public async Task TransactionRollback(DbTransaction useTrx = null) {
-            DbTransaction trx = useTrx ?? this.Database.CurrentTransaction.GetDbTransaction();
-            IDbContextTransaction ctx = await this.Database.UseTransactionAsync(trx);
-            await ctx.RollbackAsync();
-            await this.CloseConnection(true);
+        public async Task TransactionRollback(DbTransaction useTrx = null, bool closeConnection = false) {
+            DbTransaction trx = useTrx ?? this.Database.CurrentTransaction?.GetDbTransaction();
+            if (trx != null) {
+                IDbContextTransaction ctx = await this.Database.UseTransactionAsync(trx);
+                await ctx.RollbackAsync();
+            }
+
+            await this.CloseConnection(closeConnection);
         }
 
         protected void LogQueryParameter(DbCommand databaseCommand, char databaseParameterPrefix) {
