@@ -192,7 +192,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 string[] fieldNames = new string[colCount];
 
                 var cmd = (NpgsqlCommand) this.CreateCommand();
-                cmd.CommandText = $"SELECT * FROM {tableName} LIMIT 1";
+                cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
                 using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(cmd)) {
                     if (rdr.FieldCount != colCount) {
                         throw new Exception("Jumlah Kolom Tabel Tidak Sama");
@@ -217,42 +217,42 @@ namespace bifeldy_sd3_lib_60.Databases {
                         writer.StartRow();
 
                         for (int i = 0; i < colCount; i++) {
-                            if (dR[i] == DBNull.Value) {
+                            if (dR[fieldNames[i]] == DBNull.Value) {
                                 writer.WriteNull();
                             }
                             else {
                                 switch (types[i]) {
                                     case NpgsqlDbType.Bigint:
-                                        writer.Write((long) dR[i], types[i]);
+                                        writer.Write((long) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Bit:
                                         if (lengths[i] > 1) {
-                                            writer.Write((byte[]) dR[i], types[i]);
+                                            writer.Write((byte[]) dR[fieldNames[i]], types[i]);
                                         }
                                         else {
-                                            writer.Write((byte) dR[i], types[i]);
+                                            writer.Write((byte) dR[fieldNames[i]], types[i]);
                                         }
 
                                         break;
                                     case NpgsqlDbType.Boolean:
-                                        writer.Write((bool) dR[i], types[i]);
+                                        writer.Write((bool) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Bytea:
-                                        writer.Write((byte[]) dR[i], types[i]);
+                                        writer.Write((byte[]) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Char:
-                                        if (dR[i] is string kata) {
+                                        if (dR[fieldNames[i]] is string kata) {
                                             writer.Write(kata, types[i]);
                                         }
-                                        else if (dR[i] is Guid) {
-                                            string value = dR[i].ToString();
+                                        else if (dR[fieldNames[i]] is Guid) {
+                                            string value = dR[fieldNames[i]].ToString();
                                             writer.Write(value, types[i]);
                                         }
                                         else if (lengths[i] > 1) {
-                                            writer.Write((char[]) dR[i], types[i]);
+                                            writer.Write((char[]) dR[fieldNames[i]], types[i]);
                                         }
                                         else {
-                                            char[] s = dR[i].ToString().ToCharArray();
+                                            char[] s = dR[fieldNames[i]].ToString().ToCharArray();
                                             writer.Write(s[0], types[i]);
                                         }
 
@@ -261,19 +261,19 @@ namespace bifeldy_sd3_lib_60.Databases {
                                     case NpgsqlDbType.Timestamp:
                                     case NpgsqlDbType.TimestampTz:
                                     case NpgsqlDbType.Date:
-                                        writer.Write((DateTime) dR[i], types[i]);
+                                        writer.Write((DateTime) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Double:
-                                        writer.Write((double) dR[i], types[i]);
+                                        writer.Write((double) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Integer:
                                         try {
-                                            if (dR[i] is int angka) {
+                                            if (dR[fieldNames[i]] is int angka) {
                                                 writer.Write(angka, types[i]);
                                                 break;
                                             }
-                                            else if (dR[i] is string) {
-                                                int swap = Convert.ToInt32(dR[i]);
+                                            else if (dR[fieldNames[i]] is string) {
+                                                int swap = Convert.ToInt32(dR[fieldNames[i]]);
                                                 writer.Write(swap, types[i]);
                                                 break;
                                             }
@@ -283,27 +283,27 @@ namespace bifeldy_sd3_lib_60.Databases {
                                             string sh = ex.Message;
                                         }
 
-                                        writer.Write(dR[i], types[i]);
+                                        writer.Write(dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Interval:
-                                        writer.Write((TimeSpan) dR[i], types[i]);
+                                        writer.Write((TimeSpan) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Numeric:
                                     case NpgsqlDbType.Money:
-                                        writer.Write((decimal) dR[i], types[i]);
+                                        writer.Write((decimal) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Real:
-                                        writer.Write((float) dR[i], types[i]);
+                                        writer.Write((float) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Smallint:
                                         try {
-                                            if (dR[i] is byte) {
-                                                short swap = Convert.ToInt16(dR[i]);
+                                            if (dR[fieldNames[i]] is byte) {
+                                                short swap = Convert.ToInt16(dR[fieldNames[i]]);
                                                 writer.Write(swap, types[i]);
                                                 break;
                                             }
 
-                                            writer.Write((short) dR[i], types[i]);
+                                            writer.Write((short) dR[fieldNames[i]], types[i]);
                                         }
                                         catch (Exception ex) {
                                             this._logger.LogError("[PG_DBTYPE_SMALLINT] {ex}", ex.Message);
@@ -313,13 +313,13 @@ namespace bifeldy_sd3_lib_60.Databases {
                                         break;
                                     case NpgsqlDbType.Varchar:
                                     case NpgsqlDbType.Text:
-                                        writer.Write((string) dR[i], types[i]);
+                                        writer.Write((string) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Uuid:
-                                        writer.Write((Guid) dR[i], types[i]);
+                                        writer.Write((Guid) dR[fieldNames[i]], types[i]);
                                         break;
                                     case NpgsqlDbType.Xml:
-                                        writer.Write((string) dR[i], types[i]);
+                                        writer.Write((string) dR[fieldNames[i]], types[i]);
                                         break;
                                 }
                             }
@@ -334,6 +334,9 @@ namespace bifeldy_sd3_lib_60.Databases {
             catch (Exception ex) {
                 this._logger.LogError("[PG_BULK_INSERT] {ex}", ex.Message);
                 exception = ex;
+            }
+            finally {
+                await this.CloseConnection();
             }
 
             return (exception == null) ? result : throw exception;
