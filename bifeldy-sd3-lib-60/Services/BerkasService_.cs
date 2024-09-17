@@ -168,8 +168,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
             using (var reader = new BinaryReader(new FileStream(fileInfo.FullName, FileMode.Open))) {
                 byte[] buff = new byte[minFileSize];
-                reader.BaseStream.Seek(0, SeekOrigin.Begin);
-                reader.Read(buff, 0, buff.Length);
+                _ = reader.BaseStream.Seek(0, SeekOrigin.Begin);
+                _ = reader.Read(buff, 0, buff.Length);
                 for (int i = 0; i < intList.Length; i++) {
                     if (intList[i] == -1 || buff[i] == intList[i]) {
                         continue;
