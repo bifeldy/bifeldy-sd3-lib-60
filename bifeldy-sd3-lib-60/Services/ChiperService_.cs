@@ -50,7 +50,6 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly EnvVar _envVar;
         private readonly IApplicationService _app;
 
-        private readonly IStreamService _stream;
         private readonly IConverterService _converter;
 
         // This constant is used to determine the keysize of the encryption algorithm in bits.
@@ -72,7 +71,6 @@ namespace bifeldy_sd3_lib_60.Services {
         ) {
             this._envVar = envVar.Value;
             this._app = app;
-            this._stream = stream;
             this._converter = converter;
             //
             this.pubKeyPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "public.key");
@@ -157,32 +155,22 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string CalculateMD5File(string filePath) {
             using (var md5 = MD5.Create()) {
-                using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
-                    byte[] hash = md5.ComputeHash(ms.ToArray());
-                    return hash.ToStringHex();
+                using (FileStream stream = File.OpenRead(filePath)) {
+                    return md5.ComputeHash(stream).ToStringHex();
                 }
             }
         }
 
         public string CalculateCRC32File(string filePath) {
-            var crc32 = new CRC32();
-            using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
-                byte[] data = ms.ToArray();
-                crc32.SlurpBlock(data, 0, data.Length);
-                return crc32.Crc32Result.ToString("x");
+            using (FileStream stream = File.OpenRead(filePath)) {
+                return new CRC32().GetCrc32(stream).ToString("x");
             }
         }
 
         public string CalculateSHA1File(string filePath) {
             using (var sha1 = SHA1.Create()) {
-                using (MemoryStream ms = this._stream.ReadFileAsBinaryStream(filePath)) {
-                    byte[] hash = sha1.ComputeHash(ms.ToArray());
-                    var sb = new StringBuilder(hash.Length * 2);
-                    foreach (byte b in hash) {
-                        _ = sb.Append(b.ToString("x"));
-                    }
-
-                    return sb.ToString();
+                using (FileStream stream = File.OpenRead(filePath)) {
+                    return sha1.ComputeHash(stream).ToStringHex();
                 }
             }
         }
