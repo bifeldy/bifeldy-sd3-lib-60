@@ -81,10 +81,12 @@ namespace bifeldy_sd3_lib_60.Services {
             int totalFileInZip = 0;
             string path = Path.Combine(outputPath ?? this.ZipFolderPath, zipFileName);
             try {
-                var zip = new ZipFile();
+                var zip = new ZipFile {
+                    CompressionLevel = CompressionLevel.BestCompression
+                };
                 if (!string.IsNullOrEmpty(password)) {
                     zip.Password = password;
-                    zip.CompressionLevel = CompressionLevel.BestCompression;
+                    zip.Encryption = EncryptionAlgorithm.PkzipWeak;
                 }
 
                 var directoryInfo = new DirectoryInfo(folderPath);
