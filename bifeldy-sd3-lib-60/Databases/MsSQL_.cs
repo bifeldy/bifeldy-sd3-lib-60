@@ -42,8 +42,9 @@ namespace bifeldy_sd3_lib_60.Databases {
             ILogger<CMsSQL> logger,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
-            IConverterService cs
-        ) : base(options, envVar, logger, cs) {
+            IConverterService cs,
+            ICsvService csv
+        ) : base(options, envVar, logger, cs, csv) {
             this._logger = logger;
             this._envVar = envVar.Value;
             this._as = @as;
@@ -162,21 +163,20 @@ namespace bifeldy_sd3_lib_60.Databases {
         public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable) {
             bool result = false;
             Exception exception = null;
-            SqlBulkCopy dbBulkCopy = null;
             try {
                 await this.OpenConnection();
-                dbBulkCopy = new SqlBulkCopy((SqlConnection) this.GetConnection()) {
+                using (var dbBulkCopy = new SqlBulkCopy((SqlConnection)this.GetConnection()) {
                     DestinationTableName = tableName
-                };
-                await dbBulkCopy.WriteToServerAsync(dataTable);
-                result = true;
+                }) {
+                    await dbBulkCopy.WriteToServerAsync(dataTable);
+                    result = true;
+                }
             }
             catch (Exception ex) {
                 this._logger.LogError("[SQL_BULK_INSERT] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                dbBulkCopy?.Close();
                 await this.CloseConnection();
             }
 

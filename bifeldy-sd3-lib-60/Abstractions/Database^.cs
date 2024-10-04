@@ -15,6 +15,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -45,6 +46,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
+        Task<string> BulkGetCsv(string rawQuery, string delimiter, string filename, string outputPath = null);
         Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null);
     }
@@ -55,6 +57,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         private readonly ILogger<CDatabase> _logger;
         private readonly IConverterService _cs;
+        private readonly ICsvService _csv;
 
         public string DbUsername { get; set; }
         public string DbPassword { get; set; }
@@ -68,10 +71,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         private DbCommand CurrentActiveCommandTransaction = null;
 
-        public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs) : base(options) {
+        public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs, ICsvService csv) : base(options) {
             this._envVar = envVar.Value;
             this._logger = logger;
             this._cs = cs;
+            this._csv = csv;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
@@ -352,12 +356,68 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
                         result.Add(filePath);
                     }
-
-                    await rdrGetBlob.CloseAsync();
                 }
             }
             catch (Exception ex) {
                 this._logger.LogError("[RETRIEVE_BLOB] {ex}", ex.Message);
+                exception = ex;
+            }
+            finally {
+                await this.CloseConnection();
+            }
+
+            return (exception == null) ? result : throw exception;
+        }
+
+        public virtual async Task<string> BulkGetCsv(string rawQueryVulnerableSqlInjection, string delimiter, string filename, string outputPath = null) {
+            string result = null;
+            Exception exception = null;
+            try {
+                string path = Path.Combine(outputPath ?? this._csv.CsvFolderPath, filename);
+                if (File.Exists(path)) {
+                    File.Delete(path);
+                }
+
+                if (string.IsNullOrEmpty(rawQueryVulnerableSqlInjection) || string.IsNullOrEmpty(delimiter)) {
+                    throw new Exception("Select Raw Query + Delimiter Harus Di Isi");
+                }
+
+                string sqlQuery = $"SELECT * FROM ({rawQueryVulnerableSqlInjection}) alias_{DateTime.Now.Ticks}";
+                sqlQuery = sqlQuery.Replace($"\r\n", " ");
+                sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
+                this._logger.LogInformation("[BULK_GET_CSV] {sqlQuery}", sqlQuery);
+                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery)) {
+                    DataColumnCollection columns = rdr.GetSchemaTable().Columns;
+                    var __cols = new List<DataColumn>();
+                    foreach (DataColumn column in columns) {
+                        __cols.Add(column);
+                    }
+
+                    IOrderedEnumerable<DataColumn> _cols = __cols.OrderBy(c => c.Ordinal);
+                    using (var streamWriter = new StreamWriter(path, true)) {
+                        string struktur = _cols.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
+                        streamWriter.WriteLine(struktur.ToUpper());
+                        streamWriter.Flush();
+
+                        while (rdr.Read()) {
+                            var _colValue = new List<string>();
+                            foreach (DataColumn col in _cols) {
+                                _colValue.Add(rdr.GetString(col.Ordinal));
+                            }
+
+                            string line = _colValue.Aggregate((i, j) => $"{i}{delimiter}{j}");
+                            if (!string.IsNullOrEmpty(line)) {
+                                streamWriter.WriteLine(line.ToUpper());
+                                streamWriter.Flush();
+                            }
+                        }
+
+                        result = path;
+                    }
+                }
+            }
+            catch (Exception ex) {
+                this._logger.LogError("[BULK_GET_CSV] {ex}", ex.Message);
                 exception = ex;
             }
             finally {

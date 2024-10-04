@@ -41,17 +41,20 @@ namespace bifeldy_sd3_lib_60.Databases {
         private readonly ILogger<CPostgres> _logger;
         private readonly EnvVar _envVar;
         private readonly IApplicationService _as;
+        private readonly ICsvService _csv;
 
         public CPostgres(
             DbContextOptions<CPostgres> options,
             ILogger<CPostgres> logger,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
-            IConverterService cs
-        ) : base(options, envVar, logger, cs) {
+            IConverterService cs,
+            ICsvService csv
+        ) : base(options, envVar, logger, cs, csv) {
             this._logger = logger;
             this._envVar = envVar.Value;
             this._as = @as;
+            this._csv = csv;
             // --
             this.InitializeConnection();
             // --
@@ -333,6 +336,49 @@ namespace bifeldy_sd3_lib_60.Databases {
             }
             catch (Exception ex) {
                 this._logger.LogError("[PG_BULK_INSERT] {ex}", ex.Message);
+                exception = ex;
+            }
+            finally {
+                await this.CloseConnection();
+            }
+
+            return (exception == null) ? result : throw exception;
+        }
+
+        public override async Task<string> BulkGetCsv(string rawQuery, string delimiter, string filename, string outputPath = null) {
+            string result = null;
+            Exception exception = null;
+            try {
+                string path = Path.Combine(outputPath ?? this._csv.CsvFolderPath, filename);
+                if (File.Exists(path)) {
+                    File.Delete(path);
+                }
+
+                if (string.IsNullOrEmpty(rawQuery) || string.IsNullOrEmpty(delimiter)) {
+                    throw new Exception("Select Raw Query + Delimiter Harus Di Isi");
+                }
+
+                string sqlQuery = $"SELECT * FROM ({rawQuery}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
+                using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(sqlQuery)) {
+                    ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
+                    string struktur = columns.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
+                    using (var streamWriter = new StreamWriter(path, true)) {
+                        streamWriter.WriteLine(struktur.ToUpper());
+                        streamWriter.Flush();
+                    }
+                }
+
+                sqlQuery = $"COPY ({rawQuery}) TO STDOUT WITH CSV DELIMITER '{delimiter}'";
+                sqlQuery = sqlQuery.Replace($"\r\n", " ");
+                sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
+                this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
+
+                using (TextReader reader = ((NpgsqlConnection) this.GetConnection()).BeginTextExport(sqlQuery)) {
+                    result = this._csv.WriteCsv(reader, filename, outputPath);
+                }
+            }
+            catch (Exception ex) {
+                this._logger.LogError("[{name}_BULK_GET_CSV] {ex}", this.GetType().Name, ex.Message);
                 exception = ex;
             }
             finally {

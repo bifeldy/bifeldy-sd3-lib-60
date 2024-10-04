@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using System.Dynamic;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -45,6 +46,8 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IPubSubService _pubSub;
 
         private readonly TimeSpan timeout = TimeSpan.FromSeconds(10);
+
+        readonly IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
 
         public CKafkaService(ILogger<CKafkaService> logger, IConverterService converter, IPubSubService pubSub) {
             this._logger = logger;
@@ -143,7 +146,6 @@ namespace bifeldy_sd3_lib_60.Services {
                     results.Add(message);
                 }
 
-                consumer.Close();
                 return results;
             }
         }
@@ -166,7 +168,10 @@ namespace bifeldy_sd3_lib_60.Services {
             topicName = this.GetTopicNameProducerListener(topicName, suffixKodeDc);
             await this.CreateTopicIfNotExist(hostPort, topicName); ;
             string key = this.GetKeyProducerListener(hostPort, topicName, pubSubName);
-            IProducer<string, string> producer = this.CreateKafkaProducerInstance<string, string>(hostPort);
+            if (!this.keyValuePairs.ContainsKey(key)) {
+                this.keyValuePairs.Add(key, this.CreateKafkaProducerInstance<string, string>(hostPort));
+            }
+
             _ = this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(key).Subscribe(async data => {
                 if (data != null) {
                     var msg = new Message<string, string>() {
@@ -175,7 +180,7 @@ namespace bifeldy_sd3_lib_60.Services {
                         Timestamp = data.Timestamp,
                         Value = typeof(string) == data.Value.GetType() ? data.Value : this._converter.ObjectToJson(data.Value)
                     };
-                    _ = await producer.ProduceAsync(topicName, msg, stoppingToken);
+                    _ = await this.keyValuePairs[key].ProduceAsync(topicName, msg, stoppingToken);
                 }
             });
         }
@@ -183,6 +188,12 @@ namespace bifeldy_sd3_lib_60.Services {
         public void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, string pubSubName = null) {
             topicName = this.GetTopicNameProducerListener(topicName, suffixKodeDc);
             string key = this.GetKeyProducerListener(hostPort, topicName, pubSubName);
+
+            if (this.keyValuePairs.ContainsKey(key)) {
+                this.keyValuePairs[key].Dispose();
+                _ = this.keyValuePairs.Remove(key);
+            }
+
             this._pubSub.DisposeAndRemoveSubscriber(key);
         }
 
@@ -208,31 +219,31 @@ namespace bifeldy_sd3_lib_60.Services {
             (topicName, groupId) = this.GetTopicNameConsumerListener(topicName, groupId, suffixKodeDc);
             await this.CreateTopicIfNotExist(hostPort, topicName);
             string key = !string.IsNullOrEmpty(pubSubName) ? pubSubName : $"KAFKA_CONSUMER_{hostPort.ToUpper()}#{topicName.ToUpper()}";
-            IConsumer<string, string> consumer = this.CreateKafkaConsumerInstance<string, string>(hostPort, groupId);
-            TopicPartition topicPartition = this.CreateKafkaConsumerTopicPartition(topicName, -1);
-            TopicPartitionOffset topicPartitionOffset = this.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
-            consumer.Assign(topicPartitionOffset);
-            consumer.Subscribe(topicName);
-            ulong i = 0;
-            while (!stoppingToken.IsCancellationRequested) {
-                ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
-                var message = new Message<string, T>() {
-                    Headers = result.Message.Headers,
-                    Key = result.Message.Key,
-                    Timestamp = result.Message.Timestamp,
-                    Value = typeof(T) == typeof(string) ? (dynamic) result.Message.Value : this._converter.JsonToObject<T>(result.Message.Value)
-                };
-                execLambda?.Invoke(message);
+            using (IConsumer<string, string> consumer = this.CreateKafkaConsumerInstance<string, string>(hostPort, groupId)) {
+                TopicPartition topicPartition = this.CreateKafkaConsumerTopicPartition(topicName, -1);
+                TopicPartitionOffset topicPartitionOffset = this.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
+                consumer.Assign(topicPartitionOffset);
+                consumer.Subscribe(topicName);
+                ulong i = 0;
+                while (!stoppingToken.IsCancellationRequested) {
+                    ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
+                    var message = new Message<string, T>() {
+                        Headers = result.Message.Headers,
+                        Key = result.Message.Key,
+                        Timestamp = result.Message.Timestamp,
+                        Value = typeof(T) == typeof(string) ? (dynamic)result.Message.Value : this._converter.JsonToObject<T>(result.Message.Value)
+                    };
+                    execLambda?.Invoke(message);
 
-                this._pubSub.GetGlobalAppBehaviorSubject<Message<string, T>>(key).OnNext(message);
-                if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
-                    _ = consumer.Commit();
-                    i = 0;
+                    this._pubSub.GetGlobalAppBehaviorSubject<Message<string, T>>(key).OnNext(message);
+                    if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
+                        _ = consumer.Commit();
+                        i = 0;
+                    }
                 }
-            }
 
-            consumer.Close();
-            this._pubSub.DisposeAndRemoveSubscriber(key);
+                this._pubSub.DisposeAndRemoveSubscriber(key);
+            }
         }
 
     }

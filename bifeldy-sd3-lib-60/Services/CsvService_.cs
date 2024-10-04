@@ -18,14 +18,18 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using ChoETL;
+
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Extensions;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface ICsvService {
         string CsvFolderPath { get; }
-        bool DataTable2CSV(DataTable table, string filename, string separator, string outputPath = null);
-        List<T> CsvToList<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null);
+        void DataTable2CSV(DataTable dt, string filename, string separator, string outputPath = null);
+        List<T> Csv2List<T>(Stream stream, char delimiter = ',', bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null);
+        string Csv2Json(string filePath, string delimiter, List<CCsv2Json> csvColumn = null);
     }
 
     public sealed class CCsvService : ICsvService {
@@ -48,45 +52,40 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public bool DataTable2CSV(DataTable table, string filename, string separator, string outputPath = null) {
-            bool res = false;
-            StreamWriter writer = null;
+        public string WriteCsv(TextReader textReader, string filename, string outputPath = null) {
+            if (string.IsNullOrEmpty(filename)) {
+                throw new Exception("Nama File + Extensi Harus Di Isi");
+            }
+
             string path = Path.Combine(outputPath ?? this.CsvFolderPath, filename);
-            try {
-                writer = new StreamWriter(path);
-                string sep = string.Empty;
-                var builder = new StringBuilder();
-                foreach (DataColumn col in table.Columns) {
-                    _ = builder.Append(sep).Append(col.ColumnName);
-                    sep = separator;
-                }
-                // Untuk Export *.CSV Di Buat NAMA_KOLOM Besar Semua Tanpa Petik "NAMA_KOLOM"
-                writer.WriteLine(builder.ToString().ToUpper());
-                foreach (DataRow row in table.Rows) {
-                    sep = string.Empty;
-                    builder = new StringBuilder();
-                    foreach (DataColumn col in table.Columns) {
-                        _ = builder.Append(sep).Append(row[col.ColumnName]);
-                        sep = separator;
+            using (var streamWriter = new StreamWriter(path, true)) {
+                string line = null;
+                do {
+                    line = textReader.ReadLine()?.Trim();
+                    if (!string.IsNullOrEmpty(line)) {
+                        streamWriter.WriteLine(line.ToUpper());
+                        streamWriter.Flush();
                     }
-
-                    writer.WriteLine(builder.ToString());
                 }
+                while (!string.IsNullOrEmpty(line));
+            }
 
+            return path;
+        }
+
+        public void DataTable2CSV(DataTable dt, string filename, string separator, string outputPath = null) {
+            try {
+                string path = Path.Combine(outputPath ?? this.CsvFolderPath, filename);
+                dt.ToCsv(separator, path);
                 this._logger.LogInformation("[DATA_TABLE_2_CSV] {path}", path);
-                res = true;
             }
             catch (Exception ex) {
                 this._logger.LogError("[DATA_TABLE_2_CSV] {ex}", ex.Message);
+                throw;
             }
-            finally {
-                writer?.Close();
-            }
-
-            return res;
         }
 
-        public List<T> CsvToList<T>(Stream stream, string delimiter = ",", bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null) {
+        public List<T> Csv2List<T>(Stream stream, char delimiter = ',', bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null) {
             using (var reader = new StreamReader(stream)) {
                 int i = 0;
                 List<string> col = csvColumn ?? new();
@@ -161,6 +160,31 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 return row;
             }
+        }
+
+        public string Csv2Json(string filePath, string delimiter, List<CCsv2Json> csvColumn = null) {
+            if (csvColumn == null || csvColumn?.Count <= 0) {
+                throw new Exception("Daftar Kolom Harus Di Isi");
+            }
+
+            var sb = new StringBuilder();
+            using (ChoCSVReader<dynamic> csv = new ChoCSVReader(filePath).WithDelimiter(delimiter)) {
+                ChoCSVReader<dynamic> _data = csv;
+
+                if (csvColumn != null) {
+                    for (int i = 0; i < csvColumn.Count; i++) {
+                        int pos = csvColumn[i].Position;
+                        _data = _data.WithField(csvColumn[i].ColumnName, (pos > 0) ? pos : (i + 1), csvColumn[i].DataType);
+                    }
+                    _data = _data.WithFirstLineHeader(true);
+                }
+
+                using (var w = new ChoJSONWriter(sb)) {
+                    w.Write(csv);
+                }
+            }
+
+            return sb.ToString();
         }
 
     }

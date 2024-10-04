@@ -43,8 +43,9 @@ namespace bifeldy_sd3_lib_60.Databases {
             ILogger<COracle> logger,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
-            IConverterService cs
-        ) : base(options, envVar, logger, cs) {
+            IConverterService cs,
+            ICsvService csv
+        ) : base(options, envVar, logger, cs, csv) {
             this._logger = logger;
             this._envVar = envVar.Value;
             this._as = @as;
@@ -183,21 +184,20 @@ namespace bifeldy_sd3_lib_60.Databases {
         public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable) {
             bool result = false;
             Exception exception = null;
-            OracleBulkCopy dbBulkCopy = null;
             try {
                 await this.OpenConnection();
-                dbBulkCopy = new OracleBulkCopy((OracleConnection) this.GetConnection()) {
+                using (var dbBulkCopy = new OracleBulkCopy((OracleConnection)this.GetConnection()) {
                     DestinationTableName = tableName
-                };
-                dbBulkCopy.WriteToServer(dataTable);
-                result = true;
+                }) {
+                    dbBulkCopy.WriteToServer(dataTable);
+                    result = true;
+                }
             }
             catch (Exception ex) {
                 this._logger.LogError("[ORA_BULK_INSERT] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                dbBulkCopy?.Close();
                 await this.CloseConnection();
             }
 
