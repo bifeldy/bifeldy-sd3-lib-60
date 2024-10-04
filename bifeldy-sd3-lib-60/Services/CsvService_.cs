@@ -52,27 +52,6 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string WriteCsv(TextReader textReader, string filename, string outputPath = null) {
-            if (string.IsNullOrEmpty(filename)) {
-                throw new Exception("Nama File + Extensi Harus Di Isi");
-            }
-
-            string path = Path.Combine(outputPath ?? this.CsvFolderPath, filename);
-            using (var streamWriter = new StreamWriter(path, true)) {
-                string line = null;
-                do {
-                    line = textReader.ReadLine()?.Trim();
-                    if (!string.IsNullOrEmpty(line)) {
-                        streamWriter.WriteLine(line.ToUpper());
-                        streamWriter.Flush();
-                    }
-                }
-                while (!string.IsNullOrEmpty(line));
-            }
-
-            return path;
-        }
-
         public void DataTable2CSV(DataTable dt, string filename, string separator, string outputPath = null) {
             try {
                 string path = Path.Combine(outputPath ?? this.CsvFolderPath, filename);

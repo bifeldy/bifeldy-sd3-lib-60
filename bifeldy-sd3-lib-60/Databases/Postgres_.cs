@@ -359,6 +359,9 @@ namespace bifeldy_sd3_lib_60.Databases {
                 }
 
                 string sqlQuery = $"SELECT * FROM ({rawQuery}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
+                sqlQuery = sqlQuery.Replace($"\r\n", " ");
+                sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
+                this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
                 using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(sqlQuery)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
                     string struktur = columns.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
@@ -374,7 +377,18 @@ namespace bifeldy_sd3_lib_60.Databases {
                 this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
 
                 using (TextReader reader = ((NpgsqlConnection) this.GetConnection()).BeginTextExport(sqlQuery)) {
-                    result = this._csv.WriteCsv(reader, filename, outputPath);
+                    using (var streamWriter = new StreamWriter(path, true)) {
+                        string line = null;
+                        do {
+                            line = reader.ReadLine()?.Trim();
+                            if (!string.IsNullOrEmpty(line)) {
+                                streamWriter.WriteLine(line.ToUpper());
+                                streamWriter.Flush();
+                            }
+                        }
+                        while (!string.IsNullOrEmpty(line));
+                        result = path;
+                    }
                 }
             }
             catch (Exception ex) {
