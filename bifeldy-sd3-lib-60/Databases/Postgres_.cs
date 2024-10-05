@@ -362,7 +362,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 sqlQuery = sqlQuery.Replace($"\r\n", " ");
                 sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
                 this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
-                using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(sqlQuery)) {
+                using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(sqlQuery)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
                     string struktur = columns.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
                     using (var streamWriter = new StreamWriter(path, true)) {

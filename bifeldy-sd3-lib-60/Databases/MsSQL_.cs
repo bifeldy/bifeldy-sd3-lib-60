@@ -165,7 +165,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                using (var dbBulkCopy = new SqlBulkCopy((SqlConnection)this.GetConnection()) {
+                using (var dbBulkCopy = new SqlBulkCopy((SqlConnection) this.GetConnection()) {
                     DestinationTableName = tableName
                 }) {
                     await dbBulkCopy.WriteToServerAsync(dataTable);

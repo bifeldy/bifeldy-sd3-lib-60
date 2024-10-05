@@ -12,7 +12,7 @@
 
 namespace bifeldy_sd3_lib_60.Models {
 
-    public sealed class CCsv2Json {
+    public sealed class CCsvColumn {
         public string ColumnName { get; set; }
         public Type DataType { get; set; }
         public int Position { get; set; } = 0;

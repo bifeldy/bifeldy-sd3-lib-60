@@ -231,7 +231,7 @@ namespace bifeldy_sd3_lib_60.Services {
                         Headers = result.Message.Headers,
                         Key = result.Message.Key,
                         Timestamp = result.Message.Timestamp,
-                        Value = typeof(T) == typeof(string) ? (dynamic)result.Message.Value : this._converter.JsonToObject<T>(result.Message.Value)
+                        Value = typeof(T) == typeof(string) ? (dynamic) result.Message.Value : this._converter.JsonToObject<T>(result.Message.Value)
                     };
                     execLambda?.Invoke(message);
 

@@ -186,7 +186,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                using (var dbBulkCopy = new OracleBulkCopy((OracleConnection)this.GetConnection()) {
+                using (var dbBulkCopy = new OracleBulkCopy((OracleConnection) this.GetConnection()) {
                     DestinationTableName = tableName
                 }) {
                     dbBulkCopy.WriteToServer(dataTable);

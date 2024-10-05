@@ -27,9 +27,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public interface ICsvService {
         string CsvFolderPath { get; }
-        void DataTable2CSV(DataTable dt, string filename, string separator, string outputPath = null);
-        List<T> Csv2List<T>(Stream stream, char delimiter = ',', bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null);
-        string Csv2Json(string filePath, string delimiter, List<CCsv2Json> csvColumn = null);
+        DataTable Csv2DataTable(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string tableName = null);
+        string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn = null);
+        List<T> Csv2List<T>(string filePath, string delimiter = ",", List<CCsvColumn> csvColumn = null);
     }
 
     public sealed class CCsvService : ICsvService {
@@ -52,112 +52,34 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public void DataTable2CSV(DataTable dt, string filename, string separator, string outputPath = null) {
-            try {
-                string path = Path.Combine(outputPath ?? this.CsvFolderPath, filename);
-                dt.ToCsv(separator, path);
-                this._logger.LogInformation("[DATA_TABLE_2_CSV] {path}", path);
-            }
-            catch (Exception ex) {
-                this._logger.LogError("[DATA_TABLE_2_CSV] {ex}", ex.Message);
-                throw;
-            }
-        }
-
-        public List<T> Csv2List<T>(Stream stream, char delimiter = ',', bool skipHeader = false, List<string> csvColumn = null, List<string> requiredColumn = null) {
-            using (var reader = new StreamReader(stream)) {
-                int i = 0;
-                List<string> col = csvColumn ?? new();
-                var row = new List<T>();
-
-                if (skipHeader && csvColumn != null) {
-                    i++;
-                    _ = reader.ReadLine();
-                }
-
-                while (!reader.EndOfStream) {
-                    string line = reader.ReadLine();
-                    if (!string.IsNullOrEmpty(line)) {
-                        string[] values = line.Split(delimiter).Select(v => v.StartsWith("\"") && v.EndsWith("\"") ? v[1..^1] : v).ToArray();
-
-                        if (i == 0) {
-                            if (csvColumn == null) {
-                                col.AddRange(values);
-                            }
-                            else {
-                                var temp = new List<string>();
-                                for (int j = 0; j < values.Length; j++) {
-                                    if (csvColumn.Select(ac => ac.ToUpper()).Contains(values[j].ToUpper())) {
-                                        temp.Add(values[j]);
-                                    }
-                                }
-
-                                if (temp.Count != col.Count) {
-                                    throw new Exception("Data kolom yang tersedia tidak lengkap");
-                                }
-
-                                col = temp;
-                            }
-                        }
-                        else if (values.Length != col.Count) {
-                            throw new Exception("Jumlah kolom data tidak sesuai dengan kolom header");
-                        }
-                        else {
-                            PropertyInfo[] properties = typeof(T).GetProperties();
-                            T objT = Activator.CreateInstance<T>();
-
-                            for (int j = 0; j < col.Count; j++) {
-                                string colName = col[j].ToUpper();
-                                string rowVal = values[j].ToUpper();
-
-                                if (csvColumn != null && requiredColumn != null) {
-                                    if (requiredColumn.Select(rc => rc.ToUpper()).Contains(colName)) {
-                                        if (string.IsNullOrEmpty(rowVal)) {
-                                            throw new Exception($"Baris {i + 1} kolom {j} :: {colName} tidak boleh kosong");
-                                        }
-                                    }
-                                }
-
-                                foreach (PropertyInfo pro in properties) {
-                                    if (pro.Name.ToUpper() == colName) {
-                                        try {
-                                            pro.SetValue(objT, rowVal);
-                                        }
-                                        catch {
-                                            //
-                                        }
-                                    }
-                                }
-                            }
-
-                            row.Add(objT);
-                        }
-                    }
-
-                    i++;
-                }
-
-                return row;
-            }
-        }
-
-        public string Csv2Json(string filePath, string delimiter, List<CCsv2Json> csvColumn = null) {
+        private ChoCSVReader<dynamic> ChoEtlSetupCsv(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
             if (csvColumn == null || csvColumn?.Count <= 0) {
                 throw new Exception("Daftar Kolom Harus Di Isi");
             }
 
+            ChoCSVReader<dynamic> csv = new ChoCSVReader(filePath).WithDelimiter(delimiter);
+            foreach (CCsvColumn cc in csvColumn) {
+                csv = csv.WithField(cc.ColumnName, cc.Position, cc.DataType);
+            }
+
+            csv = csv.WithFirstLineHeader(true).MayHaveQuotedFields().MayContainEOLInData();
+            return csv;
+        }
+
+        public DataTable Csv2DataTable(string filePath, string delimiter, List<CCsvColumn> csvColumn, string tableName = null) {
+            csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
+            var fi = new FileInfo(filePath);
+
+            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
+                return csv.AsDataTable(tableName ?? fi.Name);
+            }
+        }
+
+        public string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
+            csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
             var sb = new StringBuilder();
-            using (ChoCSVReader<dynamic> csv = new ChoCSVReader(filePath).WithDelimiter(delimiter)) {
-                ChoCSVReader<dynamic> _data = csv;
 
-                if (csvColumn != null) {
-                    for (int i = 0; i < csvColumn.Count; i++) {
-                        int pos = csvColumn[i].Position;
-                        _data = _data.WithField(csvColumn[i].ColumnName, (pos > 0) ? pos : (i + 1), csvColumn[i].DataType);
-                    }
-                    _data = _data.WithFirstLineHeader(true);
-                }
-
+            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
                 using (var w = new ChoJSONWriter(sb)) {
                     w.Write(csv);
                 }
@@ -166,6 +88,37 @@ namespace bifeldy_sd3_lib_60.Services {
             return sb.ToString();
         }
 
+        public List<T> Csv2List<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
+            csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
+            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
+                using (IDataReader rdr = csv.AsDataReader()) {
+                    DataColumnCollection columns = rdr.GetSchemaTable().Columns;
+                    PropertyInfo[] properties = typeof(T).GetProperties();
+                    var row = new List<T>();
+
+                    while (rdr.Read()) {
+                        T objT = Activator.CreateInstance<T>();
+                        foreach (DataColumn column in columns) {
+                            foreach (PropertyInfo pro in properties) {
+                                if (pro.Name.ToUpper() == column.ColumnName.ToUpper()) {
+                                    try {
+                                        pro.SetValue(objT, rdr[column.ColumnName]);
+                                    }
+                                    catch {
+                                        //
+                                    }
+                                }
+                            }
+                        }
+
+                        row.Add(objT);
+                    }
+
+                    return row;
+                }
+
+            }
+        }
     }
 
 }
