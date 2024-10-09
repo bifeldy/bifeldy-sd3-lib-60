@@ -15,7 +15,6 @@
 
 using System.Data;
 using System.Data.Common;
-using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -42,12 +41,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task TransactionRollback(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
+        Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
         Task<string> BulkGetCsv(string rawQuery, string delimiter, string filename, string outputPath = null);
-        Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
+        Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
         Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null);
     }
 
@@ -210,6 +210,26 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             finally {
                 dr?.Close();
                 await this.CloseConnection();
+            }
+
+            return (exception == null) ? result : throw exception;
+        }
+
+        protected virtual async Task<List<T>> GetListAsync<T>(DbCommand databaseCommand) {
+            var result = new List<T>();
+            DbDataReader dr = null;
+            Exception exception = null;
+            try {
+                dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess);
+                result = dr.ToList<T>();
+            }
+            catch (Exception ex) {
+                this._logger.LogError("[DATA_LIST] {ex}", ex.Message);
+                exception = ex;
+            }
+            finally {
+                dr?.Close();
+                this.CloseConnection();
             }
 
             return (exception == null) ? result : throw exception;
@@ -386,34 +406,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 sqlQuery = sqlQuery.Replace($"\r\n", " ");
                 sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
                 this._logger.LogInformation("[BULK_GET_CSV] {sqlQuery}", sqlQuery);
-                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery)) {
-                    DataColumnCollection columns = rdr.GetSchemaTable().Columns;
-                    var __cols = new List<DataColumn>();
-                    foreach (DataColumn column in columns) {
-                        __cols.Add(column);
-                    }
-
-                    IOrderedEnumerable<DataColumn> _cols = __cols.OrderBy(c => c.Ordinal);
-                    using (var streamWriter = new StreamWriter(path, true)) {
-                        string struktur = _cols.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
-                        streamWriter.WriteLine(struktur.ToUpper());
-                        streamWriter.Flush();
-
-                        while (rdr.Read()) {
-                            var _colValue = new List<string>();
-                            foreach (DataColumn col in _cols) {
-                                _colValue.Add(rdr.GetString(col.Ordinal));
-                            }
-
-                            string line = _colValue.Aggregate((i, j) => $"{i}{delimiter}{j}");
-                            if (!string.IsNullOrEmpty(line)) {
-                                streamWriter.WriteLine(line.ToUpper());
-                                streamWriter.Flush();
-                            }
-                        }
-
-                        result = path;
-                    }
+                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, commandBehavior: CommandBehavior.SequentialAccess)) {
+                    rdr.ToCsv(delimiter, path);
+                    result = path;
                 }
             }
             catch (Exception ex) {
@@ -433,11 +428,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public abstract Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
         public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
+        public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
-        public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
+        public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
         public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null);
 
     }

@@ -144,6 +144,14 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.GetDataTableAsync(cmd);
         }
 
+        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
+            var cmd = (NpgsqlCommand) this.CreateCommand();
+            cmd.CommandText = queryString;
+            cmd.CommandType = CommandType.Text;
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.GetListAsync<T>(cmd);
+        }
+
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
             var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
@@ -403,12 +411,12 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
-        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
+        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default) {
             var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.ExecReaderAsync(cmd);
+            return await this.ExecReaderAsync(cmd, commandBehavior);
         }
 
         public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null) {

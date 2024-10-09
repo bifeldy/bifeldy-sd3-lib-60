@@ -19,21 +19,17 @@ namespace bifeldy_sd3_lib_60.Extensions {
     public static class DataTableExtensions {
 
         public static List<T> ToList<T>(this DataTable dt) {
-            DataColumnCollection columns = dt.Columns;
+            dt.CaseSensitive = false;
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             return dt.AsEnumerable().Select(row => {
                 T objT = Activator.CreateInstance<T>();
-                foreach (DataColumn column in columns) {
-                    foreach (PropertyInfo pro in properties) {
-                        if (pro.Name.ToUpper() == column.ColumnName.ToUpper()) {
-                            try {
-                                pro.SetValue(objT, row[column.ColumnName]);
-                            }
-                            catch {
-                                //
-                            }
-                        }
+                foreach (PropertyInfo pro in properties) {
+                    try {
+                        pro.SetValue(objT, row[pro.Name]);
+                    }
+                    catch {
+                        //
                     }
                 }
 
