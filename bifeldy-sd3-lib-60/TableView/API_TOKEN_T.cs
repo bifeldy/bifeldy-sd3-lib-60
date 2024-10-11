@@ -16,9 +16,9 @@ using System.Text.Json.Serialization;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
-    public sealed class API_TOKEN_T : EntityTable {
+    public sealed class API_TOKEN_T : EntityTableView {
         [Key] public string USER_NAME { set; get; }
         [JsonIgnore] public string PASSWORD { set; get; }
         [Key] public string APP_NAME { set; get; }

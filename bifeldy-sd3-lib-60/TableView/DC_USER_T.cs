@@ -16,9 +16,9 @@ using System.Text.Json.Serialization;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
-    public sealed class DC_USER_T : EntityTable {
+    public sealed class DC_USER_T : EntityTableView {
         [Key] public string USER_NAME { get; set; }
         [JsonIgnore] public string USER_PASSWORD { get; set; }
         public string USER_APP_MODUL { get; set; }

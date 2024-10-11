@@ -12,17 +12,16 @@
  */
 
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
-    public sealed class KAFKA_CONSUMER_AUTO_LOG : EntityTable {
-        [Key] public string TPC { set; get; }
-        [Key] public decimal? OFFS { set; get; }
-        public string KEY { set; get; }
-        public string VAL { set; get; }
-        public DateTime? TMSTAMP { set; get; }
+    public sealed class API_KEY_T : EntityTableView {
+        [Key][JsonIgnore] public string KEY { set; get; }
+        public string IP_ORIGIN { set; get; }
+        [Key] public string APP_NAME { set; get; }
     }
 
 }

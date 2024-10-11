@@ -6,7 +6,7 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Class Tabel Bawaan
+ * Catatan      :: Class Tabel / View Bawaan
  *              :: Tidak Untuk Didaftarkan Ke DI Container
  *              :: Hanya Untuk Inherit
  *              :: Mohon & Harap Tidak Digunakan
@@ -15,6 +15,6 @@
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
-    public abstract class EntityTable { }
+    public abstract class EntityTableView { }
 
 }

@@ -83,8 +83,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             var libAsm = Assembly.GetExecutingAssembly();
             var prgAsm = Assembly.GetEntryAssembly();
 
-            modelBuilder.RegisterAllEntities<EntityTable>(libAsm);
-            modelBuilder.RegisterAllEntities<EntityTable>(prgAsm);
+            modelBuilder.RegisterAllEntities<EntityTableView>(libAsm);
+            modelBuilder.RegisterAllEntities<EntityTableView>(prgAsm);
 
             // DbSet<T> Case Sensitive ~
             foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {

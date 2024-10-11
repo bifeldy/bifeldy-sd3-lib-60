@@ -15,10 +15,10 @@ using Microsoft.EntityFrameworkCore;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
     [Keyless]
-    public sealed class DC_TABEL_V : EntityTable {
+    public sealed class DC_TABEL_V : EntityTableView {
         public string TBL_DC_KODE { get; set; }
         public string TBL_JENIS_DC { get; set; }
         public string TBL_DC_INDUK { get; set; }

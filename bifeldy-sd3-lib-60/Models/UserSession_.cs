@@ -13,7 +13,7 @@
 
 using System.Text.Json.Serialization;
 
-using bifeldy_sd3_lib_60.Tables;
+using bifeldy_sd3_lib_60.TableView;
 
 namespace bifeldy_sd3_lib_60.Models {
 

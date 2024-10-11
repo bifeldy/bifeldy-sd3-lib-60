@@ -18,7 +18,7 @@ using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Tables;
+using bifeldy_sd3_lib_60.TableView;
 
 namespace bifeldy_sd3_lib_60.Repositories {
 

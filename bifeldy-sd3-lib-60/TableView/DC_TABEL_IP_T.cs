@@ -15,10 +15,10 @@ using Microsoft.EntityFrameworkCore;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
     [Keyless]
-    public sealed class DC_TABEL_IP_T : EntityTable {
+    public sealed class DC_TABEL_IP_T : EntityTableView {
         public decimal? DCID { get; set; }
         public string DC_KODE { get; set; }
         public string IP_DB { get; set; }

@@ -15,10 +15,10 @@ using Microsoft.EntityFrameworkCore;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
     [Keyless]
-    public sealed class DC_LISTMAILSERVER_T : EntityTable {
+    public sealed class DC_LISTMAILSERVER_T : EntityTableView {
         public string MAIL_DCKODE { set; get; }
         public string MAIL_DCNAME { set; get; }
         public string MAIL_IP { set; get; }

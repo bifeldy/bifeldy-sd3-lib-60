@@ -15,15 +15,14 @@ using System.ComponentModel.DataAnnotations;
 
 using bifeldy_sd3_lib_60.Abstractions;
 
-namespace bifeldy_sd3_lib_60.Tables {
+namespace bifeldy_sd3_lib_60.TableView {
 
-    public sealed class KAFKA_SERVER_T : EntityTable {
-        [Key] public string HOST { get; set; }
-        [Key] public decimal? PORT { get; set; }
-        [Key] public string TOPIC { get; set; }
-        public string GROUP_ID { get; set; }
-        public decimal? REPLI { get; set; }
-        public decimal? PARTI { get; set; }
+    public sealed class KAFKA_CONSUMER_AUTO_LOG : EntityTableView {
+        [Key] public string TPC { set; get; }
+        [Key] public decimal? OFFS { set; get; }
+        public string KEY { set; get; }
+        public string VAL { set; get; }
+        public DateTime? TMSTAMP { set; get; }
     }
 
 }
