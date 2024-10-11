@@ -191,10 +191,12 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void AddDependencyInjection(bool isWebMvcNotBlazor = false) {
             _ = Services.AddHttpContextAccessor();
+
             // --
             _ = Services.AddDbContext<IOracle, COracle>();
             _ = Services.AddDbContext<IPostgres, CPostgres>();
             _ = Services.AddDbContext<IMsSQL, CMsSQL>();
+
             // --
             // Setiap Request Cycle 1 Scope 1x New Object 1x Sesion Saja
             // --
@@ -211,11 +213,6 @@ namespace bifeldy_sd3_lib_60 {
                 _ = Services.AddScoped<AuthenticationStateProvider, BlazorAuthenticationStateProvider>();
             }
 
-            _ = Services.AddScoped<IGeneralRepository, CGeneralRepository>();
-            _ = Services.AddScoped<IApiKeyRepository, CApiKeyRepository>();
-            _ = Services.AddScoped<IApiTokenRepository, CApiTokenRepository>();
-            _ = Services.AddScoped<IListMailServerRepository, CListMailServerRepository>();
-            _ = Services.AddScoped<IUserRepository, CUserRepository>();
             // --
             // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
             // --
