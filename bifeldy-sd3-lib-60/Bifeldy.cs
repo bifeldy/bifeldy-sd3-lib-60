@@ -44,6 +44,9 @@ using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
+using System.Reactive.Concurrency;
+using ChoETL;
+
 namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
@@ -55,7 +58,8 @@ namespace bifeldy_sd3_lib_60 {
         public static IConfiguration Config = null;
         public static WebApplication App = null;
 
-        private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new();
+        // private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new();
+        private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new();
 
         private static string NginxPathName = "x-forwarded-prefix";
 
@@ -301,48 +305,44 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddJobScheduler() {
+        public static void StartJobScheduler() {
             _ = Services.AddQuartz(opt => {
                 // opt.UseMicrosoftDependencyInjectionJobFactory();
+                foreach (KeyValuePair<string, Dictionary<string, Type>> jl in jobList) {
+                    string cronString = jl.Key;
+                    foreach (KeyValuePair<string, Type> kvp in jl.Value) {
+                        var jobKey = new JobKey(kvp.Key);
+                        _ = opt.AddJob(kvp.Value, jobKey);
+                        _ = opt.AddTrigger(t => t.ForJob(jobKey).WithCronSchedule(jl.Key));
+                    }
+                }
             });
             _ = Services.AddQuartzHostedService(opt => {
                 opt.WaitForJobsToComplete = true;
             });
         }
 
-        public static void CreateJobSchedule<T>(string cronString, string jobName = null) {
-            if (string.IsNullOrEmpty(jobName)) {
-                jobName = typeof(T).Name;
+        public static void CreateJobSchedule(string quartzCronString, Type classInheritFromCQuartzJobScheduler) {
+            if (jobList.ContainsKey(quartzCronString)) {
+                if (!jobList[quartzCronString].ContainsKey(classInheritFromCQuartzJobScheduler.Name)) {
+                    jobList[quartzCronString].Add(classInheritFromCQuartzJobScheduler.Name, classInheritFromCQuartzJobScheduler);
+                }
             }
-
-            JobBuilder jobBuilder = JobBuilder.Create(typeof(T)).WithIdentity(jobName);
-            IJobDetail jobDetail = jobBuilder.Build();
-            TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity(jobName);
-            ITrigger trigger = triggerBuilder.WithCronSchedule(cronString).Build();
-            jobList.Add(jobName, new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
+            else {
+                var dict = new Dictionary<string, Type> {
+                    { classInheritFromCQuartzJobScheduler.Name, classInheritFromCQuartzJobScheduler }
+                };
+                jobList.Add(quartzCronString, dict);
+            }
         }
 
-        public static void CreateJobSchedules(string cronString, params Type[] classInheritFromCQuartzJobScheduler) {
+        // https://www.freeformatter.com/cron-expression-generator-quartz.html
+        public static void CreateJobSchedule<T>(string quartzCronString) => CreateJobSchedule(quartzCronString, typeof(T));
+
+        public static void CreateJobSchedules(string quartzCronString, params Type[] classInheritFromCQuartzJobScheduler) {
             for (int i = 0; i < classInheritFromCQuartzJobScheduler.Length; i++) {
-                Type classInherited = classInheritFromCQuartzJobScheduler[i];
-                string jobName = $"{classInherited.Name}_{i}";
-                JobBuilder jobBuilder = JobBuilder.Create(classInherited).WithIdentity(jobName);
-                IJobDetail jobDetail = jobBuilder.Build();
-                TriggerBuilder triggerBuilder = TriggerBuilder.Create().WithIdentity(jobName);
-                ITrigger trigger = triggerBuilder.WithCronSchedule(cronString).Build();
-                jobList.Add(jobName, new KeyValuePair<IJobDetail, ITrigger>(jobDetail, trigger));
+                CreateJobSchedule(quartzCronString, classInheritFromCQuartzJobScheduler[i]);
             }
-        }
-
-        public async static Task<DateTimeOffset[]> StartJobScheduler() {
-            ISchedulerFactory schedulerFactory = App.Services.GetRequiredService<ISchedulerFactory>();
-            IScheduler scheduler = await schedulerFactory.GetScheduler();
-            var allJobs = new List<Task<DateTimeOffset>>();
-            foreach (KeyValuePair<string, KeyValuePair<IJobDetail, ITrigger>> jl in jobList) {
-                allJobs.Add(scheduler.ScheduleJob(jl.Value.Key, jl.Value.Value));
-            }
-
-            return await Task.WhenAll(allJobs);
         }
 
         /* ** */
@@ -424,6 +424,10 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
 
+    }
+
+    public class TestJob : IJob {
+        public Task Execute(IJobExecutionContext context) => throw new NotImplementedException();
     }
 
 }
