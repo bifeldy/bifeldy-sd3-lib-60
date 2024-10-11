@@ -44,9 +44,6 @@ using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
-using System.Reactive.Concurrency;
-using ChoETL;
-
 namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
@@ -409,10 +406,6 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
 
-    }
-
-    public class TestJob : IJob {
-        public Task Execute(IJobExecutionContext context) => throw new NotImplementedException();
     }
 
 }
