@@ -86,6 +86,8 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
+                await Task.Yield();
+
                 if (this._excludeJenisDc != null) {
                     string jenisDc = await _generalRepo.GetJenisDc();
                     if (this._excludeJenisDc.Contains(jenisDc)) {
