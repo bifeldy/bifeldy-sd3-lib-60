@@ -22,6 +22,7 @@ using Microsoft.Extensions.Options;
 using Confluent.Kafka;
 
 using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Extensions;
@@ -42,6 +43,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback);
     }
 
+    [ScopedServiceRegistration]
     public class CGeneralRepository : CRepository, IGeneralRepository {
 
         private readonly EnvVar _envVar;

@@ -20,6 +20,7 @@ using Microsoft.Reporting.NETCore;
 
 using DinkToPdf;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -33,6 +34,7 @@ namespace bifeldy_sd3_lib_60.Services {
         RdlcReport GeneratePdfWordExcelReport(string rdlcPath, DataTable dt, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CRdlcService : IRdlcService {
 
         private readonly IWebHostEnvironment _he;

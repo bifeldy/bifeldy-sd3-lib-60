@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 
 using FluentFTP;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -29,6 +30,7 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<CFtpResultInfo> CreateFtpConnectionAndGetFtpFileDir(string ipDomainHost, int portNumber, string userName, string password, string remoteWorkDir, string localDirFilePath, bool isDirectory = false, Action<double> progress = null);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CFtpService : IFtpService {
 
         private readonly ILogger<CFtpService> _logger;

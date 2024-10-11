@@ -21,6 +21,8 @@ using DinkToPdf.Contracts;
 
 using Newtonsoft.Json;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IConverterService {
@@ -35,6 +37,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CConverterService : IConverterService {
 
         private readonly IConverter _converter;

@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
@@ -41,6 +42,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task CreateAndSend(string subject, string body, MailAddress from, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null);
     }
 
+    [ScopedServiceRegistration]
     public sealed class CListMailServerRepository : CRepository, IListMailServerRepository {
 
         private readonly EnvVar _envVar;

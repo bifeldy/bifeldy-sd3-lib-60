@@ -17,6 +17,7 @@ using System.Reflection;
 
 using Microsoft.Extensions.Hosting;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 
@@ -34,6 +35,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string[] GetAllMacAddress();
     }
 
+    [SingletonServiceRegistration]
     public sealed class CApplicationService : IApplicationService {
 
         public DateTime? BuildTime {

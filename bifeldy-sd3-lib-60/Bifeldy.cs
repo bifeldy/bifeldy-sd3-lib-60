@@ -225,21 +225,6 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton<IConverter>(sp => {
                 return new SynchronizedConverter(new PdfTools());
             });
-            _ = Services.AddSingleton<IApplicationService, CApplicationService>();
-            _ = Services.AddSingleton<IGlobalService, CGlobalService>();
-            _ = Services.AddSingleton<IConverterService, CConverterService>();
-            _ = Services.AddSingleton<ICsvService, CCsvService>();
-            _ = Services.AddSingleton<IZipService, CZipService>();
-            _ = Services.AddSingleton<IHttpService, CHttpService>();
-            _ = Services.AddSingleton<IFtpService, CFtpService>();
-            _ = Services.AddSingleton<IBerkasService, CBerkasService>();
-            _ = Services.AddSingleton<ISftpService, CSftpService>();
-            _ = Services.AddSingleton<IStreamService, CStreamService>();
-            _ = Services.AddSingleton<IChiperService, CChiperService>();
-            _ = Services.AddSingleton<ILockerService, CLockerService>();
-            _ = Services.AddSingleton<IPubSubService, CPubSubService>();
-            _ = Services.AddSingleton<IKafkaService, CKafkaService>();
-            _ = Services.AddSingleton<IRdlcService, CRdlcService>();
         }
 
         /* ** */

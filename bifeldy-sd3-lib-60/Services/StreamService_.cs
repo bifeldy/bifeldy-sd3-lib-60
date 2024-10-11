@@ -14,6 +14,7 @@
 using System.IO.Compression;
 using System.Text;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -26,6 +27,7 @@ namespace bifeldy_sd3_lib_60.Services {
         MemoryStream ReadFileAsBinaryStream(string filePath, int maxChunk = 1024);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CStreamService : IStreamService {
 
         public CStreamService() {

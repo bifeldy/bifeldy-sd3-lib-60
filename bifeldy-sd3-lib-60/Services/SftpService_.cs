@@ -16,6 +16,8 @@ using Microsoft.Extensions.Logging;
 using Renci.SshNet;
 using Renci.SshNet.Sftp;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface ISftpService {
@@ -24,6 +26,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string[] GetDirectoryList(string hostname, int port, string username, string password, string remotePath);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CSftpService : ISftpService {
 
         private readonly ILogger<CSftpService> _logger;

@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
@@ -35,6 +36,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task LogoutUser();
     }
 
+    [ScopedServiceRegistration]
     public sealed class CUserRepository : CRepository, IUserRepository {
 
         private readonly AuthenticationStateProvider _asp;

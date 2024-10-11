@@ -11,11 +11,14 @@
  * 
  */
 
+using System.Dynamic;
+
 using Microsoft.Extensions.Logging;
 
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
-using System.Dynamic;
+
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -39,6 +42,7 @@ namespace bifeldy_sd3_lib_60.Services {
         void CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, Action<Message<string, T>> execLambda = null, string pubSubName = null, CancellationToken stoppingToken = default);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CKafkaService : IKafkaService {
 
         private readonly ILogger<CKafkaService> _logger;

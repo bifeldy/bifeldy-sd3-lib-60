@@ -17,6 +17,8 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
@@ -32,6 +34,7 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CHttpService : IHttpService {
 
         private readonly IConverterService _cs;

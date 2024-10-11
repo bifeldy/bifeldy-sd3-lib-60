@@ -15,6 +15,8 @@ using System.Dynamic;
 
 using System.Reactive.Subjects;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IPubSubService {
@@ -26,6 +28,7 @@ namespace bifeldy_sd3_lib_60.Services {
         List<string> ListAllKeys();
     }
 
+    [SingletonServiceRegistration]
     public sealed class CPubSubService : IPubSubService {
 
         private readonly IConverterService _converter;

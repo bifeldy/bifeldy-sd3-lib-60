@@ -16,6 +16,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -32,6 +33,7 @@ namespace bifeldy_sd3_lib_60.Services {
         bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CBerkasService : IBerkasService {
 
         private readonly EnvVar _envVar;

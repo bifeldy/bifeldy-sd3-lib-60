@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
@@ -32,6 +33,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<API_TOKEN_T> LoginBot(string userName, string password);
     }
 
+    [ScopedServiceRegistration]
     public sealed class CApiTokenRepository : CRepository, IApiTokenRepository {
 
         private readonly IApplicationService _as;

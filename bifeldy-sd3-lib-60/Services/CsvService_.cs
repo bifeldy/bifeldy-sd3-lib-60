@@ -20,6 +20,7 @@ using Microsoft.Extensions.Options;
 
 using ChoETL;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Extensions;
 
@@ -32,6 +33,7 @@ namespace bifeldy_sd3_lib_60.Services {
         List<T> Csv2List<T>(string filePath, string delimiter = ",", List<CCsvColumn> csvColumn = null);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CCsvService : ICsvService {
 
         private readonly EnvVar _envVar;

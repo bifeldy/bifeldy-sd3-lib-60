@@ -26,6 +26,8 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaProducer : BackgroundService {
 
+        private readonly IServiceScope _scopedService;
+
         private readonly ILogger<CKafkaProducer> _logger;
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
@@ -64,8 +66,8 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             this._kafka = serviceProvider.GetRequiredService<IKafkaService>();
             this._locker = serviceProvider.GetRequiredService<ILockerService>();
 
-            IServiceScope scopedService = serviceProvider.CreateScope();
-            this._generalRepo = scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
+            this._scopedService = serviceProvider.CreateScope();
+            this._generalRepo = this._scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
             this._hostPort = hostPort;
             this._topicName = topicName;
@@ -80,14 +82,13 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         public override void Dispose() {
             this.producer?.Dispose();
             this.kafkaSubs?.Dispose();
-            this._pubSub.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
+            this._pubSub?.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
+            this._scopedService?.Dispose();
             base.Dispose();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
-                await Task.Yield();
-
                 if (this._excludeJenisDc != null) {
                     string jenisDc = await _generalRepo.GetJenisDc();
                     if (this._excludeJenisDc.Contains(jenisDc)) {

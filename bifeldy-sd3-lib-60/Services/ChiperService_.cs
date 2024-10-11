@@ -23,6 +23,7 @@ using Microsoft.IdentityModel.Tokens;
 
 using Ionic.Crc;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 
@@ -45,6 +46,7 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<bool> VerifyText(string signature, string textMessage);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CChiperService : IChiperService {
 
         private readonly EnvVar _envVar;

@@ -30,6 +30,7 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<RequestJson> GetRequestBody(HttpRequest request);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CGlobalService : IGlobalService {
 
         private readonly ILogger<CGlobalService> _logger;

@@ -11,6 +11,8 @@
  * 
  */
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface ILockerService {
@@ -18,6 +20,7 @@ namespace bifeldy_sd3_lib_60.Services {
         SemaphoreSlim SemaphoreGlobalApp(string name, int initialCount = 1, int maximumCount = 1);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CLockerService : ILockerService {
 
         private readonly IDictionary<string, SemaphoreSlim> semaphore_global_app = new Dictionary<string, SemaphoreSlim>();

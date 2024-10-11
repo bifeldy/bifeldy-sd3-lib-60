@@ -27,7 +27,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             Type singletonRegistration = typeof(SingletonServiceRegistrationAttribute);
             Type transientRegistration = typeof(TransientServiceRegistrationAttribute);
 
-            var types = Assembly.GetEntryAssembly().GetTypes()
+            var libTypes = Assembly.GetExecutingAssembly().GetTypes()
                 .Where(p => (p.IsDefined(scopedRegistration, true) || p.IsDefined(transientRegistration, true) || p.IsDefined(singletonRegistration, true)) && !p.IsInterface)
                 .Select(cls => {
                     // CNamaKelas => INamaKelas
@@ -42,6 +42,22 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     };
                 }).Where(x => x.Service != null);
 
+            var prgAsmTypes = Assembly.GetEntryAssembly().GetTypes()
+                .Where(p => (p.IsDefined(scopedRegistration, true) || p.IsDefined(transientRegistration, true) || p.IsDefined(singletonRegistration, true)) && !p.IsInterface)
+                .Select(cls => {
+                    // CNamaKelas => INamaKelas
+                    string iName = cls.Name;
+                    if (iName.ToUpper().StartsWith("C")) {
+                        iName = iName[1..];
+                    }
+
+                    return new {
+                        Service = cls.GetInterface($"I{iName}"),
+                        Implementation = cls
+                    };
+                }).Where(x => x.Service != null);
+
+            var types = libTypes.Concat(prgAsmTypes).ToArray();
             foreach (var type in types) {
                 if (type.Implementation.IsDefined(scopedRegistration, false)) {
                     _ = services.AddScoped(type.Service, type.Implementation);

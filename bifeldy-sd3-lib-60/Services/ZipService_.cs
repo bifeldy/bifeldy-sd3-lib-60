@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using Ionic.Zip;
 using Ionic.Zlib;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -27,6 +28,7 @@ namespace bifeldy_sd3_lib_60.Services {
         int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputPath = null);
     }
 
+    [SingletonServiceRegistration]
     public sealed class CZipService : IZipService {
 
         private readonly EnvVar _envVar;
