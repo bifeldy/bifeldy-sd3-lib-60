@@ -18,7 +18,20 @@ namespace bifeldy_sd3_lib_60.Models {
 
         protected static string GetEnvVar(string key) => Environment.GetEnvironmentVariable(key);
 
-        private bool isUsingPostgres = true;
+        private bool dotnetRunningInContainer = false;
+        public bool DOTNET_RUNNING_IN_CONTAINER {
+            get {
+                string docker = GetEnvVar("DOTNET_RUNNING_IN_CONTAINER");
+                if (!string.IsNullOrEmpty(docker)) {
+                    this.dotnetRunningInContainer = bool.Parse(docker);
+                }
+
+                return this.dotnetRunningInContainer;
+            }
+            set => this.dotnetRunningInContainer = value;
+        }
+
+        private bool isUsingPostgres = false;
         public bool IS_USING_POSTGRES {
             get {
                 string dbPgEnv = GetEnvVar("IS_USING_POSTGRES");

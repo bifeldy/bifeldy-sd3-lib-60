@@ -138,7 +138,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                     await this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).WaitAsync(stoppingToken);
                     Message<string, string>[] cpMsgs = this.msgs.ToArray();
                     this.msgs.Clear();
-                    _ = this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).Release();
                     foreach (Message<string, string> msg in cpMsgs) {
                         try {
                             _ = await this.producer.ProduceAsync(this._topicName, msg, stoppingToken);
@@ -148,6 +147,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         }
                     }
 
+                    _ = this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).Release();
                     Thread.Sleep(1000);
                 }
             }
