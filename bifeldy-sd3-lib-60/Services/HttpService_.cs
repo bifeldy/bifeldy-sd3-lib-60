@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Mvc;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
-using System.Net.Mime;
 
 namespace bifeldy_sd3_lib_60.Services {
 
