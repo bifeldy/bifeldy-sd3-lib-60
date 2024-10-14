@@ -183,28 +183,6 @@ namespace bifeldy_sd3_lib_60.Services {
                 )
             );
 
-            KeyValuePair<string, IEnumerable<string>>[] hdrContentListRes = res.Headers.Union(res.Content.Headers).ToArray();
-            string[] hdrListRes = this.ProhibitedHeaders.Union(this.ResponseHeadersToRemove).ToArray();
-            foreach (KeyValuePair<string, IEnumerable<string>> header in hdrContentListRes) {
-                bool isOk = true;
-                foreach (string hl in hdrListRes) {
-                    string h = hl.ToLower();
-                    string hdrKey = header.Key.ToLower();
-                    if (h.EndsWith("*")) {
-                        if (hdrKey.StartsWith(h.Split("*")[0])) {
-                            isOk = false;
-                        }
-                    }
-                    else if (hdrKey == h) {
-                        isOk = false;
-                    }
-                }
-
-                if (isOk) {
-                    response.Headers[header.Key] = header.Value.ToArray();
-                }
-            }
-
             int statusCode = (int) res.StatusCode;
 
             response.Clear();
@@ -227,6 +205,28 @@ namespace bifeldy_sd3_lib_60.Services {
                 });
             }
             else {
+                KeyValuePair<string, IEnumerable<string>>[] hdrContentListRes = res.Headers.Union(res.Content.Headers).ToArray();
+                string[] hdrListRes = this.ProhibitedHeaders.Union(this.ResponseHeadersToRemove).ToArray();
+                foreach (KeyValuePair<string, IEnumerable<string>> header in hdrContentListRes) {
+                    bool isOk = true;
+                    foreach (string hl in hdrListRes) {
+                        string h = hl.ToLower();
+                        string hdrKey = header.Key.ToLower();
+                        if (h.EndsWith("*")) {
+                            if (hdrKey.StartsWith(h.Split("*")[0])) {
+                                isOk = false;
+                            }
+                        }
+                        else if (hdrKey == h) {
+                            isOk = false;
+                        }
+                    }
+
+                    if (isOk) {
+                        response.Headers[header.Key] = header.Value.ToArray();
+                    }
+                }
+
                 await res.Content.CopyToAsync(response.Body);
             }
 
