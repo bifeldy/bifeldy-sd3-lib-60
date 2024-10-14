@@ -18,11 +18,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Models;
+using System.Net.Mime;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
-        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response);
+        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false);
         Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null);
         Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null);
@@ -146,7 +148,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return httpRequestMessage;
         }
 
-        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response) {
+        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false) {
             string[] hdrListReq = this.ProhibitedHeaders.Union(this.RequestHeadersToRemove).ToArray();
             var lsHeader = new List<Tuple<string, string>>();
             foreach (KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues> header in request.Headers) {
@@ -181,7 +183,6 @@ namespace bifeldy_sd3_lib_60.Services {
                 )
             );
 
-            response.Clear();
             KeyValuePair<string, IEnumerable<string>>[] hdrContentListRes = res.Headers.Union(res.Content.Headers).ToArray();
             string[] hdrListRes = this.ProhibitedHeaders.Union(this.ResponseHeadersToRemove).ToArray();
             foreach (KeyValuePair<string, IEnumerable<string>> header in hdrContentListRes) {
@@ -204,8 +205,30 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            response.StatusCode = (int) res.StatusCode;
-            await res.Content.CopyToAsync(response.Body);
+            int statusCode = (int) res.StatusCode;
+
+            response.Clear();
+            response.StatusCode = statusCode;
+
+            if (statusCode == 404 && (isApiEndpoint || urlTarget.Contains("/api/"))) {
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
+                    info = "404 - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
+                    result = new ResponseJsonError() {
+                        message = $"Silahkan Periksa Kembali Dokumentasi API"
+                    }
+                });
+            }
+            else if (statusCode == 502) {
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
+                    info = "502 - Whoops :: Alamat Server Tujuan Tidak Tersedia",
+                    result = new ResponseJsonError() {
+                        message = $"Silahkan Hubungi S/SD 3 Untuk informasi Lebih Lanjut"
+                    }
+                });
+            }
+            else {
+                await res.Content.CopyToAsync(response.Body);
+            }
 
             // Soalnya Stream Body ~
             return null;
