@@ -261,7 +261,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                result = await databaseCommand.ExecuteNonQueryAsync() >= 0;
+                result = await databaseCommand.ExecuteNonQueryAsync() > 0;
             }
             catch (Exception ex) {
                 this._logger.LogError("[EXEC_QUERY] {ex}", ex.Message);
