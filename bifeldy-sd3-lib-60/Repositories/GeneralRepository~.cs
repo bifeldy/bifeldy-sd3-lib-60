@@ -287,7 +287,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 throw new TidakMemenuhiException("Khusus HO!");
             }
 
-            DataTable dt = await this._orapg.GetDataTableAsync($@"
+            List<ListApiDc> listApiDcs = await this._orapg.GetListAsync<ListApiDc>($@"
                 SELECT
                     a.dc_kode,
                     a.ip_nginx,
@@ -305,7 +305,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                 new() { NAME = "kode_dc", VALUE = dcKode.ToUpper() }
             });
-            var listApiDcs = dt.ToList<ListApiDc>();
 
             ListApiDc dbi = listApiDcs.FirstOrDefault();
             string hostApiDc = string.IsNullOrEmpty(dbi?.API_HOST) ? dbi?.IP_NGINX : dbi?.API_HOST;
