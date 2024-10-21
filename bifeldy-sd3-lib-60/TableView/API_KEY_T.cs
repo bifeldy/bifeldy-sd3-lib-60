@@ -22,6 +22,7 @@ namespace bifeldy_sd3_lib_60.TableView {
         [Key][JsonIgnore] public string KEY { set; get; }
         public string IP_ORIGIN { set; get; }
         [Key] public string APP_NAME { set; get; }
+        public string KETER { set; get; }
     }
 
 }

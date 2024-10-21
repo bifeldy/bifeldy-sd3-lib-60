@@ -46,4 +46,12 @@ namespace bifeldy_sd3_lib_60.Models {
         [JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
     }
 
+    // Untuk Turunan
+    // Kosongan Bisa Buat Kirim JWT Via Body (POST, PUT, PATCH)
+    public class InputJson : RequestJson { }
+
+    public class InputJsonDc : InputJson {
+        public string kode_dc { get; set; }
+    }
+
 }
