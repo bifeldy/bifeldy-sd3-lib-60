@@ -54,4 +54,8 @@ namespace bifeldy_sd3_lib_60.Models {
         public string kode_dc { get; set; }
     }
 
+    public class InputJsonDcPingPong : InputJsonDc {
+        public string version { get; set; }
+    }
+
 }

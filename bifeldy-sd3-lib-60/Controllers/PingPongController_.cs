@@ -44,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [HttpPut]
         [SwaggerOperation(Summary = "Untuk test Ping-Pong saja")]
         public async Task<IActionResult> PingPong(
-            [FromBody, SwaggerParameter("JSON body yang berisi kode gudang", Required = false)] InputJsonDc fd
+            [FromBody, SwaggerParameter("JSON body yang berisi kode gudang", Required = false)] InputJsonDcPingPong fd
         ) {
             string ipOrigin = this._gs.CleanIpOrigin(
                 this._gs.GetIpOriginData(
@@ -54,14 +54,15 @@ namespace bifeldy_sd3_lib_60.Controllers {
             );
 
             string kodeDc = await this._generalRepo.GetKodeDc();
-            if (!string.IsNullOrEmpty(fd?.kode_dc) && kodeDc == "DCHO") {
+            if (fd != null && kodeDc == "DCHO") {
                 _ = await _orapg.ExecQueryAsync($@"
-                    INSERT INTO api_ping_t (dc_kode, ip_origin, last_online)
-                    VALUES (:dc_kode, ip_origin, last_online)
+                    INSERT INTO api_ping_t (dc_kode, ip_origin, last_online, version)
+                    VALUES (:dc_kode, :ip_origin, :last_online, :version)
                 ", new List<CDbQueryParamBind>() {
                     new() { NAME = "dc_kode", VALUE = fd.kode_dc.ToUpper() },
                     new() { NAME = "ip_origin", VALUE = ipOrigin },
-                    new() { NAME = "last_online", VALUE = DateTime.Now }
+                    new() { NAME = "last_online", VALUE = DateTime.Now },
+                    new() { NAME = "version", VALUE = fd.version }
                 });
             }
 
