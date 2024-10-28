@@ -26,8 +26,6 @@ using Ionic.Crc;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
-using Serilog.Formatting.Raw;
-using System.IO;
 
 namespace bifeldy_sd3_lib_60.Services {
 
