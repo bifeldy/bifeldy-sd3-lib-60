@@ -26,6 +26,8 @@ using Ionic.Crc;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
+using Serilog.Formatting.Raw;
+using System.IO;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -40,8 +42,10 @@ namespace bifeldy_sd3_lib_60.Services {
         string HashText(string textMessage);
         string EncodeJWT(UserApiSession userSession, ulong expiredNextMilliSeconds = 60 * 60 * 1000 * 1);
         IEnumerable<Claim> DecodeJWT(string token);
+        Task<string> SignFile(string filePath);
         Task<string> SignByte(byte[] data);
         Task<string> SignText(string textMessage);
+        Task<bool> VerifyFile(string signature, string filePath);
         Task<bool> VerifyByte(string signature, byte[] data);
         Task<bool> VerifyText(string signature, string textMessage);
     }
@@ -291,17 +295,33 @@ namespace bifeldy_sd3_lib_60.Services {
             return rsa;
         }
 
-        public async Task<string> SignByte(byte[] data) {
+        private async Task<string> RsaSign(Func<SHA256, RSAPKCS1SignatureFormatter, Task<string>> callback) {
             using (var alg = SHA256.Create()) {
                 using (RSA rsa = await this.GenerateAndLoadRsa()) {
                     var rsaFormatter = new RSAPKCS1SignatureFormatter(rsa);
                     rsaFormatter.SetHashAlgorithm(nameof(SHA256));
+                    return await callback(alg, rsaFormatter);
+                }
+            }
+        }
 
-                    byte[] hash = alg.ComputeHash(data);
+        public async Task<string> SignFile(string filePath) {
+            return await this.RsaSign(async (alg, rsaFormatter) => {
+                using (FileStream stream = File.OpenRead(filePath)) {
+                    byte[] hash = await alg.ComputeHashAsync(stream);
                     byte[] signHash = rsaFormatter.CreateSignature(hash);
                     return signHash.ToStringHex();
                 }
-            }
+            });
+        }
+
+        public async Task<string> SignByte(byte[] data) {
+            return await this.RsaSign(async (alg, rsaFormatter) => {
+                byte[] hash = alg.ComputeHash(data);
+                byte[] signHash = rsaFormatter.CreateSignature(hash);
+                string signedHash = signHash.ToStringHex();
+                return await Task.FromResult(signedHash);
+            });
         }
 
         public async Task<string> SignText(string textMessage) {
@@ -309,17 +329,33 @@ namespace bifeldy_sd3_lib_60.Services {
             return await this.SignByte(data);
         }
 
-        public async Task<bool> VerifyByte(string signature, byte[] data) {
+        private async Task<bool> RsaVerify(Func<SHA256, RSAPKCS1SignatureDeformatter, Task<bool>> callback) {
             using (var alg = SHA256.Create()) {
                 using (RSA rsa = await this.GenerateAndLoadRsa()) {
-                    byte[] hash = alg.ComputeHash(data);
-                    byte[] signHash = signature.ParseHexTextToByte();
-
                     var rsaDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
                     rsaDeformatter.SetHashAlgorithm(nameof(SHA256));
-                    return rsaDeformatter.VerifySignature(hash, signHash);
+                    return await callback(alg, rsaDeformatter);
                 }
             }
+        }
+
+        public async Task<bool> VerifyFile(string signature, string filePath) {
+            return await this.RsaVerify(async (alg, rsaDeformatter) => {
+                using (FileStream stream = File.OpenRead(filePath)) {
+                    byte[] hash = await alg.ComputeHashAsync(stream);
+                    byte[] signHash = signature.ParseHexTextToByte();
+                    return rsaDeformatter.VerifySignature(hash, signHash);
+                }
+            });
+        }
+
+        public async Task<bool> VerifyByte(string signature, byte[] data) {
+            return await this.RsaVerify(async (alg, rsaDeformatter) => {
+                byte[] hash = alg.ComputeHash(data);
+                byte[] signHash = signature.ParseHexTextToByte();
+                bool isVerified = rsaDeformatter.VerifySignature(hash, signHash);
+                return await Task.FromResult(isVerified);
+            });
         }
 
         public async Task<bool> VerifyText(string signature, string textMessage) {
