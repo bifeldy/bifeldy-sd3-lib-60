@@ -25,7 +25,6 @@ using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Exceptions;
-using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
@@ -41,6 +40,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
         Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
         Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback);
+        Task<string> GetDataDcHoApiUrlBase(string apiPath);
     }
 
     [ScopedServiceRegistration]
@@ -356,6 +356,43 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
                 Callback(null, uriBuilder.Uri);
             }
+        }
+
+        public async Task<string> GetDataDcHoApiUrlBase(string apiPath) {
+            //
+            // http://xxx.xxx.xxx.xxx/{AppName}/api?secret=*********
+            //
+            string apiDataDcBase = await this._orapg.ExecScalarAsync<string>($@"
+                SELECT web_url
+                FROM dc_webservice_t
+                WHERE web_type = 'DATADC_API_URL_BASE'
+            ");
+            if (string.IsNullOrEmpty(apiDataDcBase)) {
+                throw new Exception("API URL Web Service 'DATADC_API_URL_BASE' Tidak Tersedia");
+            }
+
+            var baseUri = new Uri(apiDataDcBase);
+            NameValueCollection baseQuery = HttpUtility.ParseQueryString(baseUri.Query);
+
+            string url = $"{baseUri.Scheme}://";
+            if (!string.IsNullOrEmpty(baseUri.UserInfo)) {
+                url += $"{baseUri.UserInfo}@";
+            }
+
+            url += $"{baseUri.Host}:{baseUri.Port}";
+
+            var apiUri = new Uri(apiPath);
+            NameValueCollection apiQuery = HttpUtility.ParseQueryString(apiUri.Query);
+
+            foreach (string aq in baseQuery.AllKeys) {
+                apiQuery.Set(aq, baseQuery.Get(aq));
+            }
+
+            var uriBuilder = new UriBuilder(url) {
+                Path = $"{baseUri.AbsolutePath}{apiUri.AbsolutePath}",
+                Query = apiQuery.ToString()
+            };
+            return uriBuilder.ToString();
         }
 
     }
