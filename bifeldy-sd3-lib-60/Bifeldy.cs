@@ -193,7 +193,7 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void LoadConfig() => Services.Configure<EnvVar>(Config.GetSection("ENV"));
 
-        public static void AddDependencyInjection(bool isBlazorWebApp = false) {
+        public static void AddDependencyInjection(bool isBlazorWebApp = true) {
             _ = Services.AddHttpContextAccessor();
 
             // --
