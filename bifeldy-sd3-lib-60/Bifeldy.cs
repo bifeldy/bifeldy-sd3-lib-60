@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,11 +38,10 @@ using Serilog.Events;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Backgrounds;
+using bifeldy_sd3_lib_60.Converters;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Repositories;
-using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
 namespace bifeldy_sd3_lib_60 {
@@ -72,6 +72,10 @@ namespace bifeldy_sd3_lib_60 {
             Builder = builder;
             Services = builder.Services;
             Config = builder.Configuration;
+            //
+            _ = Services.Configure<JsonOptions>(opt => {
+                opt.SerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
+            });
         }
 
         public static void InitApp(WebApplication app) => App = app;

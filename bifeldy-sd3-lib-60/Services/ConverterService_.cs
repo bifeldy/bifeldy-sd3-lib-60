@@ -22,6 +22,7 @@ using DinkToPdf.Contracts;
 using Newtonsoft.Json;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Converters;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -29,11 +30,11 @@ namespace bifeldy_sd3_lib_60.Services {
         byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument);
         byte[] ImageToByte(Image x);
         Image ByteToImage(byte[] byteArray);
-        T JsonToObject<T>(string j2o);
+        T JsonToObject<T>(string j2o, JsonSerializerSettings settings = null);
         string JsonToXml(string json);
-        string ObjectToJson(object body);
+        string ObjectToJson(object body, JsonSerializerSettings settings = null);
         string XmlToJson(string xml);
-        T XmlJsonToObject<T>(string type, string text);
+        T XmlJsonToObject<T>(string type, string text, JsonSerializerSettings settings = null);
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
     }
 
@@ -54,9 +55,23 @@ namespace bifeldy_sd3_lib_60.Services {
         [SupportedOSPlatform("windows")]
         public Image ByteToImage(byte[] byteArray) => (Bitmap) new ImageConverter().ConvertFrom(byteArray);
 
-        public T JsonToObject<T>(string j2o) => JsonConvert.DeserializeObject<T>(j2o);
+        public T JsonToObject<T>(string j2o, JsonSerializerSettings settings = null) {
+            settings ??= new JsonSerializerSettings {
+                Converters = new[] {
+                    new DecimalNewtonsoftJsonConverter()
+                }
+            };
+            return JsonConvert.DeserializeObject<T>(j2o, settings);
+        }
 
-        public string ObjectToJson(object o2j) => JsonConvert.SerializeObject(o2j);
+        public string ObjectToJson(object o2j, JsonSerializerSettings settings = null) {
+            settings ??= new JsonSerializerSettings {
+                Converters = new[] {
+                    new DecimalNewtonsoftJsonConverter()
+                }
+            };
+            return JsonConvert.SerializeObject(o2j, settings);
+        }
 
         public string XmlToJson(string xml) {
             var xdoc = XDocument.Parse(xml);
@@ -66,13 +81,13 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string JsonToXml(string json) => JsonConvert.DeserializeXmlNode(json, "root").ToString();
 
-        public T XmlJsonToObject<T>(string type, string text) {
+        public T XmlJsonToObject<T>(string type, string text, JsonSerializerSettings settings = null) {
             switch (type) {
                 case MediaTypeNames.Application.Xml:
                     text = this.XmlToJson(text);
                     goto case MediaTypeNames.Application.Json;
                 case MediaTypeNames.Application.Json:
-                    return this.JsonToObject<T>(text);
+                    return this.JsonToObject<T>(text, settings);
                 default:
                     throw new NotImplementedException("No Type Available!");
             }
