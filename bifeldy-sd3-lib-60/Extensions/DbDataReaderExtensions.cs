@@ -23,18 +23,18 @@ namespace bifeldy_sd3_lib_60.Extensions {
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             if (dr.HasRows) {
-                var cols = new Dictionary<string, int>();
-                for (int i = 0; i < dr.FieldCount; i++) {
-                    cols[dr.GetName(i).ToUpper()] = i;
-                }
-
                 while (dr.Read()) {
+                    var cols = new Dictionary<string, object>();
+                    for (int i = 0; i < dr.FieldCount; i++) {
+                        cols[dr.GetName(i).ToUpper()] = dr.IsDBNull(i) ? null : dr.GetValue(i);
+                    }
+
                     T objT = Activator.CreateInstance<T>();
                     foreach (PropertyInfo pro in properties) {
                         try {
-                            int ordinal = cols[pro.Name.ToUpper()];
-                            if (!dr.IsDBNull(ordinal)) {
-                                pro.SetValue(objT, dr.GetValue(ordinal));
+                            object obj = cols[pro.Name.ToUpper()];
+                            if (obj != null) {
+                                pro.SetValue(objT, obj);
                             }
                         }
                         catch {

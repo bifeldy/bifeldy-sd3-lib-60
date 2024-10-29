@@ -43,7 +43,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
-        Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
+        Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
         Task<string> BulkGetCsv(string rawQuery, string delimiter, string filename, string outputPath = null);
@@ -256,12 +256,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand) {
+        protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false) {
             bool result = false;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                result = await databaseCommand.ExecuteNonQueryAsync() > 0;
+                int res = await databaseCommand.ExecuteNonQueryAsync();
+                result = shouldEqualMinRowsAffected ? res == minRowsAffected : res >= minRowsAffected;
             }
             catch (Exception ex) {
                 this._logger.LogError("[EXEC_QUERY] {ex}", ex.Message);
@@ -430,7 +431,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
-        public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
+        public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
         public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);

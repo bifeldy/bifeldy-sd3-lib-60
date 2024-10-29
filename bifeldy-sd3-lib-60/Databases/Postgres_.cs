@@ -160,12 +160,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.ExecScalarAsync<T>(cmd);
         }
 
-        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
+        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false) {
             var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.ExecQueryAsync(cmd);
+            return await this.ExecQueryAsync(cmd, minRowsAffected, shouldEqualMinRowsAffected);
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
