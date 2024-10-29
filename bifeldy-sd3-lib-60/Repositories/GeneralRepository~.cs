@@ -40,7 +40,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
         Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
         Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback);
-        Task<string> GetDataDcHoApiUrlBase(string apiPath);
+        Task<string> GetAppHoApiUrlBase(string apiPath);
     }
 
     [ScopedServiceRegistration]
@@ -358,20 +358,21 @@ namespace bifeldy_sd3_lib_60.Repositories {
             }
         }
 
-        public async Task<string> GetDataDcHoApiUrlBase(string apiPath) {
+        public async Task<string> GetAppHoApiUrlBase(string apiPath) {
             //
-            // http://xxx.xxx.xxx.xxx/{AppName}/api?secret=*********
+            // http://xxx.xxx.xxx.xxx/{appNameAsPath}/api?secret=*********
             //
-            string apiDataDcBase = await this._orapg.ExecScalarAsync<string>($@"
+            string appNameAsPath = this._as.AppName.ToUpper();
+            string apiUrl = await this._orapg.ExecScalarAsync<string>($@"
                 SELECT web_url
                 FROM dc_webservice_t
-                WHERE web_type = 'DATADC_API_URL_BASE'
+                WHERE web_type = '{appNameAsPath}_API_URL_BASE'
             ");
-            if (string.IsNullOrEmpty(apiDataDcBase)) {
-                throw new Exception("API URL Web Service 'DATADC_API_URL_BASE' Tidak Tersedia");
+            if (string.IsNullOrEmpty(apiUrl)) {
+                throw new Exception($"API URL Web Service '{appNameAsPath}_API_URL_BASE' Tidak Tersedia");
             }
 
-            var baseUri = new Uri(apiDataDcBase);
+            var baseUri = new Uri(apiUrl);
             NameValueCollection baseQuery = HttpUtility.ParseQueryString(baseUri.Query);
 
             string url = $"{baseUri.Scheme}://";
