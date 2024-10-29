@@ -56,6 +56,17 @@ namespace bifeldy_sd3_lib_60.Controllers {
             string kodeDc = await this._generalRepo.GetKodeDc();
             if (fd != null && kodeDc == "DCHO") {
                 _ = await _orapg.ExecQueryAsync($@"
+                    DELETE FROM api_ping_t
+                    WHERE
+                        dc_kode = :dc_kode
+                        AND ip_origin = :ip_origin
+                        AND version = :version
+                ", new List<CDbQueryParamBind>() {
+                    new() { NAME = "dc_kode", VALUE = fd.kode_dc.ToUpper() },
+                    new() { NAME = "ip_origin", VALUE = ipOrigin },
+                    new() { NAME = "version", VALUE = fd.version }
+                });
+                _ = await _orapg.ExecQueryAsync($@"
                     INSERT INTO api_ping_t (dc_kode, ip_origin, last_online, version)
                     VALUES (:dc_kode, :ip_origin, :last_online, :version)
                 ", new List<CDbQueryParamBind>() {
