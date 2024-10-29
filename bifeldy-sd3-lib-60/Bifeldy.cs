@@ -193,7 +193,7 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void LoadConfig() => Services.Configure<EnvVar>(Config.GetSection("ENV"));
 
-        public static void AddDependencyInjection(bool isWebMvcNotBlazor = false) {
+        public static void AddDependencyInjection(bool isBlazorWebApp = false) {
             _ = Services.AddHttpContextAccessor();
 
             // --
@@ -209,8 +209,8 @@ namespace bifeldy_sd3_lib_60 {
                 return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<IPostgres>() : sp.GetRequiredService<IOracle>();
             });
 
-            if (isWebMvcNotBlazor) {
-                throw new NotImplementedException("Untuk Versi WebMVC Masih Belum Tersedia ...");
+            if (!isBlazorWebApp) {
+                throw new NotImplementedException("Untuk Versi ASP.NET WebMVC Masih Belum Tersedia ...");
             }
             else {
                 _ = Services.AddScoped<ProtectedSessionStorage>();
