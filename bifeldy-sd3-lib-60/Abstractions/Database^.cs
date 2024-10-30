@@ -320,7 +320,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<List<string>> RetrieveBlob(DbCommand databaseCommand, string stringPathDownload, string stringFileName) {
+        protected virtual async Task<List<string>> RetrieveBlob(DbCommand databaseCommand, string stringPathDownload, string stringFileName = null) {
             var result = new List<string>();
             Exception exception = null;
             try {
