@@ -12,7 +12,7 @@
  */
 
 using System.Data;
-using System.Data.Common;
+using System.Reflection;
 using System.Text;
 
 using Microsoft.Extensions.Logging;
@@ -54,6 +54,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
+        // Posisi Kolom CSV Start Dari 1 Bukan 0
         private ChoCSVReader<dynamic> ChoEtlSetupCsv(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
             if (csvColumn == null || csvColumn?.Count <= 0) {
                 throw new Exception("Daftar Kolom Harus Di Isi");
@@ -93,8 +94,33 @@ namespace bifeldy_sd3_lib_60.Services {
         public List<T> Csv2List<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
             csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
             using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
-                using (var rdr = (DbDataReader) csv.AsDataReader()) {
-                    return rdr.ToList<T>();
+                using (IDataReader dr = csv.AsDataReader()) {
+                    var ls = new List<T>();
+                    PropertyInfo[] properties = typeof(T).GetProperties();
+
+                    while (dr.Read()) {
+                        var cols = new Dictionary<string, object>();
+                        for (int i = 0; i < dr.FieldCount; i++) {
+                            cols[dr.GetName(i).ToUpper()] = dr.IsDBNull(i) ? null : dr.GetValue(i);
+                        }
+
+                        T objT = Activator.CreateInstance<T>();
+                        foreach (PropertyInfo pro in properties) {
+                            try {
+                                object obj = cols[pro.Name.ToUpper()];
+                                if (obj != null) {
+                                    pro.SetValue(objT, obj);
+                                }
+                            }
+                            catch {
+                                //
+                            }
+                        }
+
+                        ls.Add(objT);
+                    }
+
+                    return ls;
                 }
             }
         }
