@@ -37,9 +37,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
         List<MailAddress> CreateEmailAddress(string[] address);
         Attachment CreateEmailAttachment(string filePath);
         List<Attachment> CreateEmailAttachment(string[] filePath);
-        MailMessage CreateEmailMessage(string subject, string body, MailAddress from, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null);
-        Task SendEmailMessage(MailMessage mailMessage);
-        Task CreateAndSend(string subject, string body, MailAddress from, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null);
+        MailMessage CreateEmailMessage(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
+        Task SendEmailMessage(MailMessage mailMessage, bool paksaDariHo = false);
+        MailAddress GetDefaultBotSenderFromAddress();
+        Task CreateAndSend(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
     }
 
     [ScopedServiceRegistration]
@@ -48,6 +49,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private readonly EnvVar _envVar;
         private readonly ILogger<CListMailServerRepository> _logger;
 
+        private readonly IApplicationService _as;
         private readonly IOraPg _orapg;
 
         public CListMailServerRepository(
@@ -59,6 +61,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         ) : base(envVar, @as, orapg, mssql) {
             this._envVar = envVar.Value;
             this._logger = logger;
+            this._as = @as;
             this._orapg = orapg;
         }
 
@@ -91,17 +94,27 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         /* ** */
 
-        private async Task<SmtpClient> CreateSmtpClient() {
+        private async Task<SmtpClient> CreateSmtpClient(bool paksaDariHo = false) {
             string dcKode = await this.GetKodeDc();
             DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
-            int port = int.Parse(mailServer.MAIL_PORT);
+
+            string host = mailServer.MAIL_HOSTNAME;
+            string _port = mailServer.MAIL_PORT;
+            int port = string.IsNullOrEmpty(_port) ? 0 : int.Parse(_port);
+            string uname = mailServer.MAIL_USERNAME;
+            string upass = mailServer.MAIL_PASSWORD;
+
+            if (string.IsNullOrEmpty(host) || port <= 0 || string.IsNullOrEmpty(uname) || string.IsNullOrEmpty(upass) || paksaDariHo) {
+                host = this._envVar.SMTP_SERVER_IP_DOMAIN;
+                port = this._envVar.SMTP_SERVER_PORT;
+                uname = this._envVar.SMTP_SERVER_USERNAME;
+                upass = this._envVar.SMTP_SERVER_PASSWORD;
+            }
+
             return new SmtpClient() {
-                Host = mailServer.MAIL_HOSTNAME ?? this._envVar.SMTP_SERVER_IP_DOMAIN,
-                Port = (port > 0) ? port : this._envVar.SMTP_SERVER_PORT,
-                Credentials = new NetworkCredential(
-                    mailServer.MAIL_USERNAME ?? this._envVar.SMTP_SERVER_USERNAME,
-                    mailServer.MAIL_PASSWORD ?? this._envVar.SMTP_SERVER_PASSWORD
-                )
+                Host = host,
+                Port = port,
+                Credentials = new NetworkCredential(uname, upass)
             };
         }
 
@@ -129,21 +142,25 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return attachments;
         }
 
+        public MailAddress GetDefaultBotSenderFromAddress() {
+            return this.CreateEmailAddress("sd3@indomaret.co.id", $"[SD3_BOT] 📧 {this._as.AppName} v{this._as.AppVersion}");
+        }
+
         public MailMessage CreateEmailMessage(
             string subject,
             string body,
-            MailAddress from,
             List<MailAddress> to,
             List<MailAddress> cc = null,
             List<MailAddress> bcc = null,
-            List<Attachment> attachments = null
+            List<Attachment> attachments = null,
+            MailAddress from = null
         ) {
             var mailMessage = new MailMessage() {
                 Subject = subject,
                 SubjectEncoding = Encoding.UTF8,
                 Body = body,
                 BodyEncoding = Encoding.UTF8,
-                From = from,
+                From = from ?? this.GetDefaultBotSenderFromAddress(),
                 IsBodyHtml = true
             };
             foreach (MailAddress t in to) {
@@ -171,33 +188,34 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return mailMessage;
         }
 
-        public async Task SendEmailMessage(MailMessage mailMessage) {
-            SmtpClient smtpClient = await this.CreateSmtpClient();
+        public async Task SendEmailMessage(MailMessage mailMessage, bool paksaDariHo = false) {
+            SmtpClient smtpClient = await this.CreateSmtpClient(paksaDariHo);
             await smtpClient.SendMailAsync(mailMessage);
         }
 
         public async Task CreateAndSend(
             string subject,
             string body,
-            MailAddress from,
             List<MailAddress> to,
             List<MailAddress> cc = null,
             List<MailAddress> bcc = null,
-            List<Attachment> attachments = null
+            List<Attachment> attachments = null,
+            MailAddress from = null
         ) {
             Exception e = null;
             try {
-                await this.SendEmailMessage(
-                    this.CreateEmailMessage(
-                        subject,
-                        body,
-                        from,
-                        to,
-                        cc,
-                        bcc,
-                        attachments
-                    )
+                MailMessage mail = this.CreateEmailMessage(
+                    subject, body, to, cc, bcc, attachments,
+                    from ?? this.GetDefaultBotSenderFromAddress()
                 );
+                try {
+                    // Pakai Regional
+                    await this.SendEmailMessage(mail);
+                }
+                catch {
+                    // Via DCHO
+                    await this.SendEmailMessage(mail, true);
+                }
             }
             catch (Exception ex) {
                 this._logger.LogError("[SUREL_CREATE_AND_SEND] {ex}", ex.Message);

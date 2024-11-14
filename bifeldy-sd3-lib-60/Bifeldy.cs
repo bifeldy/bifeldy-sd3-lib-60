@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -356,6 +357,14 @@ namespace bifeldy_sd3_lib_60 {
 
                 await next();
             });
+        }
+
+        public static void UseForwardedHeaders() {
+            _ = App.UseForwardedHeaders(
+                new ForwardedHeadersOptions() {
+                    ForwardedHeaders = ForwardedHeaders.All
+                }
+            );
         }
 
         public static void UseHelmet() {
