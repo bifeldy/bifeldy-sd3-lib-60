@@ -5,6 +5,7 @@
     <RootNamespace>bifeldy_sd3_lib_60</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <Version>1.0.0.0</Version>
     <!--
       <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss:fffZ"))</SourceRevisionId>
     -->
