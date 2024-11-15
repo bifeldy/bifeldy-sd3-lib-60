@@ -20,21 +20,39 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         public static List<T> ToList<T>(this DataTable dt) {
             dt.CaseSensitive = false;
+
+            var ls = new List<T>();
             PropertyInfo[] properties = typeof(T).GetProperties();
 
-            return dt.AsEnumerable().Select(row => {
+            foreach (DataRow row in dt.Rows) {
+                var cols = new Dictionary<string, object>();
+                foreach (DataColumn col in dt.Columns) {
+                    string colName = col.ColumnName.ToUpper();
+                    if (row[colName] != DBNull.Value) {
+                        cols[colName] = row[colName];
+                    }
+                }
+
                 T objT = Activator.CreateInstance<T>();
                 foreach (PropertyInfo pro in properties) {
                     try {
-                        pro.SetValue(objT, row[pro.Name]);
+                        string key = pro.Name.ToUpper();
+                        if (cols.ContainsKey(key)) {
+                            object val = cols[key];
+                            if (val != null) {
+                                pro.SetValue(objT, val);
+                            }
+                        }
                     }
                     catch {
                         //
                     }
                 }
 
-                return objT;
-            }).ToList();
+                ls.Add(objT);
+            }
+
+            return ls;
         }
 
         public static void ToCsv(this DataTable dt, string separator, string outputFilePath = null) {
