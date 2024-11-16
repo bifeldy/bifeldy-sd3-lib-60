@@ -29,6 +29,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IMsSQL : IDatabase {
         CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName);
+        CMsSQL CloneConnection();
     }
 
     public sealed class CMsSQL : CDatabase, IMsSQL {
@@ -211,6 +212,13 @@ namespace bifeldy_sd3_lib_60.Databases {
         public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {
             var mssql = (CMsSQL) this.Clone();
             mssql.InitializeConnection(dbIpAddrss, dbUsername, dbPassword, dbName);
+            mssql.ReSetConnectionString();
+            return mssql;
+        }
+
+        public CMsSQL CloneConnection() {
+            var mssql = (CMsSQL) this.Clone();
+            mssql.InitializeConnection(this.DbIpAddrss, this.DbUsername, this.DbPassword, this.DbName);
             mssql.ReSetConnectionString();
             return mssql;
         }

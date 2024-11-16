@@ -34,6 +34,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IPostgres : IOraPg {
         CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName);
+        CPostgres CloneConnection();
     }
 
     public sealed class CPostgres : CDatabase, IPostgres {
@@ -74,7 +75,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.DbUsername = dbUsername ?? this._as.GetVariabel("UserPostgres", this._envVar.KUNCI_GXXX);
             this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordPostgres", this._envVar.KUNCI_GXXX);
             this.DbName = dbName ?? this._as.GetVariabel("DatabasePostgres", this._envVar.KUNCI_GXXX);
-            this.DbConnectionString = $"Host={this.DbIpAddrss};Port={this.DbPort};Username={this.DbUsername};Password={this.DbPassword};Database={this.DbName};Timeout=180;"; // 3 menit
+            this.DbConnectionString = $"Host={this.DbIpAddrss};Port={this.DbPort};Username={this.DbUsername};Password={this.DbPassword};Database={this.DbName};Timeout=180;ApplicationName={this._as.AppName}_{this._as.AppVersion};"; // 3 menit
         }
 
         protected override void BindQueryParameter(DbCommand cmd, List<CDbQueryParamBind> parameters) {
@@ -378,6 +379,13 @@ namespace bifeldy_sd3_lib_60.Databases {
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {
             var postgres = (CPostgres) this.Clone();
             postgres.InitializeConnection(dbIpAddrss, dbPort, dbUsername, dbPassword, dbName);
+            postgres.ReSetConnectionString();
+            return postgres;
+        }
+
+        public CPostgres CloneConnection() {
+            var postgres = (CPostgres) this.Clone();
+            postgres.InitializeConnection(this.DbIpAddrss, this.DbPort, this.DbUsername, this.DbPassword, this.DbName);
             postgres.ReSetConnectionString();
             return postgres;
         }

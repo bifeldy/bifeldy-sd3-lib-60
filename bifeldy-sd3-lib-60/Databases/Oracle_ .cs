@@ -25,11 +25,13 @@ using Oracle.ManagedDataAccess.Client;
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using System.Diagnostics;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
     public interface IOracle : IOraPg {
         COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid);
+        COracle CloneConnection();
     }
 
     public sealed class COracle : CDatabase, IOracle {
@@ -233,6 +235,13 @@ namespace bifeldy_sd3_lib_60.Databases {
             var oracle = (COracle) this.Clone();
             string dbTnsOdp = $"(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={dbIpAddrss})(PORT={dbPort})))(CONNECT_DATA=(SERVICE_NAME={dbNameSid})))";
             oracle.InitializeConnection(dbUsername, dbPassword, dbTnsOdp);
+            oracle.ReSetConnectionString();
+            return oracle;
+        }
+
+        public COracle CloneConnection() {
+            var oracle = (COracle) this.Clone();
+            oracle.InitializeConnection(this.DbUsername, this.DbPassword, this.DbTnsOdp);
             oracle.ReSetConnectionString();
             return oracle;
         }
