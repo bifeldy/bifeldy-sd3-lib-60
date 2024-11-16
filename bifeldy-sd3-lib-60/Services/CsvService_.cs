@@ -110,7 +110,7 @@ namespace bifeldy_sd3_lib_60.Services {
                         foreach (PropertyInfo pro in properties) {
                             string key = pro.Name.ToUpper();
                             if (cols.ContainsKey(key)) {
-                                object val = cols[key];
+                                dynamic val = cols[key];
                                 if (val != null) {
                                     pro.SetValue(objT, val);
                                 }
