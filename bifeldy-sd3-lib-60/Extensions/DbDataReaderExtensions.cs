@@ -24,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
             if (dr.HasRows) {
                 while (dr.Read()) {
-                    var cols = new Dictionary<string, object>();
+                    var cols = new Dictionary<string, dynamic>();
                     for (int i = 0; i < dr.FieldCount; i++) {
                         if (!dr.IsDBNull(i)) {
                             cols[dr.GetName(i).ToUpper()] = dr.GetValue(i);
@@ -33,17 +33,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
                     T objT = Activator.CreateInstance<T>();
                     foreach (PropertyInfo pro in properties) {
-                        try {
-                            string key = pro.Name.ToUpper();
-                            if (cols.ContainsKey(key)) {
-                                object val = cols[key];
-                                if (val != null) {
-                                    pro.SetValue(objT, val);
-                                }
+                        string key = pro.Name.ToUpper();
+                        if (cols.ContainsKey(key)) {
+                            object val = cols[key];
+                            if (val != null) {
+                                pro.SetValue(objT, val);
                             }
-                        }
-                        catch {
-                            //
                         }
                     }
 

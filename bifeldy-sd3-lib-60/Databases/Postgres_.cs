@@ -232,106 +232,54 @@ namespace bifeldy_sd3_lib_60.Databases {
                                 writer.WriteNull();
                             }
                             else {
+                                dynamic _obj = dR[fieldNames[i]];
                                 switch (types[i]) {
                                     case NpgsqlDbType.Bigint:
-                                        writer.Write((long) dR[fieldNames[i]], types[i]);
+                                        writer.Write(Convert.ToInt64(_obj), types[i]);
                                         break;
-                                    case NpgsqlDbType.Bit:
-                                        if (lengths[i] > 1) {
-                                            writer.Write((byte[]) dR[fieldNames[i]], types[i]);
-                                        }
-                                        else {
-                                            writer.Write((byte) dR[fieldNames[i]], types[i]);
-                                        }
-
+                                    case NpgsqlDbType.Integer:
+                                        writer.Write(Convert.ToInt32(_obj), types[i]);
+                                        break;
+                                    case NpgsqlDbType.Smallint:
+                                        writer.Write(Convert.ToInt16(_obj), types[i]);
+                                        break;
+                                    case NpgsqlDbType.Money:
+                                    case NpgsqlDbType.Numeric:
+                                        writer.Write(Convert.ToDecimal(_obj), types[i]);
+                                        break;
+                                    case NpgsqlDbType.Double:
+                                        writer.Write(Convert.ToDouble(_obj), types[i]);
+                                        break;
+                                    case NpgsqlDbType.Real:
+                                        writer.Write(Convert.ToSingle(_obj), types[i]);
                                         break;
                                     case NpgsqlDbType.Boolean:
-                                        writer.Write((bool) dR[fieldNames[i]], types[i]);
-                                        break;
-                                    case NpgsqlDbType.Bytea:
-                                        writer.Write((byte[]) dR[fieldNames[i]], types[i]);
+                                        writer.Write(Convert.ToBoolean(_obj), types[i]);
                                         break;
                                     case NpgsqlDbType.Char:
-                                        if (dR[fieldNames[i]] is string kata) {
-                                            writer.Write(kata, types[i]);
-                                        }
-                                        else if (dR[fieldNames[i]] is Guid) {
-                                            string value = dR[fieldNames[i]].ToString();
-                                            writer.Write(value, types[i]);
-                                        }
-                                        else if (lengths[i] > 1) {
-                                            writer.Write((char[]) dR[fieldNames[i]], types[i]);
-                                        }
-                                        else {
-                                            char[] s = dR[fieldNames[i]].ToString().ToCharArray();
-                                            writer.Write(s[0], types[i]);
+                                        if (lengths[i] == 1) {
+                                            writer.Write(Convert.ToString(_obj).ToCharArray().First(), types[i]);
+                                            break;
                                         }
 
+                                        goto case NpgsqlDbType.Varchar;
+                                    case NpgsqlDbType.Varchar:
+                                    case NpgsqlDbType.Text:
+                                        writer.Write(Convert.ToString(_obj), types[i]);
                                         break;
                                     case NpgsqlDbType.Time:
                                     case NpgsqlDbType.Timestamp:
                                     case NpgsqlDbType.TimestampTz:
                                     case NpgsqlDbType.Date:
-                                        writer.Write((DateTime) dR[fieldNames[i]], types[i]);
+                                        writer.Write(Convert.ToDateTime(_obj), types[i]);
                                         break;
-                                    case NpgsqlDbType.Double:
-                                        writer.Write((double) dR[fieldNames[i]], types[i]);
+                                    case NpgsqlDbType.Bytea:
+                                        writer.Write((byte[]) _obj, types[i]);
                                         break;
-                                    case NpgsqlDbType.Integer:
-                                        try {
-                                            if (dR[fieldNames[i]] is int angka) {
-                                                writer.Write(angka, types[i]);
-                                                break;
-                                            }
-                                            else if (dR[fieldNames[i]] is string) {
-                                                int swap = Convert.ToInt32(dR[fieldNames[i]]);
-                                                writer.Write(swap, types[i]);
-                                                break;
-                                            }
-                                        }
-                                        catch (Exception ex) {
-                                            this._logger.LogError("[PG_DBTYPE_INTEGER] {ex}", ex.Message);
-                                            string sh = ex.Message;
-                                        }
-
-                                        writer.Write(dR[fieldNames[i]], types[i]);
+                                    default:
+                                        writer.Write(_obj, types[i]);
                                         break;
-                                    case NpgsqlDbType.Interval:
-                                        writer.Write((TimeSpan) dR[fieldNames[i]], types[i]);
-                                        break;
-                                    case NpgsqlDbType.Numeric:
-                                    case NpgsqlDbType.Money:
-                                        writer.Write((decimal) dR[fieldNames[i]], types[i]);
-                                        break;
-                                    case NpgsqlDbType.Real:
-                                        writer.Write((float) dR[fieldNames[i]], types[i]);
-                                        break;
-                                    case NpgsqlDbType.Smallint:
-                                        try {
-                                            if (dR[fieldNames[i]] is byte) {
-                                                short swap = Convert.ToInt16(dR[fieldNames[i]]);
-                                                writer.Write(swap, types[i]);
-                                                break;
-                                            }
-
-                                            writer.Write((short) dR[fieldNames[i]], types[i]);
-                                        }
-                                        catch (Exception ex) {
-                                            this._logger.LogError("[PG_DBTYPE_SMALLINT] {ex}", ex.Message);
-                                            string ms = ex.Message;
-                                        }
-
-                                        break;
-                                    case NpgsqlDbType.Varchar:
-                                    case NpgsqlDbType.Text:
-                                        writer.Write((string) dR[fieldNames[i]], types[i]);
-                                        break;
-                                    case NpgsqlDbType.Uuid:
-                                        writer.Write((Guid) dR[fieldNames[i]], types[i]);
-                                        break;
-                                    case NpgsqlDbType.Xml:
-                                        writer.Write((string) dR[fieldNames[i]], types[i]);
-                                        break;
+                                    // TODO :: Add More Handles While Free Time ~
                                 }
                             }
                         }

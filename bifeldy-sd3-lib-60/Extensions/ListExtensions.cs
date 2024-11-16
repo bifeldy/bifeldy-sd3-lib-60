@@ -57,12 +57,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 foreach (T item in listData) {
                     DataRow row = table.NewRow();
                     foreach (PropertyDescriptor prop in properties) {
-                        try {
-                            row[prop.Name] = prop.GetValue(item) ?? DBNull.Value;
-                        }
-                        catch {
-                            row[prop.Name] = DBNull.Value;
-                        }
+                        row[prop.Name] = prop.GetValue(item) ?? DBNull.Value;
                     }
 
                     table.Rows.Add(row);

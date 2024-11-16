@@ -25,7 +25,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             foreach (DataRow row in dt.Rows) {
-                var cols = new Dictionary<string, object>();
+                var cols = new Dictionary<string, dynamic>();
                 foreach (DataColumn col in dt.Columns) {
                     string colName = col.ColumnName.ToUpper();
                     if (row[colName] != DBNull.Value) {
@@ -35,17 +35,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
                 T objT = Activator.CreateInstance<T>();
                 foreach (PropertyInfo pro in properties) {
-                    try {
-                        string key = pro.Name.ToUpper();
-                        if (cols.ContainsKey(key)) {
-                            object val = cols[key];
-                            if (val != null) {
-                                pro.SetValue(objT, val);
-                            }
+                    string key = pro.Name.ToUpper();
+                    if (cols.ContainsKey(key)) {
+                        object val = cols[key];
+                        if (val != null) {
+                            pro.SetValue(objT, val);
                         }
-                    }
-                    catch {
-                        //
                     }
                 }
 
