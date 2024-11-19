@@ -195,20 +195,19 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         protected virtual async Task<DataTable> GetDataTableAsync(DbCommand databaseCommand) {
             var result = new DataTable();
-            DbDataReader dr = null;
             Exception exception = null;
             try {
                 // await OpenConnection();
                 // dataAdapter.Fill(result);
-                dr = await this.ExecReaderAsync(databaseCommand);
-                result.Load(dr);
+                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand)) {
+                    result.Load(dr);
+                }
             }
             catch (Exception ex) {
                 this._logger.LogError("[DATA_TABLE] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                dr?.Close();
                 await this.CloseConnection();
             }
 
