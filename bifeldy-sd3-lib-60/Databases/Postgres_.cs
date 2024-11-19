@@ -207,7 +207,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
                 using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(cmd)) {
                     if (rdr.FieldCount != colCount) {
-                        throw new Exception("Jumlah Kolom Tabel Tidak Sama");
+                        throw new Exception($"Jumlah Kolom Tabel Tujuan {tableName} Tidak Sama Dengan Input DataTable {dataTable.TableName}");
                     }
 
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
