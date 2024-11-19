@@ -44,6 +44,7 @@ using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.UserAuth;
+using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -155,6 +156,18 @@ namespace bifeldy_sd3_lib_60 {
 
                 c.OperationFilter<SwaggerMediaTypesOperationFilter>();
                 c.SchemaFilter<SwaggerHideJsonPropertyFilter>();
+                c.TagActionsBy(api => {
+                    if (api.GroupName != null) {
+                        return new[] { api.GroupName };
+                    }
+
+                    if (api.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor) {
+                        return new[] { controllerActionDescriptor.ControllerName };
+                    }
+
+                    throw new InvalidOperationException("Tidak Ada Tag [ApiExplorerSettings(GroupName = \"...\")]");
+                });
+                c.DocInclusionPredicate((name, api) => true);
             });
         }
 
