@@ -217,19 +217,18 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         protected virtual async Task<List<T>> GetListAsync<T>(DbCommand databaseCommand) {
             var result = new List<T>();
-            DbDataReader dr = null;
             Exception exception = null;
             try {
-                dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess);
-                result = dr.ToList<T>();
+                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess)) {
+                    result = dr.ToList<T>();
+                }
             }
             catch (Exception ex) {
                 this._logger.LogError("[DATA_LIST] {ex}", ex.Message);
                 exception = ex;
             }
             finally {
-                dr?.Close();
-                this.CloseConnection();
+                await this.CloseConnection();
             }
 
             return (exception == null) ? result : throw exception;
