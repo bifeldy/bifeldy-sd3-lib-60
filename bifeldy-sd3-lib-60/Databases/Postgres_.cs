@@ -29,6 +29,7 @@ using NpgsqlTypes;
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Extensions;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -246,7 +247,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                                         break;
                                     case NpgsqlDbType.Money:
                                     case NpgsqlDbType.Numeric:
-                                        writer.Write(Convert.ToDecimal(_obj), types[i]);
+                                        writer.Write(((decimal) Convert.ToDecimal(_obj)).RemoveTrail(), types[i]);
                                         break;
                                     case NpgsqlDbType.Double:
                                         writer.Write(Convert.ToDouble(_obj), types[i]);
