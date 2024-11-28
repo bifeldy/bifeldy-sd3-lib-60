@@ -86,8 +86,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
-                await Task.Yield();
-
                 if (this._excludeJenisDc != null) {
                     string jenisDc = await _generalRepo.GetJenisDc();
                     if (this._excludeJenisDc.Contains(jenisDc)) {
@@ -127,6 +125,8 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
+                    await Task.Yield();
+
                     try {
                         ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
                         _ = await this._generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);

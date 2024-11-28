@@ -89,8 +89,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
-                await Task.Yield();
-
                 if (this._excludeJenisDc != null) {
                     string jenisDc = await _generalRepo.GetJenisDc();
                     if (this._excludeJenisDc.Contains(jenisDc)) {
@@ -135,20 +133,25 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 }
 
                 while (!stoppingToken.IsCancellationRequested) {
-                    await this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).WaitAsync(stoppingToken);
-                    Message<string, string>[] cpMsgs = this.msgs.ToArray();
-                    this.msgs.Clear();
-                    foreach (Message<string, string> msg in cpMsgs) {
-                        try {
-                            _ = await this.producer.ProduceAsync(this._topicName, msg, stoppingToken);
-                        }
-                        catch (Exception e) {
-                            this._logger.LogError("[KAFKA_PRODUCER_MESSAGE] {e}", e.Message);
-                        }
-                    }
+                    await Task.Yield();
 
-                    _ = this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).Release();
-                    Thread.Sleep(1000);
+                    if (this.msgs.Count > 0) {
+                        await this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).WaitAsync(stoppingToken);
+
+                        Message<string, string>[] cpMsgs = this.msgs.ToArray();
+                        this.msgs.Clear();
+
+                        foreach (Message<string, string> msg in cpMsgs) {
+                            try {
+                                _ = await this.producer.ProduceAsync(this._topicName, msg, stoppingToken);
+                            }
+                            catch (Exception e) {
+                                this._logger.LogError("[KAFKA_PRODUCER_MESSAGE] {e}", e.Message);
+                            }
+                        }
+
+                        _ = this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).Release();
+                    }
                 }
             }
             catch (Exception ex) {

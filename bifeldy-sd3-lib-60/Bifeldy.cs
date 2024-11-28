@@ -223,10 +223,7 @@ namespace bifeldy_sd3_lib_60 {
                 return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<IPostgres>() : sp.GetRequiredService<IOracle>();
             });
 
-            if (!isBlazorWebApp) {
-                throw new NotImplementedException("Untuk Versi ASP.NET WebMVC Masih Belum Tersedia ...");
-            }
-            else {
+            if (isBlazorWebApp) {
                 _ = Services.AddScoped<ProtectedSessionStorage>();
                 _ = Services.AddScoped<AuthenticationStateProvider, BlazorAuthenticationStateProvider>();
             }
