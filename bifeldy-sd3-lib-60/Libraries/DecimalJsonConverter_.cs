@@ -12,10 +12,10 @@
 
 using bifeldy_sd3_lib_60.Extensions;
 
-namespace bifeldy_sd3_lib_60.Converters {
+namespace bifeldy_sd3_lib_60.Libraries {
 
     public sealed class DecimalSystemTextJsonConverter : System.Text.Json.Serialization.JsonConverter<decimal> {
-                
+
         public override decimal Read(
             ref System.Text.Json.Utf8JsonReader reader,
             Type typeToConvert,
