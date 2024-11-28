@@ -30,6 +30,7 @@ using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Extensions;
+using System.Linq;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -199,6 +200,10 @@ namespace bifeldy_sd3_lib_60.Databases {
                 }
 
                 int colCount = dataTable.Columns.Count;
+                var lsCol = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName.ToUpper()).ToList();
+                if (colCount != lsCol.Count) {
+                    throw new Exception($"Jumlah Kolom Mapping Tabel Aneh Tidak Sesuai");
+                }
 
                 var types = new NpgsqlDbType[colCount];
                 int[] lengths = new int[colCount];
@@ -207,15 +212,17 @@ namespace bifeldy_sd3_lib_60.Databases {
                 var cmd = (NpgsqlCommand) this.CreateCommand();
                 cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
                 using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(cmd)) {
-                    if (rdr.FieldCount != colCount) {
-                        throw new Exception($"Jumlah Kolom Tabel Tujuan {tableName} Tidak Sama Dengan Input DataTable {dataTable.TableName}");
-                    }
-
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
+
                     for (int i = 0; i < colCount; i++) {
-                        types[i] = (NpgsqlDbType) columns[i].NpgsqlDbType;
-                        lengths[i] = columns[i].ColumnSize == null ? 0 : (int) columns[i].ColumnSize;
-                        fieldNames[i] = columns[i].ColumnName;
+                        NpgsqlDbColumn column = columns.FirstOrDefault(c => c.ColumnName.ToUpper() == lsCol[i]);
+                        if (column == null) {
+                            throw new Exception($"Kolom {lsCol[i]} Tidak Tersedia Di Tabel Tujuan {tableName}");
+                        }
+
+                        types[i] = (NpgsqlDbType) column.NpgsqlDbType;
+                        lengths[i] = column.ColumnSize == null ? 0 : (int) column.ColumnSize;
+                        fieldNames[i] = column.ColumnName;
                     }
                 }
 
