@@ -11,8 +11,9 @@
  * 
  */
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Primitives;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace bifeldy_sd3_lib_60.Controllers {
@@ -23,13 +24,25 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public class EchoController : ControllerBase {
 
         public IActionResult ReturnData(dynamic json = null) {
-            IDictionary<string, string> headers = this.Request.Headers.ToDictionary(a => a.Key, a => string.Join(";", a.Value));
-            // IDictionary<string, string> cookies = this.Request.Cookies.ToDictionary(a => a.Key, a => string.Join(";", a.Value));
+            var query = new Dictionary<string, dynamic>();
+            foreach (KeyValuePair<string, StringValues> data in this.Request.Query) {
+                if (data.Value.Count > 1) {
+                    query.Add(data.Key, data.Value.ToArray());
+                }
+                else {
+                    query.Add(data.Key, string.Join("; ", data.Value));
+                }
+            }
+
+            IDictionary<string, string> headers = this.Request.Headers.Where(d => !d.Key.ToUpper().StartsWith("COOKIE")).ToDictionary(a => a.Key, a => string.Join("; ", a.Value));
+            IDictionary<string, string> cookies = this.Request.Cookies.ToDictionary(a => a.Key, a => string.Join("; ", a.Value));
+
             return this.Ok(new {
                 info = $"200 - {this.GetType().Name}",
                 method = this.Request.Method,
+                query,
                 headers,
-                // cookies = cookies,
+                cookies,
                 body = json
             });
         }
