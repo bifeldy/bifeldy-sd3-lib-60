@@ -24,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Services {
         List<string> AllowedIpOrigin { get; set; }
         string GetSecretData(HttpRequest request, RequestJson reqBody);
         string GetApiKeyData(HttpRequest request, RequestJson reqBody);
-        string GetIpOriginData(ConnectionInfo connection, HttpRequest request);
+        string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false);
         string CleanIpOrigin(string ipOrigin);
         string GetTokenData(HttpRequest request, RequestJson reqBody);
         Task<RequestJson> GetRequestBody(HttpRequest request);
@@ -78,19 +78,25 @@ namespace bifeldy_sd3_lib_60.Services {
             return apiKey;
         }
 
-        public string GetIpOriginData(ConnectionInfo connection, HttpRequest request) {
+        public string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false) {
             string ipOrigin = connection.RemoteIpAddress.ToString();
-            if (!string.IsNullOrEmpty(request.Headers["origin"])) {
-                ipOrigin = request.Headers["origin"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["referer"])) {
-                ipOrigin = request.Headers["referer"];
-            }
-            else if (!string.IsNullOrEmpty(request.Headers["cf-connecting-ip"])) {
+            if (!string.IsNullOrEmpty(request.Headers["cf-connecting-ip"])) {
                 ipOrigin = request.Headers["cf-connecting-ip"];
             }
             else if (!string.IsNullOrEmpty(request.Headers["x-forwarded-for"])) {
                 ipOrigin = request.Headers["x-forwarded-for"];
+            }
+            else if (!string.IsNullOrEmpty(request.Headers["x-real-ip"])) {
+                ipOrigin = request.Headers["x-real-ip"];
+            }
+
+            if (!ipOnly) {
+                if (!string.IsNullOrEmpty(request.Headers["origin"])) {
+                    ipOrigin = request.Headers["origin"];
+                }
+                else if (!string.IsNullOrEmpty(request.Headers["referer"])) {
+                    ipOrigin = request.Headers["referer"];
+                }
             }
 
             return ipOrigin;

@@ -49,7 +49,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
             string ipOrigin = this._gs.CleanIpOrigin(
                 this._gs.GetIpOriginData(
                     this.HttpContext.Connection,
-                    this.HttpContext.Request
+                    this.HttpContext.Request,
+                    true
                 )
             );
 
