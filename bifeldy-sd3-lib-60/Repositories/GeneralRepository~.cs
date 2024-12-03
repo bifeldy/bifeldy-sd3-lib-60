@@ -60,11 +60,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         private IDictionary<
             string, IDictionary<
-                string, (bool, CDatabase)
+                string, (bool, CDatabase, CDatabase)
             >
         > BranchConnectionInfo { get; } = new Dictionary<
             string, IDictionary<
-                string, (bool, CDatabase)
+                string, (bool, CDatabase, CDatabase)
             >
         >();
 
@@ -231,14 +231,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // Atur URL Di `appsettings.json` -> ws_syncho
         //
         // Item1 => bool :: Apakah Menggunakan Postgre
-        // Item2 => CDatabase :: Koneksi Ke Database
+        // Item2 => CDatabase :: Koneksi Ke Database Oracle / Postgre
+        // Item3 => CDatabase :: Koneksi Ke Database SqlServer (NULL ? Silahkan Pakai `OpenConnectionToDcFromHo`)
         //
         // IDictionary<string, (bool, CDatabase)> dbCon = await GetListBranchDbConnection("G001");
         // var res = dbCon["G055"].Item2.ExecScalarAsync<...>(...);
         //
-        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
+        public async Task<IDictionary<string, (bool, CDatabase, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
-                IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
+                IDictionary<string, (bool, CDatabase, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase, CDatabase)>();
 
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
                 foreach (DC_TABEL_V dbi in dbInfo) {
@@ -251,7 +252,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
-                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
+                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon, null));
                 }
 
                 this.BranchConnectionInfo[kodeDcInduk] = dbCons;
@@ -262,31 +263,36 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
             CDatabase dbConHo = null;
-            CDatabase dbOraPgDc = null;
-            CDatabase dbSqlDc = null;
-            bool dbIsUsingPostgre = false;
 
             string kodeDcSekarang = await this.GetKodeDc();
             if (kodeDcSekarang.ToUpper() != "DCHO") {
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation("DCHO");
                 DC_TABEL_V dcho = dbInfo.FirstOrDefault();
-                dbConHo = this._oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
+                if (dcho != null) {
+                    dbConHo = this._oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
+                }
             }
             else {
                 dbConHo = (CDatabase) this._orapg;
             }
 
-            DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
-            if (dbi != null) {
-                dbIsUsingPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
-                if (dbIsUsingPostgre) {
-                    dbOraPgDc = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
-                }
-                else {
-                    dbOraPgDc = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
-                }
+            bool dbIsUsingPostgre = false;
+            CDatabase dbOraPgDc = null;
+            CDatabase dbSqlDc = null;
 
-                dbSqlDc = this._mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
+            if (dbConHo != null) {
+                DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
+                if (dbi != null) {
+                    dbIsUsingPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
+                    if (dbIsUsingPostgre) {
+                        dbOraPgDc = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                    }
+                    else {
+                        dbOraPgDc = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                    }
+
+                    dbSqlDc = this._mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
+                }
             }
 
             return (dbIsUsingPostgre, dbOraPgDc, dbSqlDc);
