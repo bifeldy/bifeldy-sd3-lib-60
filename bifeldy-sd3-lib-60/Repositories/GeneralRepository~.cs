@@ -60,11 +60,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         private IDictionary<
             string, IDictionary<
-                string, (bool, CDatabase, CDatabase)
+                string, (bool, CDatabase)
             >
         > BranchConnectionInfo { get; } = new Dictionary<
             string, IDictionary<
-                string, (bool, CDatabase, CDatabase)
+                string, (bool, CDatabase)
             >
         >();
 
@@ -231,15 +231,14 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // Atur URL Di `appsettings.json` -> ws_syncho
         //
         // Item1 => bool :: Apakah Menggunakan Postgre
-        // Item2 => CDatabase :: Koneksi Ke Database Oracle / Postgre
-        // Item3 => CDatabase :: Koneksi Ke Database SqlServer (NULL ? Silahkan Pakai `OpenConnectionToDcFromHo`)
+        // Item2 => CDatabase :: Koneksi Ke Database Oracle / Postgre (Tidak Ada SqlServer)
         //
         // IDictionary<string, (bool, CDatabase)> dbCon = await GetListBranchDbConnection("G001");
         // var res = dbCon["G055"].Item2.ExecScalarAsync<...>(...);
         //
-        public async Task<IDictionary<string, (bool, CDatabase, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
+        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
-                IDictionary<string, (bool, CDatabase, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase, CDatabase)>();
+                IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
 
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
                 foreach (DC_TABEL_V dbi in dbInfo) {
@@ -252,7 +251,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
-                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon, null));
+                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
                 }
 
                 this.BranchConnectionInfo[kodeDcInduk] = dbCons;
