@@ -226,8 +226,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         //
-        // Sepertinya Yang Ini Akan Kurang Berguna
-        // Karena Dapat Akses Langsung Ke Database
+        // Akses Langsung Ke Database Cabang
+        // Tembak Ambil Info Dari Service Mas Edwin :) HO
+        // Atur URL Di `appsettings.json` -> ws_syncho
         //
         // Item1 => bool :: Apakah Menggunakan Postgre
         // Item2 => CDatabase :: Koneksi Ke Database
