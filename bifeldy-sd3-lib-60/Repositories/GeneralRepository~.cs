@@ -58,6 +58,16 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private readonly IOraPg _orapg;
         private readonly IMsSQL _mssql;
 
+        private IDictionary<
+            string, IDictionary<
+                string, (bool, CDatabase)
+            >
+        > BranchConnectionInfo { get; } = new Dictionary<
+            string, IDictionary<
+                string, (bool, CDatabase)
+            >
+        >();
+
         public CGeneralRepository(
             IOptions<EnvVar> envVar,
             IApplicationService @as,
@@ -228,21 +238,24 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
             IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
 
-            List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
-            foreach (DC_TABEL_V dbi in dbInfo) {
-                CDatabase dbCon;
-                bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
-                if (isPostgre) {
-                    dbCon = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
-                }
-                else {
-                    dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
-                }
+            if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
+                List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
+                foreach (DC_TABEL_V dbi in dbInfo) {
+                    CDatabase dbCon;
+                    bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
+                    if (isPostgre) {
+                        dbCon = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                    }
+                    else {
+                        dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                    }
 
-                dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
+                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
+                }
             }
 
-            return dbCons;
+            this.BranchConnectionInfo[kodeDcInduk] = dbCons;
+            return this.BranchConnectionInfo[kodeDcInduk];
         }
 
         public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
