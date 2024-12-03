@@ -226,15 +226,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
             IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
 
-            string kodeDc = await this.GetKodeDc();
-            DC_TABEL_V dc = await this._orapg.Set<DC_TABEL_V>().Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper()).FirstOrDefaultAsync();
-            if (kodeDc.ToUpper() == "DCHO" || dc.TBL_JENIS_DC.ToUpper() != "INDUK") {
-                throw new TidakMemenuhiException("Khusus DC Induk");
-            }
-
             List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
             foreach (DC_TABEL_V dbi in dbInfo) {
-                CDatabase dbCon = null;
+                CDatabase dbCon;
                 bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                 if (isPostgre) {
                     dbCon = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);

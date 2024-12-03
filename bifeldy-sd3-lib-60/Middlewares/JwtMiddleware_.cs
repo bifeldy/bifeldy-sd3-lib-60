@@ -65,9 +65,15 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
                 context.User = new ClaimsPrincipal(userClaimIdentity);
 
+                Claim _claimName = userClaim.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault();
+                Claim _claimRole = userClaim.Where(c => c.Type == ClaimTypes.Role).FirstOrDefault();
+                if (_claimName == null || _claimRole == null) {
+                    throw new Exception("Format Token Salah / Expired!");
+                }
+
                 context.Items["user"] = new UserApiSession() {
-                    name = userClaim.Where(c => c.Type == ClaimTypes.Name).First().Value,
-                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), userClaim.Where(c => c.Type == ClaimTypes.Role).First().Value)
+                    name = _claimName.Value,
+                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), _claimRole.Value)
                 };
             }
             catch {

@@ -265,12 +265,15 @@ namespace bifeldy_sd3_lib_60.Databases {
                                         writer.Write(Convert.ToBoolean(_obj), types[i]);
                                         break;
                                     case NpgsqlDbType.Char:
-                                        if (lengths[i] == 1) {
-                                            writer.Write(Convert.ToString(_obj).ToCharArray().First(), types[i]);
-                                            break;
+                                        char[] _chars = ((string) Convert.ToString(_obj)).ToCharArray();
+                                        if (lengths[i] > 1) {
+                                            writer.Write(_chars, types[i]);
+                                        }
+                                        else {
+                                            writer.Write(Convert.ToChar(_chars[0]), types[i]);
                                         }
 
-                                        goto case NpgsqlDbType.Varchar;
+                                        break;
                                     case NpgsqlDbType.Varchar:
                                     case NpgsqlDbType.Text:
                                         writer.Write(Convert.ToString(_obj), types[i]);

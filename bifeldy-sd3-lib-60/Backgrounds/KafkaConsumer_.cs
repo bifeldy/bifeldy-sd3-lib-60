@@ -95,6 +95,10 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
                 if (string.IsNullOrEmpty(this._hostPort)) {
                     KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._topicName);
+                    if (kafka == null) {
+                        throw new Exception("KAFKA Tidak Tersedia !");
+                    }
+
                     this._hostPort = $"{kafka.HOST}:{kafka.PORT}";
                 }
 
