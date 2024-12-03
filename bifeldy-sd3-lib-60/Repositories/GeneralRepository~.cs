@@ -236,9 +236,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // var res = dbCon["G055"].Item2.ExecScalarAsync<...>(...);
         //
         public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
-            IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
-
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
+                IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
+
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
                 foreach (DC_TABEL_V dbi in dbInfo) {
                     CDatabase dbCon;
@@ -252,9 +252,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
                     dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
                 }
+
+                this.BranchConnectionInfo[kodeDcInduk] = dbCons;
             }
 
-            this.BranchConnectionInfo[kodeDcInduk] = dbCons;
             return this.BranchConnectionInfo[kodeDcInduk];
         }
 
