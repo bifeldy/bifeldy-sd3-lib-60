@@ -25,7 +25,6 @@ using Oracle.ManagedDataAccess.Client;
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using System.Diagnostics;
 
 namespace bifeldy_sd3_lib_60.Databases {
 

@@ -11,7 +11,6 @@
  * 
  */
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Swashbuckle.AspNetCore.Annotations;

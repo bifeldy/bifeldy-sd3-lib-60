@@ -11,8 +11,6 @@
  * 
  */
 
-using FluentFTP;
-
 namespace bifeldy_sd3_lib_60.Models {
 
     public sealed class CFtpResultInfo {
