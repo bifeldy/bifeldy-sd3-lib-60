@@ -23,7 +23,6 @@ namespace bifeldy_sd3_lib_60.UserAuth {
 
     public sealed class BlazorAuthenticationStateProvider : AuthenticationStateProvider {
 
-        private readonly ILogger<BlazorAuthenticationStateProvider> _logger;
         private readonly ProtectedSessionStorage _protectedSessionStorage;
 
         private static readonly ClaimsIdentity _anonymousClaimsIdentity = new();
@@ -32,10 +31,8 @@ namespace bifeldy_sd3_lib_60.UserAuth {
         public string SessionKey { get; } = "user-session";
 
         public BlazorAuthenticationStateProvider(
-            ILogger<BlazorAuthenticationStateProvider> logger,
             ProtectedSessionStorage protectedSessionStorage
         ) {
-            this._logger = logger;
             this._protectedSessionStorage = protectedSessionStorage;
         }
 
@@ -55,8 +52,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
                 UserWebSession userSession = (userSessionStorage.Success ? userSessionStorage.Value : null) ?? throw new Exception("User Not Login");
                 return new AuthenticationState(this.GetUserClaimPrincipal(userSession));
             }
-            catch (Exception ex) {
-                this._logger.LogError("[BLAZOR_AUTHENTICATION_STATE_PROVIDER_ERROR] 🔓 {ex}", ex.Message);
+            catch {
                 return new AuthenticationState(_anonymousPrincipal);
             }
         }
