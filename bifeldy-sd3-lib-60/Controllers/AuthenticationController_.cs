@@ -36,6 +36,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public class _Controller : ControllerBase {
 
         private readonly IApplicationService _app;
+        private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
         private readonly IApiKeyRepository _apiKeyRepo;
         private readonly IApiTokenRepository _apiTokenRepo;
@@ -46,6 +47,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         public _Controller(
             IApplicationService app,
+            IGlobalService gs,
             IChiperService chiper,
             IApiKeyRepository apiKeyRepo,
             IApiTokenRepository apiTokenRepo,
@@ -53,6 +55,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IOraPg orapg
         ) {
             this._app = app;
+            this._gs = gs;
             this._chiper = chiper;
             this._apiKeyRepo = apiKeyRepo;
             this._apiTokenRepo = apiTokenRepo;
@@ -118,7 +121,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
                     else {
                         userSession = new UserApiSession {
-                            name = this.HttpContext.Connection.RemoteIpAddress.ToString(),
+                            name = this._gs.GetIpOriginData(this.HttpContext.Connection, this.HttpContext.Request, true),
                             role = UserSessionRole.PROGRAM_SERVICE
                         };
                     }

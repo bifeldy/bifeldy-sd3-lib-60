@@ -46,12 +46,10 @@ namespace bifeldy_sd3_lib_60.Controllers {
         public async Task<IActionResult> PingPong(
             [FromBody, SwaggerParameter("JSON body yang berisi kode gudang", Required = false)] InputJsonDcPingPong fd
         ) {
-            string ipOrigin = this._gs.CleanIpOrigin(
-                this._gs.GetIpOriginData(
-                    this.HttpContext.Connection,
-                    this.HttpContext.Request,
-                    true
-                )
+            string ipOrigin = this._gs.GetIpOriginData(
+                this.HttpContext.Connection,
+                this.HttpContext.Request,
+                true
             );
 
             string kodeDc = await this._generalRepo.GetKodeDc();

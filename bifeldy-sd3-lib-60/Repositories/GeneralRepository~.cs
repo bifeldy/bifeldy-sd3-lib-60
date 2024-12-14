@@ -49,6 +49,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private readonly EnvVar _envVar;
 
         private readonly IApplicationService _as;
+        private readonly IGlobalService _gs;
         private readonly IHttpService _http;
         private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
@@ -71,6 +72,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public CGeneralRepository(
             IOptions<EnvVar> envVar,
             IApplicationService @as,
+            IGlobalService gs,
             IHttpService http,
             IChiperService chiper,
             IConverterService converter,
@@ -81,6 +83,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         ) : base(envVar, @as, orapg, mssql) {
             this._envVar = envVar.Value;
             this._as = @as;
+            this._gs = gs;
             this._http = http;
             this._chiper = chiper;
             this._converter = converter;
@@ -364,7 +367,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 // API Key Khusus Bypass ~ Case Sensitive
                 NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
                 queryApiDc.Set("key", hashText);
-                queryApiDc.Set("mask_ip", this._chiper.EncryptText(request.HttpContext.Connection.RemoteIpAddress.ToString(), hashText));
+
+                string ipOrigin = this._gs.GetIpOriginData(request.HttpContext.Connection, request.HttpContext.Request, true);
+                queryApiDc.Set("mask_ip", this._chiper.EncryptText(ipOrigin));
 
                 var uriBuilder = new UriBuilder(urlApiDc) {
                     Query = queryApiDc.ToString()

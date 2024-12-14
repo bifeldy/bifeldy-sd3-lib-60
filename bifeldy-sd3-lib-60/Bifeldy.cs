@@ -45,6 +45,7 @@ using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.UserAuth;
+using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -96,9 +97,10 @@ namespace bifeldy_sd3_lib_60 {
                 o.MessageTemplate = "{RemoteIpAddress} :: {RequestScheme} :: {RequestHost} :: {RequestMethod} :: {RequestPath} :: {StatusCode} :: {Elapsed:0.0000} ms";
                 // o.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Error;
                 o.EnrichDiagnosticContext = (diagnosticContext, httpContext) => {
+                    IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
                     diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-                    diagnosticContext.Set("RemoteIpAddress", httpContext.Connection.RemoteIpAddress);
+                    diagnosticContext.Set("RemoteIpAddress", gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true));
                 };
             });
         }

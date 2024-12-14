@@ -79,11 +79,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false) {
-            string ipOrigin = null;
-
-            if (connection != null) {
-                ipOrigin = connection.RemoteIpAddress.ToString();
-            }
+            string ipOrigin = connection?.RemoteIpAddress?.ToString();
 
             if (request != null) {
                 if (!string.IsNullOrEmpty(request.Headers["cf-connecting-ip"])) {
@@ -97,7 +93,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            if (!ipOnly && connection != null) {
+            if (!ipOnly) {
                 if (!string.IsNullOrEmpty(request.Headers["origin"])) {
                     ipOrigin = request.Headers["origin"];
                 }
@@ -106,7 +102,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            return ipOrigin;
+            return this.CleanIpOrigin(ipOrigin);
         }
 
         public string CleanIpOrigin(string ipOrigin) {
