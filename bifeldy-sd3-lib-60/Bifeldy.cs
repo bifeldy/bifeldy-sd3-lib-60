@@ -100,7 +100,8 @@ namespace bifeldy_sd3_lib_60 {
                     IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
                     diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-                    diagnosticContext.Set("RemoteIpAddress", gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true));
+                    string ipOrigin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true);
+                    diagnosticContext.Set("RemoteIpAddress", ipOrigin);
                 };
             });
         }

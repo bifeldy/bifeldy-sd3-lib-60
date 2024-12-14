@@ -91,14 +91,14 @@ namespace bifeldy_sd3_lib_60.Services {
                 else if (!string.IsNullOrEmpty(request.Headers["x-real-ip"])) {
                     ipOrigin = request.Headers["x-real-ip"];
                 }
-            }
 
-            if (!ipOnly) {
-                if (!string.IsNullOrEmpty(request.Headers["origin"])) {
-                    ipOrigin = request.Headers["origin"];
-                }
-                else if (!string.IsNullOrEmpty(request.Headers["referer"])) {
-                    ipOrigin = request.Headers["referer"];
+                if (!ipOnly) {
+                    if (!string.IsNullOrEmpty(request.Headers["origin"])) {
+                        ipOrigin = request.Headers["origin"];
+                    }
+                    else if (!string.IsNullOrEmpty(request.Headers["referer"])) {
+                        ipOrigin = request.Headers["referer"];
+                    }
                 }
             }
 
