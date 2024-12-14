@@ -38,18 +38,14 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CApplicationService : IApplicationService {
 
-        public DateTime? BuildTime {
-            get {
-                var prgAsm = Assembly.GetEntryAssembly();
-                var libAsm = Assembly.GetExecutingAssembly();
-                return prgAsm.GetLinkerBuildTime() ?? libAsm.GetLinkerBuildTime();
-            }
-        }
+        private readonly Assembly _prgAsm = Assembly.GetEntryAssembly();
+        private readonly Assembly _libAsm = Assembly.GetExecutingAssembly();
 
+        public DateTime? BuildTime => this._prgAsm.GetLinkerBuildTime() ?? this._libAsm.GetLinkerBuildTime();
         public bool DebugMode => Bifeldy.App.Environment.IsDevelopment();
         public string AppName => Bifeldy.App.Environment.ApplicationName;
         public string AppLocation => AppDomain.CurrentDomain.BaseDirectory;
-        public string AppVersion => string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
+        public string AppVersion => string.Join("", this._prgAsm.GetName().Version.ToString().Split('.'));
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
