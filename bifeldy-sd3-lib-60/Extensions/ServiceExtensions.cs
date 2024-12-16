@@ -36,8 +36,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 string iName = $"I{cls.Name}";
 
                 // CNamaKelas => INamaKelas
-                if (isCNamaKelas && iName.ToUpper().StartsWith("C")) {
-                    iName = $"I{iName[1..]}";
+                if (isCNamaKelas && cls.Name.ToUpper().StartsWith("C")) {
+                    iName = $"I{cls.Name[1..]}";
                 }
 
                 Type interfaceClass = cls.GetInterface(iName);
