@@ -148,7 +148,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         ",
                         new List<CDbQueryParamBind>() {
                             new() { NAME = "dc_kode", VALUE = await this.GetKodeDc() },
-                            new() { NAME = "nama_prog", VALUE = $"%{this._as.AppName}%" }
+                            new() { NAME = "nama_prog", VALUE = $"%{this._as.AppName}%".ToUpper() }
                         }
                     );
                     if (string.IsNullOrEmpty(res)) {
@@ -181,9 +181,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         AND UPPER(user_password) = :password
                 ",
                 new List<CDbQueryParamBind>() {
-                    new() { NAME = "user_name", VALUE = userNameNik },
-                    new() { NAME = "user_nik", VALUE = userNameNik },
-                    new() { NAME = "password", VALUE = password }
+                    new() { NAME = "user_name", VALUE = userNameNik.ToUpper() },
+                    new() { NAME = "user_nik", VALUE = userNameNik.ToUpper() },
+                    new() { NAME = "password", VALUE = password.ToUpper() }
                 }
             );
             return !string.IsNullOrEmpty(loggedInUsername);
@@ -191,9 +191,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         public async Task<string> GetURLWebService(string webType) {
             return await this._orapg.ExecScalarAsync<string>(
-                $@"SELECT WEB_URL FROM DC_WEBSERVICE_T WHERE WEB_TYPE = :web_type",
+                $@"SELECT web_url FROM dc_webservice_t WHERE UPPER(web_type) = :web_type",
                 new List<CDbQueryParamBind>() {
-                    new() { NAME = "web_type", VALUE = webType }
+                    new() { NAME = "web_type", VALUE = webType.ToUpper() }
                 }
             );
         }
@@ -319,7 +319,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         AND UPPER(b.app_name) = :app_name
                     )
                 WHERE
-                    a.dc_kode = :kode_dc
+                    UPPER(a.dc_kode) = :kode_dc
             ", new List<CDbQueryParamBind>() {
                 new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                 new() { NAME = "kode_dc", VALUE = dcKode.ToUpper() }

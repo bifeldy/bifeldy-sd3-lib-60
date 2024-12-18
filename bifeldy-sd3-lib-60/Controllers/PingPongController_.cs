@@ -57,13 +57,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 _ = await _orapg.ExecQueryAsync($@"
                     DELETE FROM api_ping_t
                     WHERE
-                        dc_kode = :dc_kode
-                        AND ip_origin = :ip_origin
-                        AND version = :version
+                        UPPER(dc_kode) = :dc_kode
+                        AND UPPER(ip_origin) = :ip_origin
+                        AND UPPER(version) = :version
                 ", new List<CDbQueryParamBind>() {
                     new() { NAME = "dc_kode", VALUE = fd.kode_dc.ToUpper() },
-                    new() { NAME = "ip_origin", VALUE = ipOrigin },
-                    new() { NAME = "version", VALUE = fd.version }
+                    new() { NAME = "ip_origin", VALUE = ipOrigin.ToUpper() },
+                    new() { NAME = "version", VALUE = fd.version.ToUpper() }
                 });
                 _ = await _orapg.ExecQueryAsync($@"
                     INSERT INTO api_ping_t (dc_kode, ip_origin, last_online, version)
