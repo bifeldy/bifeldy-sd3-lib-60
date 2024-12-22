@@ -29,7 +29,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
-        private readonly IConverterService _converter;
 
         public string SessionKey { get; } = "user-session";
 
@@ -38,15 +37,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             ILogger<SecretMiddleware> logger,
             IApplicationService app,
             IGlobalService gs,
-            IChiperService chiper,
-            IConverterService converter
+            IChiperService chiper
         ) {
             this._next = next;
             this._logger = logger;
             this._app = app;
             this._gs = gs;
             this._chiper = chiper;
-            this._converter = converter;
         }
 
         public async Task Invoke(HttpContext context, IApiKeyRepository _akRepo, IGeneralRepository _generalRepo) {
@@ -82,12 +79,16 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     }
                 }
 
-                if (allowed) {
+                try {
+                    if (!allowed) {
+                        throw new Exception("Secret salah / tidak dikenali!");
+                    }
+
                     string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
                         ? this._gs.GetIpOriginData(connection, request)
                         : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
                     string token = this._chiper.EncodeJWT(new UserApiSession() {
-                        name = this._gs.CleanIpOrigin(maskIp),
+                        name = maskIp,
                         role = UserSessionRole.PROGRAM_SERVICE
                     });
 
@@ -112,7 +113,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
                     request.QueryString = new QueryBuilder(queryparameters).ToQueryString();
                 }
-                else {
+                catch {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
                     await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
@@ -121,6 +122,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                             message = "Secret salah / tidak dikenali!"
                         }
                     });
+
                     return;
                 }
             }

@@ -246,8 +246,12 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddGrpc() {
+        public static void AddGrpc(bool useJwt = false) {
             _ = Services.AddCodeFirstGrpc(opt => {
+                if (useJwt) {
+                    opt.Interceptors.Add<GRpcServerInterceptor>();
+                }
+
                 opt.MaxReceiveMessageSize = null;
                 opt.EnableDetailedErrors = true;
             });

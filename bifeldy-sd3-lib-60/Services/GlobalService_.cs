@@ -171,8 +171,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async Task<RequestJson> GetRequestBody(HttpRequest request) {
             RequestJson reqBody = null;
-            string contentType = request.Headers["content-type"].ToString();
-            if (SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
+            string contentType = request.ContentType ?? request.Headers["content-type"].ToString();
+            if (contentType == "application/grpc" || SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
                 string rbString = await request.GetRequestBodyStringAsync();
                 if (!string.IsNullOrEmpty(rbString)) {
                     try {

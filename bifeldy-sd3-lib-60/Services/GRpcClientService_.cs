@@ -11,12 +11,16 @@
  * 
  */
 
+using Microsoft.Extensions.Logging;
+
 using Grpc.Core;
+using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
 
 using ProtoBuf.Grpc.Client;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Grpcs;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -28,8 +32,10 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CGRpcClientService : IGRpcClientService {
 
-        public CGRpcClientService() {
-            //
+        private readonly ILoggerFactory _loggerFactory;
+
+        public CGRpcClientService(ILoggerFactory loggerFactory) {
+            this._loggerFactory = loggerFactory;
         }
 
         public GrpcChannel CreateChannel(string host, int port) {
@@ -45,7 +51,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public GrpcClient ClientGetService<T>(string host, int port) {
             GrpcChannel channel = this.CreateChannel(host, port);
-            return channel.CreateGrpcService(typeof(T));
+            CallInvoker invoker = channel.Intercept(new GRpcClientInterceptor(this._loggerFactory));
+            return invoker.CreateGrpcService(typeof(T));
         }
 
     }
