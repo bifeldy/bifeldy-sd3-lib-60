@@ -1,4 +1,17 @@
-﻿using System.Reflection;
+﻿/**
+ * 
+ * Author       :: Basilius Bias Astho Christyono
+ * Phone        :: (+62) 889 236 6466
+ * 
+ * Department   :: IT SD 03
+ * Mail         :: bias@indomaret.co.id
+ * 
+ * Catatan      :: Untuk Binding Grpc
+ *              :: Tidak Untuk Didaftarkan Ke DI Container
+ * 
+ */
+
+using System.Reflection;
 
 using Microsoft.Extensions.DependencyInjection;
 

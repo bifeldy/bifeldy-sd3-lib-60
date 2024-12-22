@@ -6,7 +6,7 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Memasang Dependency Injection Sesuai Service Attribute
+ * Catatan      :: Memasang Grpc Service Sesuai Contract Attribute
  *              :: Tidak Untuk Didaftarkan Ke DI Container
  * 
  */
