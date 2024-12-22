@@ -33,6 +33,8 @@ using Microsoft.OpenApi.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 
+using ProtoBuf.Grpc.Server;
+
 using Quartz;
 
 using Serilog;
@@ -241,6 +243,21 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
+        public static void AddGrpc() {
+            _ = Services.AddCodeFirstGrpc(opt => {
+                opt.MaxReceiveMessageSize = null;
+                opt.EnableDetailedErrors = true;
+            });
+            _ = Services.AddCodeFirstGrpcReflection();
+        }
+
+        public static void AutoMapGrpcService() {
+            // TODO :: Auto Load, Register, & Mapping
+            _ = App.MapCodeFirstGrpcReflectionService();
+        }
+
+        /* ** */
+
         public static void UseInvariantCulture() {
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
@@ -344,16 +361,17 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static async void Handle404ApiNotFound(HttpContext context) {
-            HttpResponse response = context.Response;
-
-            response.Clear();
-            response.StatusCode = StatusCodes.Status404NotFound;
-            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
-                info = "404 - Whoops :: API Tidak Ditemukan",
-                result = new ResponseJsonError() {
-                    message = $"Silahkan Periksa Kembali Dokumentasi API"
-                }
+        public static void Handle404ApiNotFound(string apiUrlPrefix = "api") {
+            _ = App.Map("/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}", async context => {
+                HttpResponse response = context.Response;
+                response.Clear();
+                response.StatusCode = StatusCodes.Status404NotFound;
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
+                    info = "404 - Whoops :: API Tidak Ditemukan",
+                    result = new ResponseJsonError() {
+                        message = $"Silahkan Periksa Kembali Dokumentasi API"
+                    }
+                });
             });
         }
 
@@ -388,14 +406,14 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void UseErrorHandlerMiddleware() {
+        public static void UseErrorHandlerMiddleware(string apiUrlPrefix = "api") {
             _ = App.Use(async (context, next) => {
 
                 // Khusus API Path :: Akan Di Handle Error Dengan Balikan Data JSON
                 // Selain Itu Atau Jika Masih Ada Error Lain
                 // Misal Di Catch Akan Terlempar Ke Halaman Error Bawaan UI
 
-                if (!context.Request.Path.Value.StartsWith("/api/")) {
+                if (!context.Request.Path.Value.StartsWith($"/{apiUrlPrefix}/")) {
                     await next();
                 }
                 else {

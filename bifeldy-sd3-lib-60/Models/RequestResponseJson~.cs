@@ -6,56 +6,67 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Template Kirim JSON
+ * Catatan      :: Template Kirim JSON & GRPCs
  *              :: Bisa Dipakai Untuk Inherit
  * 
  */
 
 using System.Text.Json.Serialization;
 
+using ProtoBuf;
+
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 
 namespace bifeldy_sd3_lib_60.Models {
 
+    [ProtoContract]
     public class RequestJson {
-        [JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
-        [JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
-        [JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
+        [ProtoMember(1)][JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
+        [ProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
+        [ProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
     }
 
+    [ProtoContract]
     public abstract class ResponseJson<T> {
-        [JsonPropertyOrder(0)] public string info { get; set; }
+        [ProtoMember(1)][JsonPropertyOrder(0)] public string info { get; set; }
     }
 
+    [ProtoContract]
     public class ResponseJsonSingle<T> : ResponseJson<T> {
-        [JsonPropertyOrder(1)] public T result { get; set; }
+        [ProtoMember(2)][JsonPropertyOrder(1)] public T result { get; set; }
     }
 
+    [ProtoContract]
     public class ResponseJsonMulti<T> : ResponseJson<T> {
-        [JsonPropertyOrder(2)] public IEnumerable<T> results { get; set; }
-        [JsonPropertyOrder(3)] public decimal? pages { get; set; }
-        [JsonPropertyOrder(4)] public decimal? count { get; set; }
+        [ProtoMember(3)][JsonPropertyOrder(2)] public IEnumerable<T> results { get; set; }
+        [ProtoMember(4)][JsonPropertyOrder(3)] public decimal? pages { get; set; }
+        [ProtoMember(5)][JsonPropertyOrder(4)] public decimal? count { get; set; }
     }
 
+    [ProtoContract]
     public class ResponseJsonError {
-        [JsonPropertyOrder(0)] public string message { get; set; }
+        [ProtoMember(1)][JsonPropertyOrder(0)] public string message { get; set; }
     }
 
+    [ProtoContract]
     public class ResponseJsonErrorApiKeyIpOrigin : ResponseJsonError {
-        [JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string api_key { get; set; }
-        [JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
+        [ProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string api_key { get; set; }
+        [ProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
     }
 
     // Untuk Turunan
     // Kosongan Bisa Buat Kirim JWT Via Body (POST, PUT, PATCH)
+    [ProtoContract]
     public class InputJson : RequestJson { }
 
+    [ProtoContract]
     public class InputJsonDc : InputJson {
-        public string kode_dc { get; set; }
+        [ProtoMember(4)] public string kode_dc { get; set; }
     }
 
+    [ProtoContract]
     public class InputJsonDcPingPong : InputJsonDc {
-        public string version { get; set; }
+        [ProtoMember(5)] public string version { get; set; }
     }
 
 }

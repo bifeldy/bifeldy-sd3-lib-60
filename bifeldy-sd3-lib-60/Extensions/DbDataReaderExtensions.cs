@@ -18,12 +18,11 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class DbDataReaderExtensions {
 
-        public static List<T> ToList<T>(this DbDataReader dr) {
-            var ls = new List<T>();
+        public static IEnumerable<T> FetchRow<T>(this DbDataReader dr, CancellationToken token = default, Action<T> callback = null) {
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             if (dr.HasRows) {
-                while (dr.Read()) {
+                while (dr.Read() && !token.IsCancellationRequested) {
                     var cols = new Dictionary<string, dynamic>();
                     for (int i = 0; i < dr.FieldCount; i++) {
                         if (!dr.IsDBNull(i)) {
@@ -42,8 +41,17 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         }
                     }
 
-                    ls.Add(objT);
+                    callback?.Invoke(objT);
+                    yield return objT;
                 }
+            }
+        }
+
+        public static List<T> ToList<T>(this DbDataReader dr, CancellationToken token = default, Action<T> callback = null) {
+            var ls = new List<T>();
+
+            foreach (T objT in dr.FetchRow(token, callback)) {
+                ls.Add(objT);
             }
 
             return ls;

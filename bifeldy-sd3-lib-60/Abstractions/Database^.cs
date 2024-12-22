@@ -36,12 +36,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
         object Clone();
+        Task CloseConnection(bool force = false);
         Task<IDbContextTransaction> TransactionStart(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
         Task TransactionCommit(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task TransactionRollback(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
-        Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
+        Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
@@ -133,7 +134,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         /// <summary> Jangan Lupa Di Commit Atau Rollback Sebelum Menjalankan Ini </summary>
-        protected async Task CloseConnection(bool force = false) {
+        public async Task CloseConnection(bool force = false) {
             if (this.Database.CurrentTransaction != null && force) {
                 CurrentActiveCommandTransaction = null;
             }
@@ -214,12 +215,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<List<T>> GetListAsync<T>(DbCommand databaseCommand) {
+        protected virtual async Task<List<T>> GetListAsync<T>(DbCommand databaseCommand, CancellationToken token = default, Action<T> callback = null) {
             var result = new List<T>();
             Exception exception = null;
             try {
                 using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess)) {
-                    result = dr.ToList<T>();
+                    result = dr.ToList(token, callback);
                 }
             }
             catch (Exception ex) {
@@ -427,7 +428,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public abstract Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
         public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
-        public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
+        public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null);
         public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
         public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);

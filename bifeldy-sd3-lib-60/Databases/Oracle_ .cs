@@ -158,12 +158,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.GetDataTableAsync(cmd);
         }
 
-        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
+        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null) {
             var cmd = (OracleCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.GetListAsync<T>(cmd);
+            return await this.GetListAsync(cmd, token, callback);
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
