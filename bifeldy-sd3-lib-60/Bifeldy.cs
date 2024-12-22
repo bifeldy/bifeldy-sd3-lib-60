@@ -33,6 +33,7 @@ using Microsoft.OpenApi.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 
+using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
 using Quartz;
@@ -43,11 +44,13 @@ using Serilog.Events;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Grpcs;
 using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.UserAuth;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.UserAuth;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -248,11 +251,16 @@ namespace bifeldy_sd3_lib_60 {
                 opt.MaxReceiveMessageSize = null;
                 opt.EnableDetailedErrors = true;
             });
+            _ = Services.AddSingleton(
+                BinderConfiguration.Create(
+                    binder: new GrpcBinder(Services)
+                )
+            );
             _ = Services.AddCodeFirstGrpcReflection();
         }
 
         public static void AutoMapGrpcService() {
-            // TODO :: Auto Load, Register, & Mapping
+            App.AutoMapGrpcService();
             _ = App.MapCodeFirstGrpcReflectionService();
         }
 
