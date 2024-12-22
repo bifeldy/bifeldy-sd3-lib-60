@@ -6,7 +6,7 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Untuk Binding Grpc
+ * Catatan      :: Untuk Intercept Client
  *              :: Tidak Untuk Didaftarkan Ke DI Container
  * 
  */
