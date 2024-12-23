@@ -38,6 +38,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
+        private readonly IBerkasService _berkas;
         private readonly IApiKeyRepository _apiKeyRepo;
         private readonly IApiTokenRepository _apiTokenRepo;
         private readonly IUserRepository _userRepo;
@@ -49,6 +50,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IApplicationService app,
             IGlobalService gs,
             IChiperService chiper,
+            IBerkasService berkas,
             IApiKeyRepository apiKeyRepo,
             IApiTokenRepository apiTokenRepo,
             IUserRepository userRepo,
@@ -57,6 +59,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._app = app;
             this._gs = gs;
             this._chiper = chiper;
+            this._berkas = berkas;
             this._apiKeyRepo = apiKeyRepo;
             this._apiTokenRepo = apiTokenRepo;
             this._userRepo = userRepo;
@@ -199,6 +202,45 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
                 });
             }
+        }
+
+        /* ** */
+
+        private ActionResult GetProtoFile(string name = "_all") {
+            try {
+                string filePath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf", name);
+                if (!filePath.EndsWith(".proto")) {
+                    filePath += ".proto";
+                }
+
+                if (!System.IO.File.Exists(filePath)) {
+                    throw new Exception("File Tidak Ditemukan!");
+                }
+
+                return this.PhysicalFile(filePath, "text/plain");
+            }
+            catch (Exception ex) {
+                return this.NotFound(new ResponseJsonSingle<ResponseJsonError>() {
+                    info = $"404 - {this.GetType().Name} :: File Tidak Ditemukan",
+                    result = new ResponseJsonError() {
+                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
+                            ? ex.Message
+                            : "Terjadi kesalahan saat proses data!"
+                    }
+                });
+            }
+        }
+
+        [HttpGet("proto")]
+        [SwaggerOperation(Summary = "Informasi Semua Class Data Type Protobuf-NET.Grpc")]
+        public IActionResult GrpcProtoAllFile() {
+            return this.GetProtoFile();
+        }
+
+        [HttpGet("proto/{fileName}")]
+        [SwaggerOperation(Summary = "Informasi Class Data Type Protobuf-NET.Grpc")]
+        public IActionResult GrpcProtoFile(string fileName) {
+            return this.GetProtoFile(fileName);
         }
 
     }

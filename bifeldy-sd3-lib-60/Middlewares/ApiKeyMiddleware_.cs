@@ -47,11 +47,15 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (
-                !request.Path.Value.StartsWith("/api/") ||
-                request.Path.Value.StartsWith("/api/swagger") ||
-                !string.IsNullOrEmpty(context.Items["secret"]?.ToString())
-            ) {
+            string apiPathRequested = request.Path.Value;
+            string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
+
+            bool isGrpc = Bifeldy.GRPC_ROUTH_PATH.Contains(apiPathRequestedForGrpc);
+            bool isApi = apiPathRequested.StartsWith("/api/");
+            bool isSwagger = apiPathRequested.StartsWith("/api/swagger");
+            bool haveSecret = string.IsNullOrEmpty(context.Items["secret"]?.ToString());
+
+            if ((!isGrpc && !isApi) || isSwagger || !haveSecret) {
                 await this._next(context);
                 return;
             }

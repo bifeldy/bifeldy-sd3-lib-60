@@ -26,10 +26,19 @@ namespace bifeldy_sd3_lib_60.Extensions {
             var libAsm = Assembly.GetExecutingAssembly();
             var prgAsm = Assembly.GetEntryAssembly();
 
-            IEnumerable<Type> libPrgAsmTypes = libAsm.GetTypes().Concat(prgAsm.GetTypes())
+            IEnumerable<Type> grpcServices = libAsm.GetTypes().Concat(prgAsm.GetTypes())
                 .Where(p => p.IsDefined(serviceContract, true) && p.IsInterface);
 
-            foreach (Type grpcService in libPrgAsmTypes) {
+            foreach (Type grpcService in grpcServices) {
+                string[] fullName = grpcService.FullName.Split(".");
+                var arrFn = fullName.Where(fn => fn != grpcService.Name).ToList();
+                string name = grpcService.Name.StartsWith("I") ? grpcService.Name[1..] : grpcService.Name;
+                arrFn.Add(name);
+                string grpcRoute = string.Join(".", arrFn);
+                if (!Bifeldy.GRPC_ROUTH_PATH.Contains(grpcRoute)) {
+                    Bifeldy.GRPC_ROUTH_PATH.Add(grpcRoute);
+                }
+
                 MethodInfo method = typeof(GrpcEndpointRouteBuilderExtensions).GetMethod(nameof(GrpcEndpointRouteBuilderExtensions.MapGrpcService)).MakeGenericMethod(grpcService);
                 _ = method.Invoke(null, new[] { app });
             }

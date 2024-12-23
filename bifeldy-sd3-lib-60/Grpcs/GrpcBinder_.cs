@@ -19,7 +19,7 @@ using ProtoBuf.Grpc.Configuration;
 
 namespace bifeldy_sd3_lib_60.Grpcs {
 
-    public class GrpcBinder : ServiceBinder {
+    public sealed class GrpcBinder : ServiceBinder {
 
         private readonly IServiceCollection services;
 

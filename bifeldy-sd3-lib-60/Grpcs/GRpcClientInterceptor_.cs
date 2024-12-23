@@ -18,12 +18,12 @@ using Grpc.Core.Interceptors;
 
 namespace bifeldy_sd3_lib_60.Grpcs {
 
-    public class GRpcClientInterceptor : Interceptor {
+    public sealed class CGRpcClientInterceptor : Interceptor {
 
-        private readonly ILogger<GRpcClientInterceptor> _logger;
+        private readonly ILogger<CGRpcClientInterceptor> _logger;
 
-        public GRpcClientInterceptor(ILoggerFactory loggerFactory) {
-            this._logger = loggerFactory.CreateLogger<GRpcClientInterceptor>();
+        public CGRpcClientInterceptor(ILoggerFactory loggerFactory) {
+            this._logger = loggerFactory.CreateLogger<CGRpcClientInterceptor>();
         }
 
         private async Task<T> HandleClient<T>(Task<T> data, string nameOp, string targetServer) {

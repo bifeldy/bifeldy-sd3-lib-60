@@ -24,17 +24,17 @@ using bifeldy_sd3_lib_60.Grpcs;
 
 namespace bifeldy_sd3_lib_60.Services {
 
-    public interface IGRpcClientService {
+    public interface IGRpcService {
         GrpcChannel CreateChannel(string host, int port);
         GrpcClient ClientGetService<T>(string host, int port);
     }
 
     [SingletonServiceRegistration]
-    public sealed class CGRpcClientService : IGRpcClientService {
+    public sealed class CGRpcService : IGRpcService {
 
         private readonly ILoggerFactory _loggerFactory;
 
-        public CGRpcClientService(ILoggerFactory loggerFactory) {
+        public CGRpcService(ILoggerFactory loggerFactory) {
             this._loggerFactory = loggerFactory;
         }
 
@@ -51,7 +51,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public GrpcClient ClientGetService<T>(string host, int port) {
             GrpcChannel channel = this.CreateChannel(host, port);
-            CallInvoker invoker = channel.Intercept(new GRpcClientInterceptor(this._loggerFactory));
+            CallInvoker invoker = channel.Intercept(new CGRpcClientInterceptor(this._loggerFactory));
             return invoker.CreateGrpcService(typeof(T));
         }
 

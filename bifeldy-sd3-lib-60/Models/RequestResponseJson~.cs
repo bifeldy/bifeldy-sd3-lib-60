@@ -21,37 +21,32 @@ namespace bifeldy_sd3_lib_60.Models {
 
     [ProtoContract]
     public class RequestJson {
-        [ProtoMember(1)][JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
-        [ProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
-        [ProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
+        [InheritedProtoMember(1)][JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
+        [InheritedProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
+        [InheritedProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
     }
 
-    [ProtoContract]
     public abstract class ResponseJson<T> {
-        [ProtoMember(1)][JsonPropertyOrder(0)] public string info { get; set; }
+        [JsonPropertyOrder(0)] public string info { get; set; }
     }
 
-    [ProtoContract]
     public class ResponseJsonSingle<T> : ResponseJson<T> {
-        [ProtoMember(2)][JsonPropertyOrder(1)] public T result { get; set; }
+        [JsonPropertyOrder(1)] public T result { get; set; }
     }
 
-    [ProtoContract]
     public class ResponseJsonMulti<T> : ResponseJson<T> {
-        [ProtoMember(3)][JsonPropertyOrder(2)] public IEnumerable<T> results { get; set; }
-        [ProtoMember(4)][JsonPropertyOrder(3)] public decimal? pages { get; set; }
-        [ProtoMember(5)][JsonPropertyOrder(4)] public decimal? count { get; set; }
+        [JsonPropertyOrder(2)] public IEnumerable<T> results { get; set; }
+        [JsonPropertyOrder(3)] public decimal? pages { get; set; }
+        [JsonPropertyOrder(4)] public decimal? count { get; set; }
     }
 
-    [ProtoContract]
     public class ResponseJsonError {
-        [ProtoMember(1)][JsonPropertyOrder(0)] public string message { get; set; }
+        [JsonPropertyOrder(0)] public string message { get; set; }
     }
 
-    [ProtoContract]
     public class ResponseJsonErrorApiKeyIpOrigin : ResponseJsonError {
-        [ProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string api_key { get; set; }
-        [ProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
+        [JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string api_key { get; set; }
+        [JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
     }
 
     // Untuk Turunan
@@ -61,12 +56,12 @@ namespace bifeldy_sd3_lib_60.Models {
 
     [ProtoContract]
     public class InputJsonDc : InputJson {
-        [ProtoMember(4)] public string kode_dc { get; set; }
+        [InheritedProtoMember(4)] public string kode_dc { get; set; }
     }
 
     [ProtoContract]
     public class InputJsonDcPingPong : InputJsonDc {
-        [ProtoMember(5)] public string version { get; set; }
+        [InheritedProtoMember(5)] public string version { get; set; }
     }
 
 }
