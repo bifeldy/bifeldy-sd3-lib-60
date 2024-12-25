@@ -43,6 +43,10 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.22" />
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="6.21.130" />
+    <PackageReference Include="protobuf-net.BuildTools" Version="3.2.33">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
     <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.8.0" />

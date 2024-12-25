@@ -59,6 +59,7 @@ namespace bifeldy_sd3_lib_60 {
     public static class Bifeldy {
 
         public static List<string> GRPC_ROUTH_PATH = new();
+        public static bool IS_USING_API_KEY = false;
 
         public static readonly string DEFAULT_DATA_FOLDER = "_data";
 
@@ -560,7 +561,10 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseSecretMiddleware() => App.UseMiddleware<SecretMiddleware>();
 
-        public static void UseApiKeyMiddleware() => App.UseMiddleware<ApiKeyMiddleware>();
+        public static void UseApiKeyMiddleware() {
+            _ = App.UseMiddleware<ApiKeyMiddleware>();
+            IS_USING_API_KEY = true;
+        }
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
 

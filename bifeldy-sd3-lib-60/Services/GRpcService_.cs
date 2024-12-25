@@ -26,7 +26,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public interface IGRpcService {
         GrpcChannel CreateChannel(string host, int port);
-        GrpcClient ClientGetService<T>(string host, int port);
+        T ClientGetService<T>(string host, int port) where T : class;
     }
 
     [SingletonServiceRegistration]
@@ -49,10 +49,10 @@ namespace bifeldy_sd3_lib_60.Services {
             return GrpcChannel.ForAddress($"{host}:{port}", opt);
         }
 
-        public GrpcClient ClientGetService<T>(string host, int port) {
+        public T ClientGetService<T>(string host, int port) where T : class {
             GrpcChannel channel = this.CreateChannel(host, port);
             CallInvoker invoker = channel.Intercept(new CGRpcClientInterceptor(this._loggerFactory));
-            return invoker.CreateGrpcService(typeof(T));
+            return invoker.CreateGrpcService<T>();
         }
 
     }
