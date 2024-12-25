@@ -12,6 +12,7 @@
  */
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Grpc.Core;
 using Grpc.Core.Interceptors;
@@ -21,24 +22,39 @@ using ProtoBuf.Grpc.Client;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Grpcs;
+using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IGRpcService {
-        GrpcChannel CreateChannel(string host, int port);
-        T ClientGetService<T>(string host, int port) where T : class;
+        GrpcChannel CreateChannel(string host, int port = 0);
+        T ClientGetService<T>(string host, int port = 0) where T : class;
     }
 
     [SingletonServiceRegistration]
     public sealed class CGRpcService : IGRpcService {
 
+        private readonly EnvVar _envVar;
+
         private readonly ILoggerFactory _loggerFactory;
 
-        public CGRpcService(ILoggerFactory loggerFactory) {
+        public CGRpcService(
+            IOptions<EnvVar> envVar,
+            ILoggerFactory loggerFactory
+        ) {
+            this._envVar = envVar.Value;
             this._loggerFactory = loggerFactory;
         }
 
-        public GrpcChannel CreateChannel(string host, int port) {
+        public GrpcChannel CreateChannel(string host, int port = 0) {
+            if (string.IsNullOrEmpty(host)) {
+                throw new ArgumentNullException("host", "Harus Berisi Alamat IP / Domain");
+            }
+
+            if (port <= 0) {
+                port = this._envVar.GRPC_PORT;
+            }
+
             var opt = new GrpcChannelOptions() {
                 Credentials = ChannelCredentials.Insecure
             };
@@ -49,7 +65,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return GrpcChannel.ForAddress($"{host}:{port}", opt);
         }
 
-        public T ClientGetService<T>(string host, int port) where T : class {
+        public T ClientGetService<T>(string host, int port = 0) where T : class {
             GrpcChannel channel = this.CreateChannel(host, port);
             CallInvoker invoker = channel.Intercept(new CGRpcClientInterceptor(this._loggerFactory));
             return invoker.CreateGrpcService<T>();

@@ -239,6 +239,19 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.smtpServerPassword = value;
         }
 
+        private int grpcPort = 8145;
+        public int GRPC_PORT {
+            get {
+                string grpcPort = GetEnvVar("GRPC_PORT");
+                if (!string.IsNullOrEmpty(grpcPort)) {
+                    this.grpcPort = int.Parse(grpcPort);
+                }
+
+                return this.grpcPort;
+            }
+            set => this.grpcPort = value;
+        }
+
         private string wsSyncHo = "http://127.0.0.1";
         public string WS_SYNCHO {
             get {
