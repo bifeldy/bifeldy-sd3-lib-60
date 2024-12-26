@@ -22,6 +22,7 @@ using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
+using System.Xml.Linq;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
@@ -206,9 +207,11 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         /* ** */
 
-        private ActionResult GetProtoFile(string name = "_all") {
+        [HttpGet("protobuf-net/{fileName}")]
+        [SwaggerOperation(Summary = "Informasi Class Data Type Protobuf-NET.Grpc")]
+        public IActionResult GrpcProtoFile(string fileName) {
             try {
-                string filePath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf", name);
+                string filePath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net", fileName);
                 if (!filePath.EndsWith(".proto")) {
                     filePath += ".proto";
                 }
@@ -229,18 +232,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
                 });
             }
-        }
-
-        [HttpGet("proto")]
-        [SwaggerOperation(Summary = "Informasi Semua Class Data Type Protobuf-NET.Grpc")]
-        public IActionResult GrpcProtoAllFile() {
-            return this.GetProtoFile();
-        }
-
-        [HttpGet("proto/{fileName}")]
-        [SwaggerOperation(Summary = "Informasi Class Data Type Protobuf-NET.Grpc")]
-        public IActionResult GrpcProtoFile(string fileName) {
-            return this.GetProtoFile(fileName);
         }
 
     }

@@ -25,12 +25,13 @@ namespace bifeldy_sd3_lib_60.Extensions {
         public static void AutoMapGrpcService(this WebApplication app) {
             Type serviceContract = typeof(ServiceContractAttribute);
 
-            string dirPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf");
-            if (Directory.Exists(dirPath)) {
-                Directory.Delete(dirPath, true);
+            string dirPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net");
+            var di = new DirectoryInfo(dirPath);
+            foreach (FileInfo fi in di.GetFiles()) {
+                if (fi.Name != "bcl.proto") {
+                    fi.Delete();
+                }
             }
-
-            _ = Directory.CreateDirectory(dirPath);
 
             var libAsm = Assembly.GetExecutingAssembly();
             var prgAsm = Assembly.GetEntryAssembly();

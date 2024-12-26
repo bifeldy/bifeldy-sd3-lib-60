@@ -74,6 +74,9 @@
     <None Update="fonts\fre3of9x\fre3of9x.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="_data\protobuf-net\bcl.proto">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
