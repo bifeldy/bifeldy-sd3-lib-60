@@ -29,16 +29,16 @@ namespace bifeldy_sd3_lib_60.Conventions {
 
         private void SwaggerHide(Type hideType, ActionModel action, string kodeDc, string jenisDc) {
             if (
-                (hideType == typeof(ApiRouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
-                (hideType == typeof(ApiRouteExcludeAllDcAttribute) && kodeDc != "DCHO") ||
-                (hideType == typeof(ApiRouteExcludeIndukAttribute) && jenisDc == "INDUK") ||
-                (hideType == typeof(ApiRouteExcludeDepoAttribute) && jenisDc == "DEPO") ||
-                (hideType == typeof(ApiRouteExcludeKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||
-                (hideType == typeof(ApiRouteExcludeIplazaAttribute) && jenisDc == "IPLAZA") ||
-                (hideType == typeof(ApiRouteExcludeFrozenAttribute) && jenisDc == "FROZEN") ||
-                (hideType == typeof(ApiRouteExcludePerishableAttribute) && jenisDc == "PERISHABLE") ||
-                (hideType == typeof(ApiRouteExcludeLpgAttribute) && jenisDc == "LPG") ||
-                (hideType == typeof(ApiRouteExcludeSewaAttribute) && jenisDc == "SEWA")
+                (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
+                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO") ||
+                (hideType == typeof(RouteExcludeIndukAttribute) && jenisDc == "INDUK") ||
+                (hideType == typeof(RouteExcludeDepoAttribute) && jenisDc == "DEPO") ||
+                (hideType == typeof(RouteExcludeKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||
+                (hideType == typeof(RouteExcludeIplazaAttribute) && jenisDc == "IPLAZA") ||
+                (hideType == typeof(RouteExcludeFrozenAttribute) && jenisDc == "FROZEN") ||
+                (hideType == typeof(RouteExcludePerishableAttribute) && jenisDc == "PERISHABLE") ||
+                (hideType == typeof(RouteExcludeLpgAttribute) && jenisDc == "LPG") ||
+                (hideType == typeof(RouteExcludeSewaAttribute) && jenisDc == "SEWA")
             ) {
                 action.ApiExplorer.IsVisible = false;
             }
@@ -51,16 +51,16 @@ namespace bifeldy_sd3_lib_60.Conventions {
             string jenisDc = this._generalRepository.GetJenisDc().Result;
 
             Type[] typesToCheck = new[] {
-                typeof(ApiRouteExcludeDcHoAttribute),
-                typeof(ApiRouteExcludeAllDcAttribute),
-                typeof(ApiRouteExcludeIndukAttribute),
-                typeof(ApiRouteExcludeDepoAttribute),
-                typeof(ApiRouteExcludeKonvinienceAttribute),
-                typeof(ApiRouteExcludeIplazaAttribute),
-                typeof(ApiRouteExcludeFrozenAttribute),
-                typeof(ApiRouteExcludePerishableAttribute),
-                typeof(ApiRouteExcludeLpgAttribute),
-                typeof(ApiRouteExcludeSewaAttribute)
+                typeof(RouteExcludeDcHoAttribute),
+                typeof(RouteExcludeAllDcAttribute),
+                typeof(RouteExcludeIndukAttribute),
+                typeof(RouteExcludeDepoAttribute),
+                typeof(RouteExcludeKonvinienceAttribute),
+                typeof(RouteExcludeIplazaAttribute),
+                typeof(RouteExcludeFrozenAttribute),
+                typeof(RouteExcludePerishableAttribute),
+                typeof(RouteExcludeLpgAttribute),
+                typeof(RouteExcludeSewaAttribute)
             };
 
             foreach (ControllerModel controller in application.Controllers) {
