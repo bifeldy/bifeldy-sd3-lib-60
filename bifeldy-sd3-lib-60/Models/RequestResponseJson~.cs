@@ -21,9 +21,9 @@ namespace bifeldy_sd3_lib_60.Models {
 
     [ProtoContract]
     public class RequestJson {
-        [InheritedProtoMember(1)][JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
-        [InheritedProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
-        [InheritedProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
+        [ProtoMember(1)][InheritedProtoMember(1)][JsonPropertyOrder(0)][SwaggerHideJsonProperty] public string secret { get; set; }
+        [ProtoMember(2)][InheritedProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string key { get; set; }
+        [ProtoMember(3)][InheritedProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string token { get; set; }
     }
 
     public abstract class ResponseJson<T> {
@@ -56,12 +56,12 @@ namespace bifeldy_sd3_lib_60.Models {
 
     [ProtoContract]
     public class InputJsonDc : InputJson {
-        [InheritedProtoMember(4)] public string kode_dc { get; set; }
+        [ProtoMember(4)][InheritedProtoMember(4)] public string kode_dc { get; set; }
     }
 
     [ProtoContract]
     public class InputJsonDcPingPong : InputJsonDc {
-        [InheritedProtoMember(5)] public string version { get; set; }
+        [ProtoMember(5)][InheritedProtoMember(5)] public string version { get; set; }
     }
 
 }

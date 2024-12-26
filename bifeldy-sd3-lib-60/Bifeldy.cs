@@ -33,10 +33,8 @@ using Microsoft.OpenApi.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 
-using ProtoBuf;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
-using ProtoBuf.Meta;
 
 using Quartz;
 
@@ -242,7 +240,7 @@ namespace bifeldy_sd3_lib_60 {
             }
 
             // --
-            // Hanya Singleton Yang Bisa Di Inject Di Constructor() { }
+            // Hanya Singleton Yang Leluasa Dengan Mudahnya Bisa Di Inject Di Constructor() { } Dimana Saja
             // --
             _ = Services.AddSingleton<IConverter>(sp => {
                 return new SynchronizedConverter(new PdfTools());
@@ -251,107 +249,8 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void PopulateSubTypes(int counter, Type grpcProto) {
-            var rtm = RuntimeTypeModel.Default.GetTypes();
-            foreach (object mt in rtm) {
-                if (mt is MetaType theType) {
-                    if (theType.Type == grpcProto) {
-                        return;
-                    }
-                }
-            }
-
-            Type objType = typeof(object);
-            var inheritanceTree = new List<Type>();
-            do {
-                inheritanceTree.Insert(0, grpcProto);
-                grpcProto = grpcProto.BaseType;
-            }
-            while (null != grpcProto && grpcProto != objType);
-
-            // if (!inheritanceTree.Any(gt => gt.IsGenericType)) {
-            //     return;
-            // }
-
-            for (int i = 0; i < inheritanceTree.Count - 1; i++) {
-                Type _typeParent = inheritanceTree[i];
-                Type __typeChild = inheritanceTree[i + 1];
-
-                MetaType _mtParent = RuntimeTypeModel.Default[_typeParent];
-                MetaType __mtChild = RuntimeTypeModel.Default[__typeChild];
-                // MetaType _mtParent = RuntimeTypeModel.Default.Add(_typeParent, true);
-
-                bool isFound = false;
-                SubType[] _stParent = _mtParent.GetSubtypes();
-                foreach (SubType s in _stParent) {
-                    if (s.DerivedType == __mtChild) {
-                        isFound = true;
-                        break;
-                    }
-                }
-
-                if (!isFound) {
-                    _mtParent = RuntimeTypeModel.Default.Add(_typeParent, true);
-                    _ = _mtParent.AddSubType(counter++, __typeChild);
-                }
-            }
-        }
-
-        public static void PrepareGrpcModelSubTypeClass() {
-            Type protoContract = typeof(ProtoContractAttribute);
-
-            var libAsm = Assembly.GetExecutingAssembly();
-            var prgAsm = Assembly.GetEntryAssembly();
-
-            IEnumerable<Type> libPrgAsmTypes = libAsm.GetTypes().Concat(prgAsm.GetTypes());
-
-            IEnumerable<Type> grpcProtos = libPrgAsmTypes
-                .Where(p => p.IsDefined(protoContract, true) && p.IsClass && p.IsSealed);
-
-            int _counter = 1000;
-            foreach (Type grpcProtoParent in grpcProtos) {
-                // var derivedGrpcProtoChilds = grpcProtos.Where(t => t != grpcProtoParent && grpcProtoParent.IsAssignableFrom(t)).ToArray();
-                // if (derivedGrpcProtoChilds.Length > 0) {
-                //     continue;
-                // }
-                PopulateSubTypes(_counter, grpcProtoParent);
-                _counter += 1000;
-            }
-        }
-
-        public static void CreateProtoFile() {
-            Type protoContract = typeof(ProtoContractAttribute);
-
-            var libAsm = Assembly.GetExecutingAssembly();
-            var prgAsm = Assembly.GetEntryAssembly();
-
-            IEnumerable<Type> libPrgAsmTypes = libAsm.GetTypes().Concat(prgAsm.GetTypes());
-
-            IEnumerable<Type> grpcProtos = libPrgAsmTypes
-                .Where(p => p.IsDefined(protoContract, true) && p.IsClass);
-
-            string dataFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER);
-            if (Directory.Exists(dataFolderPath)) {
-                string dirPath = Path.Combine(dataFolderPath, "protobuf");
-                _ = Directory.CreateDirectory(dirPath);
-
-                foreach (Type grpcProto in grpcProtos) {
-                    string protoFilePath = Path.Combine(dirPath, $"{grpcProto.Name}.proto");
-                    // string schemaName = ___mtLast.GetSchemaTypeName();
-                    File.WriteAllText(protoFilePath, RuntimeTypeModel.Default.GetSchema(grpcProto, ProtoSyntax.Default));
-                }
-
-                string allProtoFilePath = Path.Combine(dirPath, $"_all.proto");
-                var schemaGeneratorOptions = new SchemaGenerationOptions() {
-                    Syntax = ProtoSyntax.Default
-                };
-                File.WriteAllText(allProtoFilePath, RuntimeTypeModel.Default.GetSchema(schemaGeneratorOptions));
-            }
-        }
-
         public static void AddGrpc(bool useJwt = false) {
             InheritedProtoMemberAttribute.AddInheritedMembersIn();
-            // PrepareGrpcModelOopBindSealedClass();
             _ = Services.AddCodeFirstGrpc(opt => {
                 if (useJwt) {
                     opt.Interceptors.Add<CGRpcServerInterceptor>();
@@ -366,7 +265,6 @@ namespace bifeldy_sd3_lib_60 {
                 )
             );
             _ = Services.AddCodeFirstGrpcReflection();
-            CreateProtoFile();
         }
 
         public static void AutoMapGrpcService() {

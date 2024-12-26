@@ -16,12 +16,21 @@ using System.ServiceModel;
 
 using Microsoft.AspNetCore.Builder;
 
+using ProtoBuf.Grpc.Reflection;
+
 namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class WebApplicationExtensions {
 
         public static void AutoMapGrpcService(this WebApplication app) {
             Type serviceContract = typeof(ServiceContractAttribute);
+
+            string dirPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf");
+            if (Directory.Exists(dirPath)) {
+                Directory.Delete(dirPath, true);
+            }
+
+            _ = Directory.CreateDirectory(dirPath);
 
             var libAsm = Assembly.GetExecutingAssembly();
             var prgAsm = Assembly.GetEntryAssembly();
@@ -39,8 +48,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     Bifeldy.GRPC_ROUTH_PATH.Add(grpcRoute);
                 }
 
-                MethodInfo method = typeof(GrpcEndpointRouteBuilderExtensions).GetMethod(nameof(GrpcEndpointRouteBuilderExtensions.MapGrpcService)).MakeGenericMethod(grpcService);
-                _ = method.Invoke(null, new[] { app });
+                MethodInfo mapGrpcService = typeof(GrpcEndpointRouteBuilderExtensions).GetMethod(nameof(GrpcEndpointRouteBuilderExtensions.MapGrpcService)).MakeGenericMethod(grpcService);
+                _ = mapGrpcService.Invoke(null, new[] { app });
+
+                var schemaGenerator = new SchemaGenerator();
+                string schema = schemaGenerator.GetSchema(grpcService);
+                File.WriteAllText(Path.Combine(dirPath, $"{grpcService}.proto"), schema);
             }
         }
 
