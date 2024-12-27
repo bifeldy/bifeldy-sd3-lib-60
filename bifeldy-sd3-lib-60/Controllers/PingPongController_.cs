@@ -66,13 +66,15 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     new() { NAME = "version", VALUE = fd.version.ToUpper() }
                 });
                 _ = await _orapg.ExecQueryAsync($@"
-                    INSERT INTO api_ping_t (dc_kode, ip_origin, last_online, version)
-                    VALUES (:dc_kode, :ip_origin, :last_online, :version)
+                    INSERT INTO api_ping_t (dc_kode, ip_origin, last_online, version, port_api, port_grpc)
+                    VALUES (:dc_kode, :ip_origin, :last_online, :version, :port_api, :port_grpc)
                 ", new List<CDbQueryParamBind>() {
                     new() { NAME = "dc_kode", VALUE = fd.kode_dc.ToUpper() },
                     new() { NAME = "ip_origin", VALUE = ipOrigin },
                     new() { NAME = "last_online", VALUE = DateTime.Now },
-                    new() { NAME = "version", VALUE = fd.version }
+                    new() { NAME = "version", VALUE = fd.version },
+                    new() { NAME = "port_api", VALUE = fd.port_api },
+                    new() { NAME = "port_grpc", VALUE = fd.port_grpc }
                 });
             }
 

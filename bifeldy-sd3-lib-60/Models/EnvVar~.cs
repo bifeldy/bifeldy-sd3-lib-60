@@ -31,6 +31,32 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.dotnetRunningInContainer = value;
         }
 
+        private int apiPort = 80;
+        public int API_PORT {
+            get {
+                string port = GetEnvVar("API_PORT");
+                if (!string.IsNullOrEmpty(port)) {
+                    this.apiPort = int.Parse(port);
+                }
+
+                return this.apiPort;
+            }
+            set => this.apiPort = value;
+        }
+
+        private int grpcPort = 80;
+        public int GRPC_PORT {
+            get {
+                string port = GetEnvVar("GRPC_PORT");
+                if (!string.IsNullOrEmpty(port)) {
+                    this.grpcPort = int.Parse(port);
+                }
+
+                return this.grpcPort;
+            }
+            set => this.grpcPort = value;
+        }
+
         private bool isUsingPostgres = false;
         public bool IS_USING_POSTGRES {
             get {
@@ -237,19 +263,6 @@ namespace bifeldy_sd3_lib_60.Models {
                 return this.smtpServerPassword;
             }
             set => this.smtpServerPassword = value;
-        }
-
-        private int grpcPort = 8145;
-        public int GRPC_PORT {
-            get {
-                string grpcPort = GetEnvVar("GRPC_PORT");
-                if (!string.IsNullOrEmpty(grpcPort)) {
-                    this.grpcPort = int.Parse(grpcPort);
-                }
-
-                return this.grpcPort;
-            }
-            set => this.grpcPort = value;
         }
 
         private string wsSyncHo = "http://127.0.0.1";
