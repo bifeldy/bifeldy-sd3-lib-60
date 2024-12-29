@@ -12,17 +12,20 @@
 
 using System.Globalization;
 using System.Reflection;
+using System.Net;
 
 using Helmet;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -90,6 +93,26 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void InitApp(WebApplication app) => App = app;
+
+        public static void SetKestrelApiGrpcPort(IConfigurationSection configuration) {
+            _ = Builder.WebHost.ConfigureKestrel(options => {
+                // Web Api Seperti Biasa
+                string apiEnvName = "API_PORT";
+                string apiPortEnv = Environment.GetEnvironmentVariable(apiEnvName);
+                int webApiPort = int.Parse(apiPortEnv ?? configuration.GetValue<string>(apiEnvName));
+                options.Listen(IPAddress.Any, webApiPort, listenOptions => {
+                    listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+                });
+
+                // GRPC Pakai HTTP/2 Doank :: Cek Environment / appsettings.json
+                string grpcEnvName = "GRPC_PORT";
+                string grpcPortEnv = Environment.GetEnvironmentVariable(grpcEnvName);
+                int grpcPort = int.Parse(grpcPortEnv ?? configuration.GetValue<string>(grpcEnvName));
+                options.Listen(IPAddress.Any, grpcPort, listenOptions => {
+                    listenOptions.Protocols = HttpProtocols.Http2;
+                });
+            });
+        }
 
         /* ** */
 

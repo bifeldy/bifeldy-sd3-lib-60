@@ -11,6 +11,8 @@
  * 
  */
 
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +25,7 @@ using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
 using System.Xml.Linq;
+using Microsoft.Extensions.Options;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
@@ -36,10 +39,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
     [Route("")]
     public class _Controller : ControllerBase {
 
+        private readonly IServer _server;
+
+        private readonly EnvVar _envVar;
+
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
-        private readonly IBerkasService _berkas;
         private readonly IApiKeyRepository _apiKeyRepo;
         private readonly IApiTokenRepository _apiTokenRepo;
         private readonly IUserRepository _userRepo;
@@ -48,19 +54,21 @@ namespace bifeldy_sd3_lib_60.Controllers {
         protected UserApiSession UserTokenData => (UserApiSession) this.HttpContext.Items["user"];
 
         public _Controller(
+            IServer server,
+            IOptions<EnvVar> envVar,
             IApplicationService app,
             IGlobalService gs,
             IChiperService chiper,
-            IBerkasService berkas,
             IApiKeyRepository apiKeyRepo,
             IApiTokenRepository apiTokenRepo,
             IUserRepository userRepo,
             IOraPg orapg
         ) {
+            this._server = server;
+            this._envVar = envVar.Value;
             this._app = app;
             this._gs = gs;
             this._chiper = chiper;
-            this._berkas = berkas;
             this._apiKeyRepo = apiKeyRepo;
             this._apiTokenRepo = apiTokenRepo;
             this._userRepo = userRepo;
@@ -207,8 +215,52 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         /* ** */
 
+        [HttpGet("protobuf-net")]
+        [SwaggerOperation(Summary = "Informasi Protobuf-NET.Grpc")]
+        public IActionResult GrpcInfo() {
+            try {
+                IServerAddressesFeature saf = this._server.Features.Get<IServerAddressesFeature>();
+
+                int apiPort = this._envVar.API_PORT;
+                int grpcPort = this._envVar.GRPC_PORT;
+
+                foreach (string address in saf.Addresses) {
+                    var uri = new Uri(address);
+                    int port = uri.Port;
+                    if (port == 80 || port == 8145 || port == apiPort) {
+                        apiPort = port;
+                    }
+                    else if (port == grpcPort) {
+                        grpcPort = port;
+                    }
+                    else {
+                        throw new Exception("Gagal Mendapatkan Konfigurasi Port");
+                    }
+                }
+
+                string folderPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net");
+                IEnumerable<string> fileNames = Directory.GetFiles(folderPath).Select(p => Path.GetFileName(p)).Where(p => !p.Contains("Services.TarikData.DbLink") && !p.Contains("Services.ProsesData.DbLink"));
+
+                return this.Ok(new {
+                    info = $"200 - {this.GetType().Name} :: Informasi GRPC",
+                    grpc_port = grpcPort,
+                    grpc_services = fileNames
+                });
+            }
+            catch (Exception ex) {
+                return this.NotFound(new ResponseJsonSingle<ResponseJsonError>() {
+                    info = $"404 - {this.GetType().Name} :: Informasi GRPC",
+                    result = new ResponseJsonError() {
+                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
+                            ? ex.Message
+                            : "Terjadi kesalahan saat proses data!"
+                    }
+                });
+            }
+        }
+
         [HttpGet("protobuf-net/{fileName}")]
-        [SwaggerOperation(Summary = "Informasi Class Data Type Protobuf-NET.Grpc")]
+        [SwaggerOperation(Summary = "Informasi Service Class Data Type Protobuf-NET.Grpc")]
         public IActionResult GrpcProtoFile(string fileName) {
             try {
                 string filePath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net", fileName);

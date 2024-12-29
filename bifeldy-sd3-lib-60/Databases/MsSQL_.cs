@@ -57,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
             _ = options.UseSqlServer(this.DbConnectionString)
-                .LogTo(s => Console.WriteLine(s))
+                // .LogTo(s => Console.WriteLine(s))
                 .EnableDetailedErrors(this._as.DebugMode)
                 .EnableSensitiveDataLogging(this._as.DebugMode);
         }
