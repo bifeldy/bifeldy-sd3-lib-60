@@ -26,7 +26,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             Type serviceContract = typeof(ServiceContractAttribute);
 
             string dirPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net");
-            var di = new DirectoryInfo(dirPath);
+            DirectoryInfo di = Directory.CreateDirectory(dirPath);
             foreach (FileInfo fi in di.GetFiles()) {
                 if (fi.Name != "bcl.proto") {
                     fi.Delete();

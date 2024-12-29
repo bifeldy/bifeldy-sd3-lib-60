@@ -94,20 +94,26 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void InitApp(WebApplication app) => App = app;
 
-        public static void SetKestrelApiGrpcPort(IConfigurationSection configuration) {
+        public static void SetKestrelApiGrpcPort(IConfigurationSection configuration = null) {
+            IConfigurationSection config = configuration ?? Config.GetSection("ENV");
+            IDictionary<string, dynamic> cfg = config.Get<IDictionary<string, dynamic>>();
+
+            // Web Api Seperti Biasa
+            string apiEnvName = "API_PORT";
+            string apiPortEnv = Environment.GetEnvironmentVariable(apiEnvName);
+            int webApiPort = int.Parse(apiPortEnv ?? cfg[apiEnvName]);
+
+            // GRPC Pakai HTTP/2 Doank :: Cek Environment / appsettings.json
+            string grpcEnvName = "GRPC_PORT";
+            string grpcPortEnv = Environment.GetEnvironmentVariable(grpcEnvName);
+            int grpcPort = int.Parse(grpcPortEnv ?? cfg[grpcEnvName]);
+
+            Console.WriteLine($"=> Running Port :: {webApiPort} (API) :: {grpcPort} (GRPC)");
+
             _ = Builder.WebHost.ConfigureKestrel(options => {
-                // Web Api Seperti Biasa
-                string apiEnvName = "API_PORT";
-                string apiPortEnv = Environment.GetEnvironmentVariable(apiEnvName);
-                int webApiPort = int.Parse(apiPortEnv ?? configuration.GetValue<string>(apiEnvName));
                 options.Listen(IPAddress.Any, webApiPort, listenOptions => {
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                 });
-
-                // GRPC Pakai HTTP/2 Doank :: Cek Environment / appsettings.json
-                string grpcEnvName = "GRPC_PORT";
-                string grpcPortEnv = Environment.GetEnvironmentVariable(grpcEnvName);
-                int grpcPort = int.Parse(grpcPortEnv ?? configuration.GetValue<string>(grpcEnvName));
                 options.Listen(IPAddress.Any, grpcPort, listenOptions => {
                     listenOptions.Protocols = HttpProtocols.Http2;
                 });
