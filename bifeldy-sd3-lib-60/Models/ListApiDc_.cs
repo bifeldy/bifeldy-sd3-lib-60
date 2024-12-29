@@ -24,6 +24,7 @@ namespace bifeldy_sd3_lib_60.Models {
         public string API_PATH { get; set; }
         public DateTime? LAST_ONLINE { get; set; }
         public string VERSION { get; set; }
+        public decimal? PORT_GRPC { get; set; }
         public string DEFAULT_API_PATH { get; set; }
         public decimal? PING_PONG { get; set; }
     }
