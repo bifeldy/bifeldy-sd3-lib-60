@@ -195,17 +195,17 @@ namespace bifeldy_sd3_lib_60.Services {
             response.StatusCode = statusCode;
 
             if (statusCode == 404 && (isApiEndpoint || urlTarget.Contains("/api/"))) {
-                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "404 - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = $"Silahkan Periksa Kembali Dokumentasi API"
                     }
                 });
             }
             else if (statusCode == 502) {
-                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonError>() {
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "502 - Whoops :: Alamat Server Tujuan Tidak Tersedia",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = $"Silahkan Hubungi S/SD 3 Untuk informasi Lebih Lanjut"
                     }
                 });

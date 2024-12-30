@@ -78,9 +78,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
 
-            return this.Ok(new ResponseJsonSingle<ResponseJsonError>() {
+            return this.Ok(new ResponseJsonSingle<ResponseJsonMessage>() {
                 info = $"200 - {this.GetType().Name}",
-                result = new ResponseJsonError() {
+                result = new ResponseJsonMessage() {
                     message = ipOrigin
                 }
             });

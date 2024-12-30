@@ -83,9 +83,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 string secret = formData?.secret;
 
                 if (string.IsNullOrEmpty(secret) && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))) {
-                    return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
+                    return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                         info = $"400 - {this.GetType().Name} :: Login Gagal",
-                        result = new ResponseJsonError() {
+                        result = new ResponseJsonMessage() {
                             message = "Data tidak lengkap!"
                         }
                     });
@@ -100,9 +100,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     if (apiTokenT == null) {
                         DC_USER_T dcUserT = await _userRepo.GetByUserNameNikPassword(userName, password);
                         if (dcUserT == null) {
-                            return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
+                            return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                                 info = $"400 - {this.GetType().Name} :: Login Gagal",
-                                result = new ResponseJsonError() {
+                                result = new ResponseJsonMessage() {
                                     message = "User name / password salah!"
                                 }
                             });
@@ -123,9 +123,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 else {
                     API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(secret);
                     if (apiKeyT == null) {
-                        return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
+                        return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = $"400 - {this.GetType().Name} :: Login Gagal",
-                            result = new ResponseJsonError() {
+                            result = new ResponseJsonMessage() {
                                 message = "Secret salah / tidak dikenali!"
                             }
                         });
@@ -147,9 +147,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
             catch (Exception ex) {
-                return this.BadRequest(new ResponseJsonSingle<ResponseJsonError>() {
+                return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"400 - {this.GetType().Name} :: Login Gagal",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"
@@ -178,9 +178,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
             catch (Exception ex) {
-                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonError>() {
+                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"500 - {this.GetType().Name} :: Logout Gagal",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"
@@ -201,9 +201,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
             catch (Exception ex) {
-                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonError>() {
+                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"500 - {this.GetType().Name} :: Verifikasi Gagal",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"
@@ -247,9 +247,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 });
             }
             catch (Exception ex) {
-                return this.NotFound(new ResponseJsonSingle<ResponseJsonError>() {
+                return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"404 - {this.GetType().Name} :: Informasi GRPC",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"
@@ -274,9 +274,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 return this.PhysicalFile(filePath, "text/plain");
             }
             catch (Exception ex) {
-                return this.NotFound(new ResponseJsonSingle<ResponseJsonError>() {
+                return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"404 - {this.GetType().Name} :: File Tidak Ditemukan",
-                    result = new ResponseJsonError() {
+                    result = new ResponseJsonMessage() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
                             : "Terjadi kesalahan saat proses data!"

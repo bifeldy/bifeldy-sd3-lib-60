@@ -47,9 +47,9 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         }
 
         public static void Failed(AuthorizationFilterContext context) {
-            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonError>() {
+            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                 info = "401 - API Authorization :: Gagal Authentikasi Pengguna",
-                result = new ResponseJsonError() {
+                result = new ResponseJsonMessage() {
                     message = "Silahkan Login Terlebih Dahulu!"
                 }
             }) {
@@ -58,9 +58,9 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         }
 
         public static void RejectRole(AuthorizationFilterContext context, string message) {
-            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonError>() {
+            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                 info = "403 - API Authorization :: Whoops, Akses Ditolak",
-                result = new ResponseJsonError() {
+                result = new ResponseJsonMessage() {
                     message = message
                 }
             }) {

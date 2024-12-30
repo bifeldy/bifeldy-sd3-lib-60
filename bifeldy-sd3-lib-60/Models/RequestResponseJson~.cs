@@ -44,12 +44,12 @@ namespace bifeldy_sd3_lib_60.Models {
     }
 
     [ProtoContract]
-    public class ResponseJsonError {
+    public class ResponseJsonMessage {
         [ProtoMember(1)][InheritedProtoMember(1)][JsonPropertyOrder(0)] public string message { get; set; }
     }
 
     [ProtoContract]
-    public sealed class ResponseJsonErrorApiKeyIpOrigin : ResponseJsonError {
+    public sealed class ResponseJsonErrorApiKeyIpOrigin : ResponseJsonMessage {
         [ProtoMember(2)][JsonPropertyOrder(1)][SwaggerHideJsonProperty] public string api_key { get; set; }
         [ProtoMember(3)][JsonPropertyOrder(2)][SwaggerHideJsonProperty] public string ip_origin { get; set; }
     }
@@ -58,6 +58,16 @@ namespace bifeldy_sd3_lib_60.Models {
     // Kosongan Bisa Buat Kirim JWT Via Body (POST, PUT, PATCH)
     [ProtoContract]
     public class InputJson : RequestJson { }
+
+    [ProtoContract]
+    public class InputJsonDataSingle<T> : InputJson {
+        [ProtoMember(4)][InheritedProtoMember(4)] public T data { get; set; }
+    }
+
+    [ProtoContract]
+    public class InputJsonDataMulti<T> : InputJson {
+        [ProtoMember(4)][InheritedProtoMember(4)] public T[] data { get; set; }
+    }
 
     [ProtoContract]
     public class InputJsonDc : InputJson {
