@@ -146,7 +146,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true) {
             if (isRequired && string.IsNullOrEmpty(signFull)) {
-                throw new Exception("Tidak ada tanda tangan file");
+                throw new Exception("Tidak Ada Tanda Tangan File");
             }
             else if (!isRequired && string.IsNullOrEmpty(signFull)) {
                 return true;
@@ -155,7 +155,7 @@ namespace bifeldy_sd3_lib_60.Services {
             string[] signSplit = signFull.Split(' ');
             int minFileSize = signSplit.Length;
             if (fileInfo.Length < minFileSize) {
-                throw new Exception("Isi konten file tidak sesuai");
+                throw new Exception("Isi Konten File Tidak Sesuai");
             }
 
             int[] intList = new int[minFileSize];

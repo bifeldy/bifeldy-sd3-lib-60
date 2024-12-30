@@ -88,7 +88,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
                 try {
                     if (!allowed) {
-                        throw new Exception("Secret salah / tidak dikenali!");
+                        throw new Exception("Secret Salah / Tidak Dikenali!");
                     }
 
                     string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])

@@ -86,7 +86,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                         info = $"400 - {this.GetType().Name} :: Login Gagal",
                         result = new ResponseJsonMessage() {
-                            message = "Data tidak lengkap!"
+                            message = "Data Tidak Lengkap!"
                         }
                     });
                 }
@@ -276,6 +276,41 @@ namespace bifeldy_sd3_lib_60.Controllers {
             catch (Exception ex) {
                 return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"404 - {this.GetType().Name} :: File Tidak Ditemukan",
+                    result = new ResponseJsonMessage() {
+                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
+                            ? ex.Message
+                            : "Terjadi kesalahan saat proses data!"
+                    }
+                });
+            }
+        }
+
+        [HttpGet("all-dc")]
+        [SwaggerOperation(Summary = "Informasi Daftar Kode & Nama DC")]
+        [RouteExcludeAllDc]
+        public async Task<IActionResult> GetAllDc() {
+            try {
+                List<DC_TABEL_DC_T> ls = await this._orapg.GetListAsync<DC_TABEL_DC_T>($@"
+                    SELECT
+                        tbl_dc_kode,
+                        tbl_dc_nama
+                    FROM
+                        dc_tabel_dc_t
+                    ORDER BY
+                        tbl_dc_kode ASC
+                ");
+
+                return this.Ok(new  {
+                    info = $"200 - {this.GetType().Name} :: All DC",
+                    results = ls.Select(l => new {
+                        kode_dc = l.TBL_DC_KODE,
+                        nama_dc = l.TBL_DC_NAMA
+                    })
+                });
+            }
+            catch (Exception ex) {
+                return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
+                    info = $"404 - {this.GetType().Name} :: Data DC Tidak Ditemukan",
                     result = new ResponseJsonMessage() {
                         message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
                             ? ex.Message
