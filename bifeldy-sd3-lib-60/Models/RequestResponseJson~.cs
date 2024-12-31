@@ -27,17 +27,17 @@ namespace bifeldy_sd3_lib_60.Models {
     }
 
     [ProtoContract]
-    public abstract class ResponseJson<T> {
+    public abstract class ResponseJson {
         [ProtoMember(1)][InheritedProtoMember(1)][JsonPropertyOrder(0)] public string info { get; set; }
     }
 
     [ProtoContract]
-    public sealed class ResponseJsonSingle<T> : ResponseJson<T> {
+    public sealed class ResponseJsonSingle<T> : ResponseJson {
         [ProtoMember(2)][JsonPropertyOrder(1)] public T result { get; set; }
     }
 
     [ProtoContract]
-    public sealed class ResponseJsonMulti<T> : ResponseJson<T> {
+    public sealed class ResponseJsonMulti<T> : ResponseJson {
         [ProtoMember(2)][JsonPropertyOrder(1)] public IEnumerable<T> results { get; set; }
         [ProtoMember(3)][JsonPropertyOrder(2)] public decimal? pages { get; set; }
         [ProtoMember(4)][JsonPropertyOrder(3)] public decimal? count { get; set; }
