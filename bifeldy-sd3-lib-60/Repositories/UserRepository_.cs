@@ -30,6 +30,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<List<DC_USER_T>> GetAll(string userNameNik = null);
         Task<DC_USER_T> GetByUserNik(string userNik);
         Task<DC_USER_T> GetByUserName(string userName);
+        Task<DC_USER_T> GetByUserNameNik(string userNameNik);
         Task<DC_USER_T> GetByUserNameNikPassword(string userNameNik, string password);
         Task<bool> Delete(string userNik);
         Task<string> LoginUser(string userNameNik, string password);
@@ -78,6 +79,17 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<DC_USER_T> GetByUserName(string userName) {
             return await this._orapg.Set<DC_USER_T>()
                 .Where(u => u.USER_NAME.ToUpper() == userName.ToUpper())
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<DC_USER_T> GetByUserNameNik(string userNameNik) {
+            return await this._orapg.Set<DC_USER_T>()
+                .Where(u => (
+                        u.USER_NAME.ToUpper() == userNameNik.ToUpper() ||
+                        u.USER_NIK.ToUpper() == userNameNik.ToUpper()
+                    )
+                    && u.USER_NAME.ToUpper() != null && u.USER_NIK.ToUpper() != null
+                )
                 .SingleOrDefaultAsync();
         }
 
