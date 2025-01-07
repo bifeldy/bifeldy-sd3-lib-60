@@ -64,6 +64,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 }
             }
 
+            table.CaseSensitive = false;
             return table;
         }
 
