@@ -40,6 +40,12 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             }
         }
 
+        private void ApplyDeadline<TRequest, TResponse>(ref ClientInterceptorContext<TRequest, TResponse> context) where TRequest : class where TResponse : class {
+            if (context.Options.Deadline is null) {
+                context = new(context.Method, context.Host, context.Options.WithDeadline(DateTime.UtcNow.AddMinutes(60)));
+            }
+        }
+
         /* ** Client Interceptor */
 
         public override TResponse BlockingUnaryCall<TRequest, TResponse>(
@@ -52,6 +58,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyDeadline(ref context);
             TResponse result = continuation(request, context);
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Finished {nameOp} ... {targetServer}", nameOp, targetServer);
@@ -69,6 +76,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyDeadline(ref context);
             AsyncUnaryCall<TResponse> call = continuation(request, context);
 
             return new AsyncUnaryCall<TResponse>(
@@ -89,6 +97,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyDeadline(ref context);
             AsyncClientStreamingCall<TRequest, TResponse> call = continuation(context);
 
             return new AsyncClientStreamingCall<TRequest, TResponse>(
@@ -111,6 +120,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyDeadline(ref context);
             AsyncServerStreamingCall<TResponse> call = continuation(request, context);
 
             return new AsyncServerStreamingCall<TResponse>(
@@ -131,6 +141,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyDeadline(ref context);
             AsyncDuplexStreamingCall<TRequest, TResponse> call = continuation(context);
 
             return new AsyncDuplexStreamingCall<TRequest, TResponse>(
