@@ -49,31 +49,14 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
-        private readonly IDictionary<string, dynamic> DbConfig = new ExpandoObject();
-
         public CApplicationService() {
             this._SettingLibb = new SettingLibb.Class1();
         }
 
         public string GetVariabel(string key, string kunci) {
-            try {
-                if (this.DbConfig.ContainsKey(key)) {
-                    if (!string.IsNullOrEmpty(this.DbConfig[key])) {
-                        return this.DbConfig[key];
-                    }
-                }
-                // http://xxx.xxx.xxx.xxx/KunciGxxx
-                string result = this._SettingLibb.GetVariabel(key, kunci);
-                if (result.ToUpper().Contains("ERROR")) {
-                    throw new Exception(result);
-                }
-
-                this.DbConfig.Add(key, result);
-                return this.DbConfig[key];
-            }
-            catch {
-                return null;
-            }
+            // http://xxx.xxx.xxx.xxx/KunciGxxx
+            string result = this._SettingLibb.GetVariabel(key, kunci);
+            return result.ToUpper().Contains("ERROR") ? throw new Exception($"Gagal Mengambil Kunci :: {result}") : result;
         }
 
         public CIpMacAddress[] GetIpMacAddress() {
