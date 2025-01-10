@@ -253,19 +253,19 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddHttpContextAccessor();
 
             // --
-            _ = Services.AddDbContext<IOracle, COracle>();
-            _ = Services.AddDbContext<IPostgres, CPostgres>();
-            _ = Services.AddDbContext<IMsSQL, CMsSQL>();
-
+            _ = Services.AddDbContext<IOracle, COracle>(ServiceLifetime.Transient);
+            _ = Services.AddDbContext<IPostgres, CPostgres>(ServiceLifetime.Transient);
+            _ = Services.AddDbContext<IMsSQL, CMsSQL>(ServiceLifetime.Transient);
             // --
-            // Setiap Request Cycle 1 Scope 1x New Object 1x Sesion Saja
-            // --
-            _ = Services.AddScoped<IOraPg>(sp => {
+            _ = Services.AddTransient<IOraPg>(sp => {
                 EnvVar _envVar = sp.GetRequiredService<IOptions<EnvVar>>().Value;
                 return _envVar.IS_USING_POSTGRES ? sp.GetRequiredService<IPostgres>() : sp.GetRequiredService<IOracle>();
             });
 
             if (isBlazorWebApp) {
+                // --
+                // Setiap Request Cycle 1 Scope 1x New Object 1x Sesion Saja
+                // --
                 _ = Services.AddScoped<ProtectedSessionStorage>();
                 _ = Services.AddScoped<AuthenticationStateProvider, BlazorAuthenticationStateProvider>();
             }
