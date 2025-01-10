@@ -32,7 +32,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<bool> CheckKeyOrigin(string ipOrigin, string key);
     }
 
-    [ScopedServiceRegistration]
+    [TransientServiceRegistration]
     public sealed class CApiKeyRepository : CRepository, IApiKeyRepository {
 
         private readonly IApplicationService _as;

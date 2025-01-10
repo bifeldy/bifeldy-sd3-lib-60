@@ -43,7 +43,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<string> GetAppHoApiUrlBase(string apiPath);
     }
 
-    [ScopedServiceRegistration]
+    [TransientServiceRegistration]
     public class CGeneralRepository : CRepository, IGeneralRepository {
 
         private readonly EnvVar _envVar;

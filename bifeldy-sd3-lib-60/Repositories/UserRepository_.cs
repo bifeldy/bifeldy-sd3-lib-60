@@ -37,7 +37,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task LogoutUser();
     }
 
-    [ScopedServiceRegistration]
+    [TransientServiceRegistration]
     public sealed class CUserRepository : CRepository, IUserRepository {
 
         private readonly AuthenticationStateProvider _asp;

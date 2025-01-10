@@ -33,7 +33,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<API_TOKEN_T> LoginBot(string userName, string password);
     }
 
-    [ScopedServiceRegistration]
+    [TransientServiceRegistration]
     public sealed class CApiTokenRepository : CRepository, IApiTokenRepository {
 
         private readonly IApplicationService _as;
