@@ -338,7 +338,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                     }
                 }
 
-                sqlQuery = $"COPY ({rawQuery}) TO STDOUT WITH CSV DELIMITER '{delimiter}'";
+                sqlQuery = $"COPY ({rawQuery}) TO STDOUT WITH CSV DELIMITER '{delimiter}' QUOTE '\b'";
                 sqlQuery = sqlQuery.Replace($"\r\n", " ");
                 sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
                 this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
