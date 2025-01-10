@@ -36,10 +36,10 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<List<Message<string, T>>> ConsumeSingleMultipleMessages<T>(string hostPort, string groupId, string topicName, int partition = 0, long offset = -1, ulong nMessagesBlock = 1);
         string GetKeyProducerListener(string hostPort, string topicName, string pubSubName = null);
         string GetTopicNameProducerListener(string topicName, string suffixKodeDc = null);
-        void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, string pubSubName = null, CancellationToken stoppingToken = default);
+        Task CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, string pubSubName = null, CancellationToken stoppingToken = default);
         void DisposeAndRemoveKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc = null, string pubSubName = null);
         (string, string) GetTopicNameConsumerListener(string topicName, string groupId, string suffixKodeDc = null);
-        void CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, Action<Message<string, T>> execLambda = null, string pubSubName = null, CancellationToken stoppingToken = default);
+        Task CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, Action<Message<string, T>> execLambda = null, string pubSubName = null, CancellationToken stoppingToken = default);
     }
 
     [SingletonServiceRegistration]
@@ -168,7 +168,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return topicName;
         }
 
-        public async void CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc, string pubSubName = null, CancellationToken stoppingToken = default) {
+        public async Task CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc, string pubSubName = null, CancellationToken stoppingToken = default) {
             topicName = this.GetTopicNameProducerListener(topicName, suffixKodeDc);
             await this.CreateTopicIfNotExist(hostPort, topicName); ;
             string key = this.GetKeyProducerListener(hostPort, topicName, pubSubName);
@@ -218,7 +218,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return (topicName, groupId);
         }
 
-        public async void CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, Action<Message<string, T>> execLambda = null, string pubSubName = null, CancellationToken stoppingToken = default) {
+        public async Task CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, Action<Message<string, T>> execLambda = null, string pubSubName = null, CancellationToken stoppingToken = default) {
             const ulong COMMIT_AFTER_N_MESSAGES = 10; 
             (topicName, groupId) = this.GetTopicNameConsumerListener(topicName, groupId, suffixKodeDc);
             await this.CreateTopicIfNotExist(hostPort, topicName);
