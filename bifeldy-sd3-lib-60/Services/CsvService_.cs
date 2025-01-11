@@ -15,7 +15,6 @@ using System.Data;
 using System.Reflection;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using ChoETL;
@@ -37,15 +36,13 @@ namespace bifeldy_sd3_lib_60.Services {
     public sealed class CCsvService : ICsvService {
 
         private readonly EnvVar _envVar;
-        private readonly ILogger<CCsvService> _logger;
 
         private readonly IApplicationService _as;
 
         public string CsvFolderPath { get; }
 
-        public CCsvService(IOptions<EnvVar> envVar, ILogger<CCsvService> logger, IApplicationService @as) {
+        public CCsvService(IOptions<EnvVar> envVar, IApplicationService @as) {
             this._envVar = envVar.Value;
-            this._logger = logger;
             this._as = @as;
 
             this.CsvFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.CSV_FOLDER_PATH);

@@ -11,7 +11,6 @@
  * 
  */
 
-using System.Dynamic;
 using System.Net.NetworkInformation;
 using System.Reflection;
 
@@ -54,9 +53,18 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string GetVariabel(string key, string kunci) {
-            // http://xxx.xxx.xxx.xxx/KunciGxxx
-            string result = this._SettingLibb.GetVariabel(key, kunci);
-            return result.ToUpper().Contains("ERROR") ? throw new Exception($"Gagal Mengambil Kunci :: {result}") : result;
+            try {
+                // http://xxx.xxx.xxx.xxx/KunciGxxx
+                string result = this._SettingLibb.GetVariabel(key, kunci);
+                if (result.ToUpper().Contains("ERROR")) {
+                    throw new Exception($"Gagal Mengambil Kunci {key} @ {kunci} :: {result}");
+                }
+
+                return result;
+            }
+            catch {
+                return null;
+            }
         }
 
         public CIpMacAddress[] GetIpMacAddress() {
