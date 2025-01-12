@@ -51,7 +51,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private string KAFKA_NAME => "KAFKA_" + this._pubSubName ?? $"CONSUMER_{this._hostPort.ToUpper()}#{this._topicName.ToUpper()}";
 
-        const ulong COMMIT_AFTER_N_MESSAGES = 10;
+        const ulong COMMIT_AFTER_N_MESSAGES = 1;
 
         public CKafkaConsumer(
             IServiceProvider serviceProvider,
