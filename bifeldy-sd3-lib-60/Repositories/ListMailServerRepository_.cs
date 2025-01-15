@@ -95,20 +95,30 @@ namespace bifeldy_sd3_lib_60.Repositories {
         /* ** */
 
         private async Task<SmtpClient> CreateSmtpClient(bool paksaDariHo = false) {
-            string dcKode = await this.GetKodeDc();
-            DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
+            string host = null;
+            int port = 0;
+            string uname = null;
+            string upass = null;
 
-            string host = mailServer.MAIL_HOSTNAME;
-            string _port = mailServer.MAIL_PORT;
-            int port = string.IsNullOrEmpty(_port) ? 0 : int.Parse(_port);
-            string uname = mailServer.MAIL_USERNAME;
-            string upass = mailServer.MAIL_PASSWORD;
-
-            if (string.IsNullOrEmpty(host) || port <= 0 || string.IsNullOrEmpty(uname) || string.IsNullOrEmpty(upass) || paksaDariHo) {
+            if (paksaDariHo) {
                 host = this._envVar.SMTP_SERVER_IP_DOMAIN;
                 port = this._envVar.SMTP_SERVER_PORT;
                 uname = this._envVar.SMTP_SERVER_USERNAME;
                 upass = this._envVar.SMTP_SERVER_PASSWORD;
+            }
+            else {
+                string dcKode = await this.GetKodeDc();
+                DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
+
+                host = mailServer.MAIL_HOSTNAME;
+                string _port = mailServer.MAIL_PORT;
+                port = string.IsNullOrEmpty(_port) ? 0 : int.Parse(_port);
+                uname = mailServer.MAIL_USERNAME;
+                upass = mailServer.MAIL_PASSWORD;
+            }
+
+            if (string.IsNullOrEmpty(host) || port <= 0 || string.IsNullOrEmpty(uname) || string.IsNullOrEmpty(upass)) {
+                throw new Exception("Gagal Mengatur Informasi SMTP!");
             }
 
             return new SmtpClient() {
