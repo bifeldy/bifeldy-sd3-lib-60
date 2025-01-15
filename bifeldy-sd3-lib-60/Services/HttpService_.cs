@@ -186,7 +186,8 @@ namespace bifeldy_sd3_lib_60.Services {
                     contentType: new string[] {
                         request.ContentType
                     }
-                )
+                ),
+                HttpCompletionOption.ResponseHeadersRead
             );
 
             int statusCode = (int) res.StatusCode;
@@ -195,15 +196,15 @@ namespace bifeldy_sd3_lib_60.Services {
             response.StatusCode = statusCode;
 
             if (statusCode == 404 && (isApiEndpoint || urlTarget.Contains("/api/"))) {
-                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                return new NotFoundObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "404 - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
                     result = new ResponseJsonMessage() {
                         message = $"Silahkan Periksa Kembali Dokumentasi API"
                     }
                 });
             }
-            else if (statusCode == 502) {
-                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+            else if (statusCode == 502 && (isApiEndpoint || urlTarget.Contains("/api/"))) {
+                return new BadRequestObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "502 - Whoops :: Alamat Server Tujuan Tidak Tersedia",
                     result = new ResponseJsonMessage() {
                         message = $"Silahkan Hubungi S/SD 3 Untuk informasi Lebih Lanjut"
@@ -233,11 +234,9 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 }
 
-                await res.Content.CopyToAsync(response.Body);
+                Stream stream = await res.Content.ReadAsStreamAsync();
+                return new FileStreamResult(stream, res.Content.Headers.ContentType.MediaType);
             }
-
-            // Soalnya Stream Body ~
-            return null;
         }
 
         public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600) {
