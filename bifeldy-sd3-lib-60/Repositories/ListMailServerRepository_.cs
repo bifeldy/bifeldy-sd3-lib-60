@@ -110,6 +110,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 string dcKode = await this.GetKodeDc();
                 DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
 
+                if (mailServer == null) {
+                    return await this.CreateSmtpClient(true);
+                }
+
                 host = mailServer.MAIL_HOSTNAME;
                 string _port = mailServer.MAIL_PORT;
                 port = string.IsNullOrEmpty(_port) ? 0 : int.Parse(_port);
