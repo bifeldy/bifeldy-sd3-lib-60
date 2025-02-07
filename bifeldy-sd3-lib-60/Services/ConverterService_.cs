@@ -13,6 +13,7 @@
 
 using System.Drawing;
 using System.Net.Mime;
+using System.Reflection;
 using System.Runtime.Versioning;
 using System.Xml.Linq;
 
@@ -36,6 +37,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string XmlToJson(string xml);
         T XmlJsonToObject<T>(string type, string text, JsonSerializerSettings settings = null);
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
+        List<CDynamicClassProperty> GetTableClassStructureModel<T>();
     }
 
     [SingletonServiceRegistration]
@@ -118,6 +120,22 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return $"{(decimal) bytes / digit:0.00} {ext}";
+        }
+
+
+        public List<CDynamicClassProperty> GetTableClassStructureModel<T>() {
+            var ls = new List<CDynamicClassProperty>();
+
+            foreach (PropertyInfo propertyInfo in typeof(T).GetProperties()) {
+                Type type = Nullable.GetUnderlyingType(propertyInfo.PropertyType);
+                ls.Add(new CDynamicClassProperty() {
+                    ColumnName = propertyInfo.Name,
+                    DataType = type?.FullName ?? propertyInfo.PropertyType.FullName,
+                    IsNullable = type != null
+                });
+            }
+
+            return ls;
         }
 
     }
