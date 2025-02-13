@@ -242,7 +242,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 await this.OpenConnection();
                 object _obj = await databaseCommand.ExecuteScalarAsync();
                 if (_obj != null && _obj != DBNull.Value) {
-                    result = (T) TypeDescriptor.GetConverter(typeof(T)).ConvertFrom(_obj);
+                    TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
+                    if (converter.CanConvertFrom(_obj.GetType())) {
+                        result = (T) converter.ConvertFrom(_obj);
+                    }
+                    else {
+                        result = (T) Convert.ChangeType(_obj, typeof(T));
+                    }
                 }
             }
             catch (Exception ex) {
