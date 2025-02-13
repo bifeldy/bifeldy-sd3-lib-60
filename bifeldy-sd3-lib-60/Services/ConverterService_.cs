@@ -11,6 +11,7 @@
  * 
  */
 
+using System.ComponentModel;
 using System.Drawing;
 using System.Net.Mime;
 using System.Reflection;
@@ -34,6 +35,7 @@ namespace bifeldy_sd3_lib_60.Services {
         T JsonToObject<T>(string j2o, JsonSerializerSettings settings = null);
         string JsonToXml(string json);
         string ObjectToJson(object body, JsonSerializerSettings settings = null);
+        T ObjectToT<T>(object o2t);
         string XmlToJson(string xml);
         T XmlJsonToObject<T>(string type, string text, JsonSerializerSettings settings = null);
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
@@ -73,6 +75,16 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             };
             return JsonConvert.SerializeObject(o2j, settings);
+        }
+
+        public T ObjectToT<T>(object o2t) {
+            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
+            if (converter.CanConvertFrom(o2t.GetType())) {
+                return (T) converter.ConvertFrom(o2t);
+            }
+            else {
+                return (T) Convert.ChangeType(o2t, typeof(T));
+            }
         }
 
         public string XmlToJson(string xml) {

@@ -13,7 +13,6 @@
  * 
  */
 
-using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Reflection;
@@ -242,13 +241,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 await this.OpenConnection();
                 object _obj = await databaseCommand.ExecuteScalarAsync();
                 if (_obj != null && _obj != DBNull.Value) {
-                    TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
-                    if (converter.CanConvertFrom(_obj.GetType())) {
-                        result = (T) converter.ConvertFrom(_obj);
-                    }
-                    else {
-                        result = (T) Convert.ChangeType(_obj, typeof(T));
-                    }
+                    result = this._cs.ObjectToT<T>(_obj);
                 }
             }
             catch (Exception ex) {
