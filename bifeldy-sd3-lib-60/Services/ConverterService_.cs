@@ -134,7 +134,6 @@ namespace bifeldy_sd3_lib_60.Services {
             return $"{(decimal) bytes / digit:0.00} {ext}";
         }
 
-
         public List<CDynamicClassProperty> GetTableClassStructureModel<T>() {
             var ls = new List<CDynamicClassProperty>();
 
