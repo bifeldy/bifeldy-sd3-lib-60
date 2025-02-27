@@ -131,14 +131,14 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseSerilog() {
             _ = App.UseSerilogRequestLogging(o => {
-                o.MessageTemplate = "{RemoteIpAddress} :: {RequestScheme} :: {RequestHost} :: {RequestMethod} :: {RequestPath} :: {StatusCode} :: {Elapsed:0.0000} ms";
+                o.MessageTemplate = "{RemoteOrigin} :: {RemoteIpAddress} :: {RequestMethod} :: {RequestPath} :: {StatusCode} :: {Elapsed:0.0000} ms";
                 // o.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Error;
                 o.EnrichDiagnosticContext = (diagnosticContext, httpContext) => {
                     IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
-                    diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-                    diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-                    string ipOrigin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true);
-                    diagnosticContext.Set("RemoteIpAddress", ipOrigin);
+                    string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request);
+                    diagnosticContext.Set("RemoteOrigin", origin);
+                    string ipAddr = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true);
+                    diagnosticContext.Set("RemoteIpAddress", ipAddr);
                 };
             });
         }
