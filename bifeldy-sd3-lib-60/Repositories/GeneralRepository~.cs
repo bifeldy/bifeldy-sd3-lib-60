@@ -267,7 +267,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             CDatabase dbConHo = null;
 
             string kodeDcSekarang = await this.GetKodeDc();
-            if (kodeDcSekarang.ToUpper() != "DCHO" && kodeDcSekarang.ToUpper() != "WHHO") {
+            bool isHo = await this.IsHo();
+            if (!isHo) {
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation("DCHO");
                 DC_TABEL_V dcho = dbInfo.FirstOrDefault();
                 if (dcho != null) {
@@ -301,8 +302,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback) {
-            string kodeDcSekarang = await this.GetKodeDc();
-            if (kodeDcSekarang.ToUpper() != "DCHO" && kodeDcSekarang.ToUpper() != "WHHO") {
+            bool isHo = await this.IsHo();
+            if (!isHo) {
                 throw new TidakMemenuhiException("Khusus HO!");
             }
 

@@ -73,8 +73,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 bool allowed = false;
                 string hashText = this._chiper.HashText(this._app.AppName);
 
-                string currentKodeDc = await _generalRepo.GetKodeDc();
-                if (currentKodeDc == "DCHO" || currentKodeDc == "WHHO") {
+                bool isHo = await _generalRepo.IsHo();
+                if (isHo) {
                     if (await _akRepo.SecretLogin(secret) != null) {
                         allowed = true;
                     }

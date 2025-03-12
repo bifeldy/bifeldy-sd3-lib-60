@@ -52,8 +52,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 true
             );
 
-            string kodeDc = await this._generalRepo.GetKodeDc();
-            if (fd != null && (kodeDc == "DCHO" || kodeDc == "WHHO")) {
+            bool isHo = await this._generalRepo.IsHo();
+            if (fd != null && isHo) {
                 _ = await _orapg.ExecQueryAsync($@"
                     DELETE FROM api_ping_t
                     WHERE

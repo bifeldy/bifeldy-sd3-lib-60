@@ -72,8 +72,8 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             string hashText = this._chiper.HashText(this._app.AppName);
 
                             bool allowed = false;
-                            string currentKodeDc = await _generalRepo.GetKodeDc();
-                            if (currentKodeDc == "DCHO" || currentKodeDc == "WHHO") {
+                            bool isHo = await this._generalRepo.IsHo();
+                            if (isHo) {
                                 if (await _akRepo.SecretLogin(secret) != null) {
                                     allowed = true;
                                 }

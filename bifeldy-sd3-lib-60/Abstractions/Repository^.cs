@@ -27,6 +27,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<string> GetJenisDc();
         Task<string> GetKodeDc();
         Task<string> GetNamaDc();
+        Task<bool> IsDcHo();
+        Task<bool> IsWhHo();
+        Task<bool> IsHo();
         Task<DateTime> OraPg_DateYesterdayOrTommorow(int lastDay);
         Task<DateTime> OraPg_GetLastOrNextMonth(int lastMonth);
         Task<DateTime> OraPg_GetCurrentTimestamp();
@@ -96,6 +99,22 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             }
 
             return this.NamaDc;
+        }
+
+        public async Task<bool> IsDcHo() {
+            string kodeDc = await this.GetKodeDc();
+            return kodeDc == "DCHO";
+        }
+
+        public async Task<bool> IsWhHo() {
+            string kodeDc = await this.GetKodeDc();
+            return kodeDc == "WHHO";
+        }
+
+        public async Task<bool> IsHo() {
+            bool isDcHo = await this.IsDcHo();
+            bool isWhHo = await this.IsWhHo();
+            return isDcHo || isWhHo;
         }
 
         public async Task<DateTime> OraPg_DateYesterdayOrTommorow(int lastDay) {
