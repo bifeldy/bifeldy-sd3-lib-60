@@ -60,6 +60,10 @@ namespace bifeldy_sd3_lib_60.Services {
                     throw new Exception($"Gagal Mengambil Kunci {key} @ {kunci} :: {result}");
                 }
 
+                if (!string.IsNullOrEmpty(result)) {
+                    result = result.Split(';').FirstOrDefault();
+                }
+
                 return result;
             }
             catch {
