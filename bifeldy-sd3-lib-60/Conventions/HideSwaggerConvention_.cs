@@ -30,7 +30,8 @@ namespace bifeldy_sd3_lib_60.Conventions {
         private void SwaggerHide(Type hideType, ActionModel action, string kodeDc, string jenisDc) {
             if (
                 (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
-                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO") ||
+                (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
+                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "WHHO") ||
                 (hideType == typeof(RouteExcludeIndukAttribute) && jenisDc == "INDUK") ||
                 (hideType == typeof(RouteExcludeDepoAttribute) && jenisDc == "DEPO") ||
                 (hideType == typeof(RouteExcludeKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||

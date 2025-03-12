@@ -55,7 +55,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<string> GetJenisDc() {
             if (string.IsNullOrEmpty(this.JenisDc)) {
-                if (this._orapg.DbUsername.ToUpper().Contains("DCHO")) {
+                if (this._orapg.DbUsername.ToUpper().Contains("DCHO") || this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
                     this.JenisDc = "HO";
                 }
                 else {
@@ -71,6 +71,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 if (this._orapg.DbUsername.ToUpper().Contains("DCHO")) {
                     this.KodeDc = "DCHO";
                 }
+                else if (this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
+                    this.KodeDc = "WHHO";
+                }
                 else {
                     this.KodeDc = (await this._orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_KODE?.ToUpper();
                 }
@@ -83,6 +86,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             if (string.IsNullOrEmpty(this.NamaDc)) {
                 if (this._orapg.DbUsername.ToUpper().Contains("DCHO")) {
                     this.NamaDc = "DC HEAD OFFICE";
+                }
+                else if (this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
+                    this.NamaDc = "WH HEAD OFFICE";
                 }
                 else {
                     this.NamaDc = (await this._orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
