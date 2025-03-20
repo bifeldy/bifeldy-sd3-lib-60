@@ -41,7 +41,7 @@ namespace bifeldy_sd3_lib_60.TableView {
         public decimal? MAX_PKM_MANUAL { get; set; }
         public DateTime? TBL_8DIGIT { get; set; }
         public decimal? TBL_TW { get; set; }
-        public string FLAG_CSV { get; set; }
+        // public string FLAG_CSV { get; set; }
         // public string TEMP_CSV { get; set; }
         // public string PO_CSV { get; set; }
         // public decimal? TBL_PROCESS { get; set; }

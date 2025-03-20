@@ -31,20 +31,21 @@ namespace bifeldy_sd3_lib_60.Conventions {
         }
 
         private void SwaggerHide(Type hideType, ActionModel action, string kodeDc, string jenisDc) {
-            if (
-                !this._application.DebugMode && (
-                    (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
-                    (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
-                    (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "WHHO") ||
-                    (hideType == typeof(RouteExcludeIndukAttribute) && jenisDc == "INDUK") ||
-                    (hideType == typeof(RouteExcludeDepoAttribute) && jenisDc == "DEPO") ||
-                    (hideType == typeof(RouteExcludeKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||
-                    (hideType == typeof(RouteExcludeIplazaAttribute) && jenisDc == "IPLAZA") ||
-                    (hideType == typeof(RouteExcludeFrozenAttribute) && jenisDc == "FROZEN") ||
-                    (hideType == typeof(RouteExcludePerishableAttribute) && jenisDc == "PERISHABLE") ||
-                    (hideType == typeof(RouteExcludeLpgAttribute) && jenisDc == "LPG") ||
-                    (hideType == typeof(RouteExcludeSewaAttribute) && jenisDc == "SEWA")
-                )
+            if (this._application.DebugMode) {
+                action.ApiExplorer.IsVisible = true;
+            }
+            else if (
+                (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
+                (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
+                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "WHHO") ||
+                (hideType == typeof(RouteExcludeIndukAttribute) && jenisDc == "INDUK") ||
+                (hideType == typeof(RouteExcludeDepoAttribute) && jenisDc == "DEPO") ||
+                (hideType == typeof(RouteExcludeKonvinienceAttribute) && jenisDc == "KONVINIENCE") ||
+                (hideType == typeof(RouteExcludeIplazaAttribute) && jenisDc == "IPLAZA") ||
+                (hideType == typeof(RouteExcludeFrozenAttribute) && jenisDc == "FROZEN") ||
+                (hideType == typeof(RouteExcludePerishableAttribute) && jenisDc == "PERISHABLE") ||
+                (hideType == typeof(RouteExcludeLpgAttribute) && jenisDc == "LPG") ||
+                (hideType == typeof(RouteExcludeSewaAttribute) && jenisDc == "SEWA")
             ) {
                 action.ApiExplorer.IsVisible = false;
             }
