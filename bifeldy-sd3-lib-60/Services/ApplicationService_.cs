@@ -41,7 +41,17 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly Assembly _libAsm = Assembly.GetExecutingAssembly();
 
         public DateTime? BuildTime => this._prgAsm.GetLinkerBuildTime() ?? this._libAsm.GetLinkerBuildTime();
-        public bool DebugMode => Bifeldy.App.Environment.IsDevelopment();
+
+        public bool DebugMode {
+            get {
+                #if DEBUG
+                    return true;
+                #else
+                    return false;
+                #endif
+            }
+        }
+
         public string AppName => Bifeldy.App.Environment.ApplicationName;
         public string AppLocation => AppDomain.CurrentDomain.BaseDirectory;
         public string AppVersion => string.Join("", this._prgAsm.GetName().Version.ToString().Split('.'));
