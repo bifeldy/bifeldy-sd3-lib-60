@@ -21,6 +21,7 @@ using System.Reactive.Subjects;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
+using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
@@ -43,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly string _logTableName;
         private readonly bool _suffixKodeDc;
         private readonly string _pubSubName;
-        private readonly List<string> _excludeJenisDc;
+        private readonly List<EJenisDc> _excludeJenisDc;
 
         private BehaviorSubject<Message<string, dynamic>> observeable = null;
 
@@ -56,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         public CKafkaConsumer(
             IServiceProvider serviceProvider,
             string hostPort, string topicName, string logTableName = null, string groupId = null,
-            bool suffixKodeDc = false, List<string> excludeJenisDc = null, string pubSubName = null
+            bool suffixKodeDc = false, List<EJenisDc> excludeJenisDc = null, string pubSubName = null
         ) {
             this._logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
             this._app = serviceProvider.GetRequiredService<IApplicationService>();
@@ -87,7 +88,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
                 if (this._excludeJenisDc != null) {
-                    string jenisDc = await _generalRepo.GetJenisDc();
+                    EJenisDc jenisDc = await _generalRepo.GetJenisDc();
                     if (this._excludeJenisDc.Contains(jenisDc)) {
                         return;
                     }

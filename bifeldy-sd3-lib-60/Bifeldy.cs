@@ -325,24 +325,35 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
+        private static List<EJenisDc> CheckKafkaExcludeJenisDc(string excludeJenisDc) {
+            List<EJenisDc> ls = null;
+
+            if (!string.IsNullOrEmpty(excludeJenisDc)) {
+                ls = new List<EJenisDc>(excludeJenisDc.Split(",").Where(d => !string.IsNullOrEmpty(d)).Select(d => {
+                    string jenisDc = d.Trim().ToUpper();
+                    EJenisDc _eJenisDc = EJenisDc.UNKNOWN;
+
+                    if (Enum.TryParse(jenisDc, true, out EJenisDc eJenisDc)) {
+                        _eJenisDc = eJenisDc;
+                    }
+
+                    return _eJenisDc;
+                }));
+            }
+
+            return ls;
+        }
+
         public static void AddKafkaProducerBackground(string hostPort, string topicName, short replication = 1, int partition = 1, bool suffixKodeDc = false, string excludeJenisDc = null, string pubSubName = null) {
             _ = Services.AddHostedService(sp => {
-                List<string> ls = null;
-                if (!string.IsNullOrEmpty(excludeJenisDc)) {
-                    ls = new List<string>(excludeJenisDc.Split(",").Select(d => d.Trim().ToUpper()));
-                }
-
+                List<EJenisDc> ls = CheckKafkaExcludeJenisDc(excludeJenisDc);
                 return new CKafkaProducer(sp, hostPort, topicName, replication, partition, suffixKodeDc, ls, pubSubName);
             });
         }
 
         public static void AddKafkaConsumerBackground(string hostPort, string topicName, string logTableName = null, string groupId = null, bool suffixKodeDc = false, string excludeJenisDc = null, string pubSubName = null) {
             _ = Services.AddHostedService(sp => {
-                List<string> ls = null;
-                if (!string.IsNullOrEmpty(excludeJenisDc)) {
-                    ls = new List<string>(excludeJenisDc.Split(",").Select(d => d.Trim().ToUpper()));
-                }
-
+                List<EJenisDc> ls = CheckKafkaExcludeJenisDc(excludeJenisDc);
                 return new CKafkaConsumer(sp, hostPort, topicName, logTableName, groupId, suffixKodeDc, ls, pubSubName);
             });
         }

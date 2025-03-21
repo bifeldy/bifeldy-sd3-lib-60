@@ -24,7 +24,7 @@ using bifeldy_sd3_lib_60.TableView;
 namespace bifeldy_sd3_lib_60.Abstractions {
 
     public interface IRepository {
-        Task<string> GetJenisDc();
+        Task<EJenisDc> GetJenisDc();
         Task<string> GetKodeDc();
         Task<string> GetNamaDc();
         Task<bool> IsDcHo();
@@ -45,7 +45,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         private readonly IOraPg _orapg;
         private readonly IMsSQL _mssql;
 
-        private string JenisDc = null;
+        private EJenisDc JenisDc = 0;
         private string KodeDc = null;
         private string NamaDc = null;
 
@@ -56,13 +56,20 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             this._mssql = mssql;
         }
 
-        public async Task<string> GetJenisDc() {
-            if (string.IsNullOrEmpty(this.JenisDc)) {
+        public async Task<EJenisDc> GetJenisDc() {
+            if (this.JenisDc == 0) {
                 if (this._orapg.DbUsername.ToUpper().Contains("DCHO") || this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
-                    this.JenisDc = "HO";
+                    this.JenisDc = EJenisDc.HO;
                 }
                 else {
-                    this.JenisDc = (await this._orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
+                    string jenisDc = (await this._orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
+
+                    if (Enum.TryParse(jenisDc, true, out EJenisDc eJenisDc)) {
+                        this.JenisDc = eJenisDc;
+                    }
+                    else {
+                        throw new Exception("Jenis DC Tidak Valid");
+                    }
                 }
             }
 
