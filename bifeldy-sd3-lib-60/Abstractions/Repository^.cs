@@ -24,6 +24,7 @@ using bifeldy_sd3_lib_60.TableView;
 namespace bifeldy_sd3_lib_60.Abstractions {
 
     public interface IRepository {
+        Task<string> GetJenisDc(string kodeDc);
         Task<EJenisDc> GetJenisDc();
         Task<string> GetKodeDc();
         Task<string> GetNamaDc();
@@ -56,13 +57,28 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             this._mssql = mssql;
         }
 
+        public async Task<string> GetJenisDc(string kodeDc) {
+            DC_TABEL_DC_T res = null;
+
+            DbSet<DC_TABEL_DC_T> db = this._orapg.Set<DC_TABEL_DC_T>();
+            if (string.IsNullOrEmpty(kodeDc)) {
+                res = await db.SingleOrDefaultAsync();
+            }
+            else {
+                IQueryable<DC_TABEL_DC_T> sql = db.Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper());
+                res = await sql.SingleOrDefaultAsync();
+            }
+
+            return res.TBL_JENIS_DC.ToUpper();
+        }
+
         public async Task<EJenisDc> GetJenisDc() {
             if (this.JenisDc == 0) {
                 if (this._orapg.DbUsername.ToUpper().Contains("DCHO") || this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
                     this.JenisDc = EJenisDc.HO;
                 }
                 else {
-                    string jenisDc = (await this._orapg.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_JENIS_DC.ToUpper();
+                    string jenisDc = await this.GetJenisDc(null);
 
                     if (Enum.TryParse(jenisDc, true, out EJenisDc eJenisDc)) {
                         this.JenisDc = eJenisDc;
