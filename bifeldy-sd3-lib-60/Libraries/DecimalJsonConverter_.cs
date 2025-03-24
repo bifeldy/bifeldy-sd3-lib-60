@@ -10,6 +10,8 @@
  * 
  */
 
+using System.Globalization;
+
 using bifeldy_sd3_lib_60.Extensions;
 
 namespace bifeldy_sd3_lib_60.Libraries {
@@ -29,7 +31,7 @@ namespace bifeldy_sd3_lib_60.Libraries {
             decimal value,
             System.Text.Json.JsonSerializerOptions options
         ) {
-            writer.WriteNumberValue(value.RemoveTrail());
+            writer.WriteRawValue(value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
         }
 
     }
@@ -58,7 +60,7 @@ namespace bifeldy_sd3_lib_60.Libraries {
             decimal value,
             Newtonsoft.Json.JsonSerializer serializer
         ) {
-            writer.WriteRawValue(value.ToString(true));
+            writer.WriteRawValue(value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
         }
 
     }

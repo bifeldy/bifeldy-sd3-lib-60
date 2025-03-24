@@ -19,6 +19,7 @@ using FluentFTP;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
+using Serilog.Sinks.File;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -63,6 +64,32 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return ftpClient;
+        }
+
+        public async Task RenameFtpFiles(FtpClient ftpConnection, string originalFileName, string newFileName, bool deleteNewFileIfExists = false) {
+            if (this._as.DebugMode) {
+                originalFileName = $"_SIMULASI__{originalFileName}";
+            }
+
+            if (this._as.DebugMode) {
+                newFileName = $"_SIMULASI__{newFileName}";
+            }
+
+            if (!ftpConnection.FileExists(originalFileName)) {
+                throw new Exception($"File {originalFileName} Target Tidak DItemukan!");
+            }
+
+            if (ftpConnection.FileExists(newFileName) && deleteNewFileIfExists) {
+                await ftpConnection.DeleteFileAsync(newFileName);
+            }
+
+            await ftpConnection.RenameAsync(originalFileName, newFileName);
+
+            this._logger.LogInformation("[FTP_RENAME_FTP_FILES] {originalFileName} => {newFileName}", originalFileName, newFileName);
+
+            if (ftpConnection.IsConnected) {
+                await ftpConnection.DisconnectAsync();
+            }
         }
 
         public async Task<CFtpResultInfo> SendFtpFiles(FtpClient ftpConnection, string localDirPath, string fileName = null, Action<double> progress = null) {
