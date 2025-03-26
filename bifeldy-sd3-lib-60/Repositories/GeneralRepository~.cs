@@ -67,7 +67,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             string, IDictionary<
                 string, (bool, CDatabase)
             >
-        >();
+        >(StringComparer.InvariantCultureIgnoreCase);
 
         public CGeneralRepository(
             IOptions<EnvVar> envVar,
@@ -241,7 +241,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         //
         public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
-                IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>();
+                IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>(StringComparer.InvariantCultureIgnoreCase);
 
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
                 foreach (DC_TABEL_V dbi in dbInfo) {

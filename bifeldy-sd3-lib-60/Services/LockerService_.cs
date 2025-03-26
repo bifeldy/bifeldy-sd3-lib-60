@@ -23,7 +23,7 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CLockerService : ILockerService {
 
-        private readonly IDictionary<string, SemaphoreSlim> semaphore_global_app = new Dictionary<string, SemaphoreSlim>();
+        private readonly IDictionary<string, SemaphoreSlim> semaphore_global_app = new Dictionary<string, SemaphoreSlim>(StringComparer.InvariantCultureIgnoreCase);
 
         public CLockerService() {
             this.MutexGlobalApp = new SemaphoreSlim(1, 1);

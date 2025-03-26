@@ -69,8 +69,8 @@ namespace bifeldy_sd3_lib_60 {
         public static IConfiguration Config = null;
         public static WebApplication App = null;
 
-        // private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new();
-        private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new();
+        // private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
+        private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
 
         private static string NginxPathName = "x-forwarded-prefix";
 
@@ -401,7 +401,7 @@ namespace bifeldy_sd3_lib_60 {
                 }
             }
             else {
-                var dict = new Dictionary<string, Type> {
+                var dict = new Dictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase) {
                     { classInheritFromCQuartzJobScheduler.Name, classInheritFromCQuartzJobScheduler }
                 };
                 jobList.Add(quartzCronString, dict);

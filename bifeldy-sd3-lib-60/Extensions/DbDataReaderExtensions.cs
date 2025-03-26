@@ -23,7 +23,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
             if (dr.HasRows) {
                 while (dr.Read() && !token.IsCancellationRequested) {
-                    var cols = new Dictionary<string, dynamic>();
+                    var cols = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
                     for (int i = 0; i < dr.FieldCount; i++) {
                         if (!dr.IsDBNull(i)) {
                             cols[dr.GetName(i).ToUpper()] = dr.GetValue(i);

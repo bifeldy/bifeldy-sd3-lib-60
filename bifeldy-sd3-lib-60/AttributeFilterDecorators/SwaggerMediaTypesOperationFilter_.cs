@@ -38,7 +38,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         }
 
         private static Dictionary<string, OpenApiMediaType> FilterMediaTypes(IDictionary<string, OpenApiMediaType> apiMediaTypes) {
-            var _act = new Dictionary<string, OpenApiMediaType>();
+            var _act = new Dictionary<string, OpenApiMediaType>(StringComparer.InvariantCultureIgnoreCase);
             foreach (string act in AcceptedContentType) {
                 if (apiMediaTypes.TryGetValue(act, out OpenApiMediaType oamt)) {
                     _act.Add(act, oamt);

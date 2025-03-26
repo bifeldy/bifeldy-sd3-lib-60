@@ -25,7 +25,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             foreach (DataRow row in dt.Rows) {
-                var cols = new Dictionary<string, dynamic>();
+                var cols = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
                 foreach (DataColumn col in dt.Columns) {
                     string colName = col.ColumnName.ToUpper();
                     if (row[colName] != DBNull.Value) {

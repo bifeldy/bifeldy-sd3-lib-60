@@ -40,7 +40,7 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IWebHostEnvironment _he;
         private readonly IConverterService _converter;
 
-        public IDictionary<string, dynamic> FileType { get; } = new Dictionary<string, dynamic>() {
+        public IDictionary<string, dynamic> FileType { get; } = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase) {
             {
                 "PDF", new {
                     contentType = "application/pdf",

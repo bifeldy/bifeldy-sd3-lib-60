@@ -13,6 +13,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace bifeldy_sd3_lib_60.Controllers {
@@ -23,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public class EchoController : ControllerBase {
 
         public IActionResult ReturnData(dynamic json = null) {
-            var query = new Dictionary<string, dynamic>();
+            var query = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
             foreach (KeyValuePair<string, StringValues> data in this.Request.Query) {
                 if (data.Value.Count > 1) {
                     query.Add(data.Key, data.Value.ToArray());

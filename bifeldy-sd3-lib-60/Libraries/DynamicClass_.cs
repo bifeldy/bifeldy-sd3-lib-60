@@ -25,7 +25,7 @@ namespace bifeldy_sd3_lib_60.Libraries {
         private readonly Dictionary<string, KeyValuePair<Type, object>> _fields;
 
         public CDynamicClass(List<CDynamicClassProperty> fields) {
-            this._fields = new Dictionary<string, KeyValuePair<Type, object>>();
+            this._fields = new Dictionary<string, KeyValuePair<Type, object>>(StringComparer.InvariantCultureIgnoreCase);
 
             foreach (CDynamicClassProperty field in fields) {
                 var type = Type.GetType(field.DataType);

@@ -28,7 +28,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         private static Dictionary<string, object> ConvertIEnumerableToDictionary(IEnumerable enumerable) {
             int index = 0;
-            var items = new Dictionary<string, object>();
+            var items = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
             foreach (object item in enumerable) {
                 if (item.GetType().IsPrimitive || item is string) {
                     items.Add(index.ToString(), item);
