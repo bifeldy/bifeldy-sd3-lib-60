@@ -135,10 +135,10 @@ namespace bifeldy_sd3_lib_60 {
                 // o.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Error;
                 o.EnrichDiagnosticContext = (diagnosticContext, httpContext) => {
                     IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
-                    string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request);
-                    diagnosticContext.Set("RemoteOrigin", origin);
                     string ipAddr = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true);
                     diagnosticContext.Set("RemoteIpAddress", ipAddr);
+                    string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request);
+                    diagnosticContext.Set("RemoteOrigin", origin == ipAddr ? string.Empty : origin);
                 };
             });
         }
