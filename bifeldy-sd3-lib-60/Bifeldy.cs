@@ -10,6 +10,7 @@
  * 
  */
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Net;
@@ -29,6 +30,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
@@ -131,14 +133,15 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseSerilog() {
             _ = App.UseSerilogRequestLogging(o => {
-                o.MessageTemplate = "{RemoteOrigin} :: {RemoteIpAddress} :: {RequestMethod} :: {RequestPath} :: {StatusCode} :: {Elapsed:0.0000} ms";
+                o.MessageTemplate = "{TraceId} :: {RemoteOriginIpAddress} :: {RequestMethod} :: {RequestPath} :: {StatusCode} :: {Elapsed:0.0000} ms";
                 // o.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Error;
                 o.EnrichDiagnosticContext = (diagnosticContext, httpContext) => {
+                    diagnosticContext.Set("TraceId", Activity.Current?.Id ?? httpContext?.TraceIdentifier);
+
                     IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
                     string ipAddr = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true);
-                    diagnosticContext.Set("RemoteIpAddress", ipAddr);
                     string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request);
-                    diagnosticContext.Set("RemoteOrigin", origin == ipAddr ? string.Empty : origin);
+                    diagnosticContext.Set("RemoteOriginIpAddress", origin == ipAddr ? origin : $"{origin}@{ipAddr}");
                 };
             });
         }
@@ -221,12 +224,14 @@ namespace bifeldy_sd3_lib_60 {
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
                     var openApiServers = new List<OpenApiServer>();
 
-                    string proxyPath = request.Headers[proxyHeaderName];
-                    if (!string.IsNullOrEmpty(proxyPath)) {
-                        openApiServers.Add(new OpenApiServer() {
-                            Description = "Reverse Proxy Path",
-                            Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
-                        });
+                    if (request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
+                        string proxyPath = pathBase.Last();
+                        if (!string.IsNullOrEmpty(proxyPath)) {
+                            openApiServers.Add(new OpenApiServer() {
+                                Description = "Reverse Proxy Path",
+                                Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
+                            });
+                        }
                     }
 
                     openApiServers.Add(new OpenApiServer() {
@@ -464,7 +469,7 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void UseErrorHandlerMiddleware(string apiUrlPrefix = "api") {
+        public static void Handle500ApiError<T>(string apiUrlPrefix = "api") {
             _ = App.Use(async (context, next) => {
 
                 // Khusus API Path :: Akan Di Handle Error Dengan Balikan Data JSON
@@ -479,21 +484,40 @@ namespace bifeldy_sd3_lib_60 {
                         await next();
                     }
                     catch (Exception ex) {
-                        try {
-                            HttpResponse response = context.Response;
+                        ILogger<T> _logger = context.RequestServices.GetRequiredService<ILogger<T>>();
 
-                            response.Clear();
-                            response.StatusCode = StatusCodes.Status500InternalServerError;
-                            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
-                                info = "500 - Whoops :: Terjadi Kesalahan",
-                                result = new ResponseJsonMessage() {
-                                    message = App.Environment.IsDevelopment() ? ex.Message : "Gagal Memproses Data"
-                                }
-                            });
+                        var user = (UserApiSession) context.Items["user"];
+
+                        HttpRequest request = context.Request;
+                        HttpResponse response = context.Response;
+
+                        response.Clear();
+
+                        if (request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
+                            string proxyPath = pathBase.Last();
+                            if (!string.IsNullOrEmpty(proxyPath)) {
+                                response.Headers.Add("x-request-trace-proxy", proxyPath);
+                            }
                         }
-                        catch {
-                            // Response has been sent ~
-                        }
+
+                        response.Headers.Add("x-request-trace-activity", Activity.Current?.Id);
+                        response.Headers.Add("x-request-trace-id", context.TraceIdentifier);
+                        response.StatusCode = StatusCodes.Status500InternalServerError;
+
+                        _logger.LogError(
+                            "[GLOBAL_ERROR_HANDLER] {TraceId} 💣 {Message}",
+                            Activity.Current?.Id ?? context?.TraceIdentifier,
+                            ex.Message + Environment.NewLine + ex.StackTrace
+                        );
+
+                        await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                            info = "500 - Whoops :: Terjadi Kesalahan",
+                            result = new ResponseJsonMessage() {
+                                message = (App.Environment.IsDevelopment() || user?.role <= UserSessionRole.USER_SD_SSD_3)
+                                    ? ex.Message
+                                    : "Gagal Memproses Data"
+                            }
+                        });
                     }
                 }
             });

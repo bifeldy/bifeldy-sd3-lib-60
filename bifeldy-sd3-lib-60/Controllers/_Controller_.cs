@@ -164,29 +164,17 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [ApiExplorerSettings(IgnoreApi = false)]
         [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
-            try {
-                if (this.UserTokenData.role == UserSessionRole.EXTERNAL_BOT) {
-                    API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(this.UserTokenData.name);
-                    dcApiToken.TOKEN_SEKALI_PAKAI = null;
-                    _ = this._orapg.Set<API_TOKEN_T>().Update(dcApiToken);
-                    _ = await this._orapg.SaveChangesAsync();
-                }
+            if (this.UserTokenData.role == UserSessionRole.EXTERNAL_BOT) {
+                API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(this.UserTokenData.name);
+                dcApiToken.TOKEN_SEKALI_PAKAI = null;
+                _ = this._orapg.Set<API_TOKEN_T>().Update(dcApiToken);
+                _ = await this._orapg.SaveChangesAsync();
+            }
 
-                return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
-                    info = $"202 - {this.GetType().Name} :: Logout Berhasil",
-                    result = this.UserTokenData
-                });
-            }
-            catch (Exception ex) {
-                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"500 - {this.GetType().Name} :: Logout Gagal",
-                    result = new ResponseJsonMessage() {
-                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
-                            ? ex.Message
-                            : "Terjadi kesalahan saat proses data!"
-                    }
-                });
-            }
+            return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
+                info = $"202 - {this.GetType().Name} :: Logout Berhasil",
+                result = this.UserTokenData
+            });
         }
 
         [HttpPatch("verify")]
@@ -194,22 +182,10 @@ namespace bifeldy_sd3_lib_60.Controllers {
         // [AllowedRoles(UserSessionRole.USER_SD_SSD_3, UserSessionRole.EXTERNAL_BOT)]
         [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
-            try {
-                return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
-                    info = $"202 - {this.GetType().Name} :: Verifikasi Berhasil",
-                    result = this.UserTokenData
-                });
-            }
-            catch (Exception ex) {
-                return this.StatusCode(StatusCodes.Status500InternalServerError, new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"500 - {this.GetType().Name} :: Verifikasi Gagal",
-                    result = new ResponseJsonMessage() {
-                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
-                            ? ex.Message
-                            : "Terjadi kesalahan saat proses data!"
-                    }
-                });
-            }
+            return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
+                info = $"202 - {this.GetType().Name} :: Verifikasi Berhasil",
+                result = this.UserTokenData
+            });
         }
 
         /* ** */
