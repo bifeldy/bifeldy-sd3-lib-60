@@ -13,8 +13,12 @@
 
 using System.Reflection;
 using System.ServiceModel;
+using System.Text.RegularExpressions;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.SignalR;
 
 using ProtoBuf.Grpc.Reflection;
 
@@ -55,6 +59,48 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 var schemaGenerator = new SchemaGenerator();
                 string schema = schemaGenerator.GetSchema(grpcService);
                 File.WriteAllText(Path.Combine(dirPath, $"{grpcService}.proto"), schema);
+            }
+        }
+
+        public static void AutoMapHubService(this WebApplication app, string signalrPrefixHub, Action<HttpConnectionDispatcherOptions> configureOptions = null) {
+            var libAsm = Assembly.GetExecutingAssembly();
+            var prgAsm = Assembly.GetEntryAssembly();
+
+            IEnumerable<Type> hubServices = libAsm.GetTypes().Concat(prgAsm.GetTypes())
+                .Where(c => c.IsClass && !c.IsAbstract && c.IsPublic && typeof(Hub).IsAssignableFrom(c));
+
+            foreach (Type hubService in hubServices) {
+                string urlPathPascaCaseToKebabCase = Regex.Replace(hubService.Name, "(?<!^)([A-Z][a-z]|(?<=[a-z])[A-Z0-9])", "-$1", RegexOptions.Compiled).Trim().ToLower();
+
+                if (!signalrPrefixHub.StartsWith("/")) {
+                    signalrPrefixHub = $"/{signalrPrefixHub}";
+                }
+
+                if (!urlPathPascaCaseToKebabCase.StartsWith("/")) {
+                    urlPathPascaCaseToKebabCase = $"/{urlPathPascaCaseToKebabCase}";
+                }
+
+                if (urlPathPascaCaseToKebabCase.EndsWith("-hub")) {
+                    urlPathPascaCaseToKebabCase = urlPathPascaCaseToKebabCase.Replace("-hub", string.Empty);
+                }
+
+                string signalrHubPath = signalrPrefixHub + urlPathPascaCaseToKebabCase;
+
+                if (configureOptions == null) {
+                    _ = typeof(HubEndpointRouteBuilderExtensions).GetMethod(
+                        nameof(HubEndpointRouteBuilderExtensions.MapHub),
+                        BindingFlags.Static | BindingFlags.Public,
+                        new[] { typeof(IEndpointRouteBuilder), typeof(string) }
+                    ).MakeGenericMethod(hubService).Invoke(null, new dynamic[] { app, signalrHubPath });
+                }
+                else {
+                    _ = typeof(HubEndpointRouteBuilderExtensions).GetMethod(
+                        nameof(HubEndpointRouteBuilderExtensions.MapHub),
+                        BindingFlags.Static | BindingFlags.Public,
+                        new[] { typeof(IEndpointRouteBuilder), typeof(string), typeof(Action<HttpConnectionDispatcherOptions>) }
+                    ).MakeGenericMethod(hubService).Invoke(null, new dynamic[] { app, signalrHubPath, configureOptions });
+                }
+
             }
         }
 

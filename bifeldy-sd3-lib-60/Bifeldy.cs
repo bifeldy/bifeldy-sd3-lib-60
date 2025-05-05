@@ -22,11 +22,13 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -306,6 +308,27 @@ namespace bifeldy_sd3_lib_60 {
         public static void AutoMapGrpcService() {
             App.AutoMapGrpcService();
             _ = App.MapCodeFirstGrpcReflectionService();
+        }
+
+        /* ** */
+
+        public static void AddSignalR(Action<HubOptions> hubOptions = null) {
+            ISignalRServerBuilder signalR = null;
+
+            if (hubOptions == null) {
+                signalR = Services.AddSignalRCore();
+            }
+            else {
+                signalR = Services.AddSignalR(hubOptions);
+            }
+
+            _ = signalR.AddJsonProtocol(options => {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+            });
+        }
+
+        public static void AutoMapHubService(string signalrPrefixHub = "/signalr", Action<HttpConnectionDispatcherOptions> configureOptions = null) {
+            App.AutoMapHubService(signalrPrefixHub, configureOptions);
         }
 
         /* ** */

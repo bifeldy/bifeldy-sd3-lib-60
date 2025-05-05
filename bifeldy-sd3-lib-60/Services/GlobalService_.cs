@@ -21,6 +21,7 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IGlobalService {
+        SortedDictionary<string, string> SignalrClients { get; }
         List<string> AllowedIpOrigin { get; set; }
         string GetSecretData(HttpRequest request, RequestJson reqBody);
         string GetApiKeyData(HttpRequest request, RequestJson reqBody);
@@ -35,6 +36,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly ILogger<CGlobalService> _logger;
         private readonly IConverterService _cs;
+
+        public SortedDictionary<string, string> SignalrClients { get; } = new();
 
         public List<string> AllowedIpOrigin { get; set; } = new List<string>() {
             "localhost", "127.0.0.1"
