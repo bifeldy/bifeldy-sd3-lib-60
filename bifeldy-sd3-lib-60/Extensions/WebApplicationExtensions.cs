@@ -11,6 +11,7 @@
  * 
  */
 
+using System.CodeDom.Compiler;
 using System.Reflection;
 using System.ServiceModel;
 using System.Text.RegularExpressions;
@@ -28,6 +29,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         public static void AutoMapGrpcService(this WebApplication app) {
             Type serviceContract = typeof(ServiceContractAttribute);
+            Type generatedCode = typeof(GeneratedCodeAttribute);
 
             string dirPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net");
             DirectoryInfo di = Directory.CreateDirectory(dirPath);
@@ -41,7 +43,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             var prgAsm = Assembly.GetEntryAssembly();
 
             IEnumerable<Type> grpcServices = libAsm.GetTypes().Concat(prgAsm.GetTypes())
-                .Where(p => p.IsDefined(serviceContract, true) && p.IsInterface);
+                .Where(p => p.IsDefined(serviceContract, true) && !p.IsDefined(generatedCode, true) && p.IsInterface);
 
             foreach (Type grpcService in grpcServices) {
                 string[] fullName = grpcService.FullName.Split(".");
