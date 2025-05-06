@@ -60,18 +60,28 @@ namespace bifeldy_sd3_lib_60.Models {
     public class InputJson : RequestJson { }
 
     [ProtoContract]
-    public class InputJsonDataSingle<T> : InputJson {
+    public class InputJsonHoDataSingle<T> : InputJson {
         [ProtoMember(4)][InheritedProtoMember(4)] public T data { get; set; }
     }
 
     [ProtoContract]
-    public class InputJsonDataMulti<T> : InputJson {
+    public class InputJsonHoDataMulti<T> : InputJson {
         [ProtoMember(4)][InheritedProtoMember(4)] public T[] data { get; set; }
     }
 
     [ProtoContract]
     public class InputJsonDc : InputJson {
         [ProtoMember(4)][InheritedProtoMember(4)] public string kode_dc { get; set; }
+    }
+
+    [ProtoContract]
+    public class InputJsonDcDataSingle<T> : InputJsonDc {
+        [ProtoMember(5)][InheritedProtoMember(5)] public T data { get; set; }
+    }
+
+    [ProtoContract]
+    public class InputJsonDcDataMulti<T> : InputJsonDc {
+        [ProtoMember(5)][InheritedProtoMember(5)] public T[] data { get; set; }
     }
 
     [ProtoContract]
