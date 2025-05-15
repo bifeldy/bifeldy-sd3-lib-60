@@ -31,7 +31,7 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.dotnetRunningInContainer = value;
         }
 
-        private int apiPort = 80;
+        private int apiPort = -1;
         public int API_PORT {
             get {
                 string port = GetEnvVar("API_PORT");
@@ -44,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.apiPort = value;
         }
 
-        private int grpcPort = 80;
+        private int grpcPort = -1;
         public int GRPC_PORT {
             get {
                 string port = GetEnvVar("GRPC_PORT");

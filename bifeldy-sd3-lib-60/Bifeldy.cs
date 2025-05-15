@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void InitApp(WebApplication app) => App = app;
 
-        public static void SetKestrelApiGrpcPort(IConfigurationSection configuration = null) {
+        public static void SetKestrelApiGrpcPort(IConfigurationSection configuration = null, bool enableGrpc = true) {
             IConfigurationSection config = configuration ?? Config.GetSection("ENV");
             IDictionary<string, dynamic> cfg = config.Get<IDictionary<string, dynamic>>();
 
@@ -107,20 +107,29 @@ namespace bifeldy_sd3_lib_60 {
             string apiPortEnv = Environment.GetEnvironmentVariable(apiEnvName);
             int webApiPort = int.Parse(apiPortEnv ?? cfg[apiEnvName]);
 
-            // GRPC Pakai HTTP/2 Doank :: Cek Environment / appsettings.json
-            string grpcEnvName = "GRPC_PORT";
-            string grpcPortEnv = Environment.GetEnvironmentVariable(grpcEnvName);
-            int grpcPort = int.Parse(grpcPortEnv ?? cfg[grpcEnvName]);
+            string logInfo = $"=> Running Port :: {webApiPort} (API)";
 
-            Console.WriteLine($"=> Running Port :: {webApiPort} (API) :: {grpcPort} (GRPC)");
+            int grpcPort = -1;
+            if (enableGrpc) {
+                // GRPC Pakai HTTP/2 Doank :: Cek Environment / appsettings.json
+                string grpcEnvName = "GRPC_PORT";
+                string grpcPortEnv = Environment.GetEnvironmentVariable(grpcEnvName);
+                grpcPort = int.Parse(grpcPortEnv ?? cfg[grpcEnvName]);
+                logInfo += $" :: {grpcPort} (GRPC)";
+            }
+
+            Console.WriteLine(logInfo);
 
             _ = Builder.WebHost.ConfigureKestrel(options => {
                 options.Listen(IPAddress.Any, webApiPort, listenOptions => {
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                 });
-                options.Listen(IPAddress.Any, grpcPort, listenOptions => {
-                    listenOptions.Protocols = HttpProtocols.Http2;
-                });
+
+                if (enableGrpc && grpcPort >= 0) {
+                    options.Listen(IPAddress.Any, grpcPort, listenOptions => {
+                        listenOptions.Protocols = HttpProtocols.Http2;
+                    });
+                }
             });
         }
 

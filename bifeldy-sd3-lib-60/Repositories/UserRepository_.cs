@@ -8,11 +8,13 @@
  * 
  * Catatan      :: Transaksi Database Untuk API Key
  *              :: Harap Didaftarkan Ke DI Container
+ *              :: Hanya Bisa Digunakan Pada Blazor Saja ~
  * 
  */
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Abstractions;
@@ -40,18 +42,17 @@ namespace bifeldy_sd3_lib_60.Repositories {
     [TransientServiceRegistration]
     public sealed class CUserRepository : CRepository, IUserRepository {
 
-        private readonly AuthenticationStateProvider _asp;
-
+        private readonly IServiceProvider _sp;
         private readonly IOraPg _orapg;
 
         public CUserRepository(
-            AuthenticationStateProvider asp,
+            IServiceProvider sp,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IOraPg orapg,
             IMsSQL mssql
         ) : base(envVar, @as, orapg, mssql) {
-            this._asp = asp;
+            this._sp = sp;
             this._orapg = orapg;
         }
 
@@ -113,9 +114,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
         /* ** */
 
         public async Task<string> LoginUser(string userNameNik, string password) {
+            AuthenticationStateProvider asp = this._sp.GetRequiredService<AuthenticationStateProvider>();
             DC_USER_T dcUserT = await this.GetByUserNameNikPassword(userNameNik, password);
             if (dcUserT != null) {
-                var casp = (BlazorAuthenticationStateProvider) this._asp;
+                var casp = (BlazorAuthenticationStateProvider) asp;
                 await casp.UpdateAuthenticationState(new UserWebSession() {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
@@ -129,8 +131,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task LogoutUser() {
-            var casp = (BlazorAuthenticationStateProvider) this._asp;
-            await casp.UpdateAuthenticationState(null);
+            AuthenticationStateProvider asp = this._sp.GetRequiredService<AuthenticationStateProvider>();
+            var _asp = (BlazorAuthenticationStateProvider) asp;
+            await _asp.UpdateAuthenticationState(null);
         }
 
     }
