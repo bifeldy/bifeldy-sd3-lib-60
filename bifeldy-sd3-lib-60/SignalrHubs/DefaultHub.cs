@@ -7,7 +7,7 @@
  * Mail         :: bias@indomaret.co.id
  * 
  * Catatan      :: /signalr/default
- *              :: Websocket Pemberitahuan & Informasi Dari Server
+ *              :: Websocket Default Bisa Buat Contoh Untuk Pemberitahuan & Informasi Dari Server ~
  * 
  */
 
@@ -23,10 +23,10 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
 
     public interface IDefaultHub : IClientProxy {
         void RegisterIdentity(string clientName);
-        Task BroadcastAnnouncement(string message);
-        Task JoinGroup(string groupName);
-        Task LeaveGroup(string groupName);
-        Task GroupMessage(string groupName, string message, string sender = null);
+        // Task BroadcastAnnouncement(string message);
+        // Task JoinGroup(string groupName);
+        // Task LeaveGroup(string groupName);
+        // Task GroupMessage(string groupName, string message, string sender = null);
     }
 
     // [Authorize(Roles = "PROGRAM_SERVICE")]
@@ -74,37 +74,37 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
             }
         }
 
-        public async Task BroadcastAnnouncement(string message) {
-            await this.Clients.All.SendAsync("BroadcastAnnouncement", message);
-        }
+        // public async Task BroadcastAnnouncement(string message) {
+        //     await this.Clients.All.SendAsync("BroadcastAnnouncement", message);
+        // }
 
-        public async Task JoinGroup(string groupName) {
-            string clientId = this.Context.ConnectionId;
-            if (this._gs.SignalrClients.ContainsKey(clientId)) {
-                string clientName = this._gs.SignalrClients[clientId];
-                await this.Groups.AddToGroupAsync(clientId, groupName);
-                await this.GroupMessage(groupName, $"`{clientName}` has joined the group `{groupName}`.");
-            }
-            else {
-                await this.Clients.Caller.SendAsync("SystemMessage", "Please Register Your Identity!");
-            }
-        }
+        // public async Task JoinGroup(string groupName) {
+        //     string clientId = this.Context.ConnectionId;
+        //     if (this._gs.SignalrClients.ContainsKey(clientId)) {
+        //         string clientName = this._gs.SignalrClients[clientId];
+        //         await this.Groups.AddToGroupAsync(clientId, groupName);
+        //         await this.GroupMessage(groupName, $"`{clientName}` has joined the group `{groupName}`.");
+        //     }
+        //     else {
+        //         await this.Clients.Caller.SendAsync("SystemMessage", "Please Register Your Identity!");
+        //     }
+        // }
 
-        public async Task LeaveGroup(string groupName) {
-            string clientId = this.Context.ConnectionId;
-            if (this._gs.SignalrClients.ContainsKey(clientId)) {
-                string clientName = this._gs.SignalrClients[clientId];
-                await this.Groups.RemoveFromGroupAsync(clientId, groupName);
-                await this.GroupMessage(groupName, $"`{clientName}` has left the group `{groupName}`.");
-            }
-            else {
-                await this.Clients.Caller.SendAsync("SystemMessage", "Please Register Your Identity!");
-            }
-        }
+        // public async Task LeaveGroup(string groupName) {
+        //     string clientId = this.Context.ConnectionId;
+        //     if (this._gs.SignalrClients.ContainsKey(clientId)) {
+        //         string clientName = this._gs.SignalrClients[clientId];
+        //         await this.Groups.RemoveFromGroupAsync(clientId, groupName);
+        //         await this.GroupMessage(groupName, $"`{clientName}` has left the group `{groupName}`.");
+        //     }
+        //     else {
+        //         await this.Clients.Caller.SendAsync("SystemMessage", "Please Register Your Identity!");
+        //     }
+        // }
 
-        public async Task GroupMessage(string groupName, string message, string sender = null) {
-            await this.Clients.Group(groupName).SendAsync("GroupMessage", message, sender);
-        }
+        // public async Task GroupMessage(string groupName, string message, string sender = null) {
+        //     await this.Clients.Group(groupName).SendAsync("GroupMessage", message, sender);
+        // }
 
     }
 
