@@ -74,7 +74,14 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<EJenisDc> GetJenisDc() {
             if (this.JenisDc == 0) {
-                if (this._orapg.DbUsername.ToUpper().Contains("DCHO") || this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
+                // Sementara (& Selamanya) Di Hard-Coded ~
+
+                string _dbUser = this._orapg.DbUsername.ToUpper();
+                if (_dbUser.StartsWith("PGBOUNCER_")) {
+                    _dbUser = _dbUser[10..];
+                }
+
+                if (_dbUser.Contains("DCHO") || _dbUser.Contains("WHHO")) {
                     this.JenisDc = EJenisDc.HO;
                 }
                 else {
@@ -94,10 +101,17 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<string> GetKodeDc() {
             if (string.IsNullOrEmpty(this.KodeDc)) {
-                if (this._orapg.DbUsername.ToUpper().Contains("DCHO")) {
+                // Sementara (& Selamanya) Di Hard-Coded ~
+
+                string _dbUser = this._orapg.DbUsername.ToUpper();
+                if (_dbUser.StartsWith("PGBOUNCER_")) {
+                    _dbUser = _dbUser[10..];
+                }
+
+                if (_dbUser.Contains("DCHO")) {
                     this.KodeDc = "DCHO";
                 }
-                else if (this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
+                else if (_dbUser.Contains("WHHO")) {
                     this.KodeDc = "WHHO";
                 }
                 else {
@@ -110,10 +124,17 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<string> GetNamaDc() {
             if (string.IsNullOrEmpty(this.NamaDc)) {
-                if (this._orapg.DbUsername.ToUpper().Contains("DCHO")) {
+                // Sementara (& Selamanya) Di Hard-Coded ~
+
+                string _dbUser = this._orapg.DbUsername.ToUpper();
+                if (_dbUser.StartsWith("PGBOUNCER_")) {
+                    _dbUser = _dbUser[10..];
+                }
+
+                if (_dbUser.Contains("DCHO")) {
                     this.NamaDc = "DC HEAD OFFICE";
                 }
-                else if (this._orapg.DbUsername.ToUpper().Contains("WHHO")) {
+                else if (_dbUser.Contains("WHHO")) {
                     this.NamaDc = "WH HEAD OFFICE";
                 }
                 else {
