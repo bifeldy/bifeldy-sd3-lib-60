@@ -11,6 +11,7 @@
  * 
  */
 
+// using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,17 @@ using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.SignalrHubs {
 
-    public sealed class DefaultHub : Hub {
+    public interface IDefaultHub : IClientProxy {
+        void RegisterIdentity(string clientName);
+        Task BroadcastAnnouncement(string message);
+        Task JoinGroup(string groupName);
+        Task LeaveGroup(string groupName);
+        Task GroupMessage(string groupName, string message, string sender = null);
+    }
+
+    // [Authorize(Roles = "PROGRAM_SERVICE")]
+    // [Authorize(Roles = "USER_SD_SSD_3")]
+    public sealed class DefaultHub : Hub<IDefaultHub> {
 
         private readonly EnvVar _envVar;
         private readonly IGlobalService _gs;
@@ -38,7 +49,7 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
                 HttpContext http = this.Context.GetHttpContext();
                 string ipOrigin = this._gs.GetIpOriginData(http.Connection, http.Request);
 
-                this._gs.SignalrClients.Add(this.Context.ConnectionId, ipOrigin);
+                this._gs.SignalrClients.Add(this.Context.ConnectionId, $"NULL ({ipOrigin})");
             }
 
             return base.OnConnectedAsync();
@@ -52,14 +63,47 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
             return base.OnDisconnectedAsync(exception);
         }
 
+        // -- TODO :: Auth, Claim, User .. etc
+
         public void RegisterIdentity(string clientName) {
-            if (this._gs.SignalrClients.ContainsKey(this.Context.ConnectionId)) {
-                this._gs.SignalrClients[this.Context.ConnectionId] = clientName;
+            string clientId = this.Context.ConnectionId;
+            if (this._gs.SignalrClients.ContainsKey(clientId)) {
+                HttpContext http = this.Context.GetHttpContext();
+                string ipOrigin = this._gs.GetIpOriginData(http.Connection, http.Request);
+                this._gs.SignalrClients[clientId] = $"{clientName} ({ipOrigin})";
             }
         }
 
         public async Task BroadcastAnnouncement(string message) {
             await this.Clients.All.SendAsync("BroadcastAnnouncement", message);
+        }
+
+        public async Task JoinGroup(string groupName) {
+            string clientId = this.Context.ConnectionId;
+            if (this._gs.SignalrClients.ContainsKey(clientId)) {
+                string clientName = this._gs.SignalrClients[clientId];
+                await this.Groups.AddToGroupAsync(clientId, groupName);
+                await this.GroupMessage(groupName, $"`{clientName}` has joined the group `{groupName}`.");
+            }
+            else {
+                await this.Clients.Caller.SendAsync("SystemMessage", "Please Register Your Identity!");
+            }
+        }
+
+        public async Task LeaveGroup(string groupName) {
+            string clientId = this.Context.ConnectionId;
+            if (this._gs.SignalrClients.ContainsKey(clientId)) {
+                string clientName = this._gs.SignalrClients[clientId];
+                await this.Groups.RemoveFromGroupAsync(clientId, groupName);
+                await this.GroupMessage(groupName, $"`{clientName}` has left the group `{groupName}`.");
+            }
+            else {
+                await this.Clients.Caller.SendAsync("SystemMessage", "Please Register Your Identity!");
+            }
+        }
+
+        public async Task GroupMessage(string groupName, string message, string sender = null) {
+            await this.Clients.Group(groupName).SendAsync("GroupMessage", message, sender);
         }
 
     }
