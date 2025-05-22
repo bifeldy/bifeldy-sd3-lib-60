@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Libraries;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -37,7 +38,7 @@ namespace bifeldy_sd3_lib_60.Services {
             IHubConnectionBuilder connection = new HubConnectionBuilder().WithUrl(uri);
 
             if (autoReconnect) {
-                connection = connection.WithAutomaticReconnect();
+                connection = connection.WithAutomaticReconnect(new SignalrUnlimitedRetryPolicy(this._logger));
             }
 
             HubConnection client = connection.Build();
@@ -45,8 +46,15 @@ namespace bifeldy_sd3_lib_60.Services {
             if (autoReconnect) {
                 client.Closed += async (error) => {
                     this._logger.LogError("[SIGNALR_CLOSED] {error}", error);
-                    await Task.Delay(new Random().Next(0, 5) * 1000);
-                    await client.StartAsync();
+
+                    if (autoReconnect && error != null) {
+                        if (client.State != HubConnectionState.Disconnected) {
+                            await client.StopAsync();
+                        }
+
+                        await Task.Delay(new Random().Next(5, 10) * 1000);
+                        await client.StartAsync();
+                    }
 
                     if (closed != null) {
                         await closed(error);
