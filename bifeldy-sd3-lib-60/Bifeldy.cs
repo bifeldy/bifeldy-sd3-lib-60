@@ -606,7 +606,7 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
 
-        public static async Task<HubConnection> StartDefaultSignalR(string apiUrlPrefix, string signalrUrlPrefix) {
+        public static async Task<HubConnection> ConnectDefaultSignalRService(string apiUrlPrefix, string signalrUrlPrefix) {
             IServiceProvider _sp = App.Services.GetRequiredService<IServiceProvider>();
 
             IApplicationService _as = App.Services.GetRequiredService<IApplicationService>();
