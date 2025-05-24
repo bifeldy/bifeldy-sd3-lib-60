@@ -51,6 +51,8 @@ using Quartz;
 using Serilog;
 using Serilog.Events;
 
+using StackExchange.Redis;
+
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
@@ -325,7 +327,7 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddSignalR(Action<HubOptions> hubOptions = null) {
+        public static void AddSignalR(IConfigurationSection configuration = null, Action<HubOptions> hubOptions = null) {
             ISignalRServerBuilder signalR = null;
 
             if (hubOptions == null) {
@@ -338,10 +340,46 @@ namespace bifeldy_sd3_lib_60 {
             _ = signalR.AddJsonProtocol(options => {
                 options.PayloadSerializerOptions.PropertyNamingPolicy = null;
             });
+
+            IConfigurationSection config = configuration ?? Config.GetSection("ENV");
+            IDictionary<string, dynamic> cfg = config.Get<IDictionary<string, dynamic>>();
+
+            string redisEnvName = "REDIS";
+            string redisEnvVal = Environment.GetEnvironmentVariable(redisEnvName);
+
+            string redisConstStr = redisEnvVal ?? cfg[redisEnvName];
+            if (!string.IsNullOrEmpty(redisConstStr)) {
+                _ = signalR.AddStackExchangeRedis(redisConstStr, options => {
+                    options.Configuration.ChannelPrefix = new RedisChannel($"{App.Environment.ApplicationName}_SignalR", RedisChannel.PatternMode.Literal);
+                });
+            }
         }
 
         public static List<string> AutoMapHubService(string signalrPrefixHub = "/signalr", Action<HttpConnectionDispatcherOptions> configureOptions = null) {
             return App.AutoMapHubService(signalrPrefixHub, configureOptions);
+        }
+
+        /* ** */
+
+        public static void AddRedisDistributedCache(IConfigurationSection configuration = null) {
+            IConfigurationSection config = configuration ?? Config.GetSection("ENV");
+            IDictionary<string, dynamic> cfg = config.Get<IDictionary<string, dynamic>>();
+
+            string redisEnvName = "REDIS";
+            string redisEnvVal = Environment.GetEnvironmentVariable(redisEnvName);
+
+            string redisConstStr = redisEnvVal ?? cfg[redisEnvName];
+            if (string.IsNullOrEmpty(redisConstStr)) {
+                _ = Services.AddDistributedMemoryCache(options => {
+                    // No Additional Config ~
+                });
+            }
+            else {
+                _ = Services.AddStackExchangeRedisCache(options => {
+                    options.Configuration = redisConstStr;
+                    options.InstanceName = $"{App.Environment.ApplicationName}_Cache";
+                });
+            }
         }
 
         /* ** */

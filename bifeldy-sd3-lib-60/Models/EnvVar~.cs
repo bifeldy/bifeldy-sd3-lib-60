@@ -278,6 +278,19 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.wsSyncHo = value;
         }
 
+        private string redis = string.Empty;
+        public string REDIS {
+            get {
+                string redisEnv = GetEnvVar("REDIS");
+                if (!string.IsNullOrEmpty(redisEnv)) {
+                    this.redis = redisEnv;
+                }
+
+                return this.redis;
+            }
+            set => this.redis = value;
+        }
+
         // private string haha;
         // public string HAHA {
         //     get => haha ??= "TEST";
