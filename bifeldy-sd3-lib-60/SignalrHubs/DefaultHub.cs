@@ -7,7 +7,7 @@
  * Mail         :: bias@indomaret.co.id
  * 
  * Catatan      :: /signalr/default
- *              :: Websocket Default Bisa Buat Contoh Untuk Pemberitahuan & Informasi Dari Server ~
+ *              :: Websocket Default Bisa Buat Contoh & Untuk Turunan ~
  * 
  */
 
@@ -31,7 +31,7 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
 
     // [Authorize(Roles = "PROGRAM_SERVICE")]
     // [Authorize(Roles = "USER_SD_SSD_3")]
-    public sealed class DefaultHub : Hub<IDefaultHub> {
+    public class DefaultHub : Hub<IDefaultHub> {
 
         private readonly EnvVar _envVar;
         private readonly IGlobalService _gs;

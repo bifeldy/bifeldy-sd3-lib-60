@@ -10,12 +10,10 @@
  * 
  */
 
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Net;
-using System.Web;
 
 using Helmet;
 
@@ -31,7 +29,6 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -61,7 +58,6 @@ using bifeldy_sd3_lib_60.Grpcs;
 using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
@@ -605,70 +601,6 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
-
-        public static async Task<HubConnection> ConnectDefaultSignalRService(string apiUrlPrefix, string signalrUrlPrefix) {
-            IServiceProvider _sp = App.Services.GetRequiredService<IServiceProvider>();
-
-            IApplicationService _as = App.Services.GetRequiredService<IApplicationService>();
-            ISignalrService _ss = App.Services.GetRequiredService<ISignalrService>();
-
-            HubConnection signalrClient = null;
-
-            using (IServiceScope _scopedService = _sp.CreateScope()) {
-                IOraPg _orapg = _scopedService.ServiceProvider.GetRequiredService<IOraPg>();
-                IGeneralRepository _gr = _scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
-
-                bool isHo = await _gr.IsHo();
-                if (!isHo) {
-                    string appNameAsPath = _as.AppName.ToUpper();
-                    string apiUrl = await _orapg.ExecScalarAsync<string>($@"
-                        SELECT web_url
-                        FROM dc_webservice_t
-                        WHERE web_type = '{appNameAsPath}_API_URL_BASE'
-                    ");
-                    if (string.IsNullOrEmpty(apiUrl)) {
-                        throw new Exception($"API URL Web Service '{appNameAsPath}_API_URL_BASE' Tidak Tersedia");
-                    }
-
-                    var baseUri = new Uri(apiUrl);
-                    NameValueCollection baseQuery = HttpUtility.ParseQueryString(baseUri.Query);
-
-                    string url = $"{baseUri.Scheme}://";
-                    if (!string.IsNullOrEmpty(baseUri.UserInfo)) {
-                        url += $"{baseUri.UserInfo}@";
-                    }
-
-                    url += $"{baseUri.Host}:{baseUri.Port}";
-
-                    var apiUri = new Uri($"DATADCAPIURLBASE:///{signalrUrlPrefix}/default");
-                    NameValueCollection apiQuery = HttpUtility.ParseQueryString(apiUri.Query);
-
-                    foreach (string aq in baseQuery.AllKeys) {
-                        apiQuery.Set(aq, baseQuery.Get(aq));
-                    }
-
-                    var uriBuilder = new UriBuilder(url) {
-                        Path = $"{baseUri.AbsolutePath.Replace($"/{apiUrlPrefix}", string.Empty)}{apiUri.AbsolutePath}",
-                        Query = apiQuery.ToString()
-                    };
-
-                    string kodeDc = await _gr.GetKodeDc();
-                    string fullKodeDc = $"{kodeDc.ToUpper()}{(_as.DebugMode ? "SIM" : "")}";
-
-                    signalrClient = _ss.CreateClient(
-                        uriBuilder.Uri,
-                        reconnected: async (id) => {
-                            await signalrClient.SendAsync("RegisterIdentity", fullKodeDc);
-                        }
-                    );
-
-                    await signalrClient.StartAsync();
-                    await signalrClient.SendAsync("RegisterIdentity", fullKodeDc);
-                }
-            }
-
-            return signalrClient;
-        }
 
     }
 
