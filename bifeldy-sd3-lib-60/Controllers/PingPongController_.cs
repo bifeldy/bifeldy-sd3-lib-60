@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
@@ -24,6 +25,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
     [ApiController]
     [Route("ping-pong")]
+    [MinRole(UserSessionRole.PROGRAM_SERVICE)]
     [ApiExplorerSettings(IgnoreApi = true)]
     public class PingPongController : ControllerBase {
 
