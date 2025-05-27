@@ -36,6 +36,30 @@ namespace bifeldy_sd3_lib_60.Libraries {
 
     }
 
+    public sealed class MullableDecimalSystemTextJsonConverter : System.Text.Json.Serialization.JsonConverter<decimal?> {
+
+        public override decimal? Read(
+            ref System.Text.Json.Utf8JsonReader reader,
+            Type typeToConvert,
+            System.Text.Json.JsonSerializerOptions options
+        ) {
+            if (reader.TryGetDecimal(out decimal value)) {
+                return value;
+            }
+
+            return default;
+        }
+
+        public override void Write(
+            System.Text.Json.Utf8JsonWriter writer,
+            decimal? value,
+            System.Text.Json.JsonSerializerOptions options
+        ) {
+            writer.WriteRawValue(value?.RemoveTrail().ToString(CultureInfo.InvariantCulture));
+        }
+
+    }
+
     public sealed class DecimalNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<decimal> {
 
         public override decimal ReadJson(
@@ -61,6 +85,29 @@ namespace bifeldy_sd3_lib_60.Libraries {
             Newtonsoft.Json.JsonSerializer serializer
         ) {
             writer.WriteRawValue(value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
+        }
+
+    }
+
+    public sealed class NullableDecimalNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<decimal?> {
+
+        public override decimal? ReadJson(
+            Newtonsoft.Json.JsonReader reader,
+            Type objectType,
+            decimal? existingValue,
+            bool hasExistingValue,
+            Newtonsoft.Json.JsonSerializer serializer
+        ) {
+            decimal? _val = reader.ReadAsDecimal();
+            return _val?.RemoveTrail();
+        }
+
+        public override void WriteJson(
+            Newtonsoft.Json.JsonWriter writer,
+            decimal? value,
+            Newtonsoft.Json.JsonSerializer serializer
+        ) {
+            writer.WriteRawValue(value?.RemoveTrail().ToString(CultureInfo.InvariantCulture));
         }
 
     }

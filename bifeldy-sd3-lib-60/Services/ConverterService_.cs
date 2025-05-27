@@ -61,8 +61,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public T JsonToObject<T>(string j2o, JsonSerializerSettings settings = null) {
             settings ??= new JsonSerializerSettings {
-                Converters = new[] {
-                    new DecimalNewtonsoftJsonConverter()
+                Converters = new JsonConverter[] {
+                    new DecimalNewtonsoftJsonConverter(),
+                    new NullableDecimalNewtonsoftJsonConverter()
                 }
             };
             return JsonConvert.DeserializeObject<T>(j2o, settings);
@@ -70,8 +71,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string ObjectToJson(object o2j, JsonSerializerSettings settings = null) {
             settings ??= new JsonSerializerSettings {
-                Converters = new[] {
-                    new DecimalNewtonsoftJsonConverter()
+                Converters = new JsonConverter[] {
+                    new DecimalNewtonsoftJsonConverter(),
+                    new NullableDecimalNewtonsoftJsonConverter()
                 }
             };
             return JsonConvert.SerializeObject(o2j, settings);
