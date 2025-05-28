@@ -298,10 +298,10 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddGrpc(bool useJwt = false) {
+        public static void AddGrpcCodeFirst(bool useAuth = false) {
             InheritedProtoMemberAttribute.AddInheritedMembersIn();
             _ = Services.AddCodeFirstGrpc(opt => {
-                if (useJwt) {
+                if (useAuth) {
                     opt.Interceptors.Add<CGRpcServerInterceptor>();
                 }
 
