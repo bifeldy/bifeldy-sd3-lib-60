@@ -14,7 +14,7 @@
 using System.Net.NetworkInformation;
 using System.Reflection;
 
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Caching.Distributed;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
@@ -37,6 +37,8 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CApplicationService : IApplicationService {
 
+        private readonly IDistributedCache _cache;
+
         private readonly Assembly _prgAsm = Assembly.GetEntryAssembly();
         private readonly Assembly _libAsm = Assembly.GetExecutingAssembly();
 
@@ -58,25 +60,39 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
-        public CApplicationService() {
+        public CApplicationService(IDistributedCache cache) {
+            this._cache = cache;
             this._SettingLibb = new SettingLibb.Class1();
         }
 
         public string GetVariabel(string key, string kunci) {
             try {
+                string result = this._cache.GetString($"{this.GetType().Name}_{key}");
+                if (!string.IsNullOrEmpty(result)) {
+                    return result;
+                }
+
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
-                string result = this._SettingLibb.GetVariabel(key, kunci);
-                if (result.ToUpper().Contains("ERROR")) {
+                result = this._SettingLibb.GetVariabel(key, kunci);
+                if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL")) {
                     throw new Exception($"Gagal Mengambil Kunci {key} @ {kunci} :: {result}");
                 }
 
                 if (!string.IsNullOrEmpty(result)) {
                     result = result.Split(';').FirstOrDefault();
+
+                    if (!string.IsNullOrEmpty(result)) {
+                        this._cache.SetString($"{this.GetType().Name}_{key}", result, new DistributedCacheEntryOptions() {
+                            SlidingExpiration = TimeSpan.FromMinutes(15)
+                        });
+                    }
                 }
 
                 return result;
             }
             catch {
+                this._cache.Remove(key);
+
                 return null;
             }
         }
