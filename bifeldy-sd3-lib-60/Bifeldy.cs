@@ -60,6 +60,8 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
+using Grpc.Net.Client.Balancer;
+using ProtoBuf.Meta;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -310,10 +312,15 @@ namespace bifeldy_sd3_lib_60 {
             });
             _ = Services.AddSingleton(
                 BinderConfiguration.Create(
-                    binder: new GrpcBinder(Services)
+                    binder: new CGRpcBinder(Services)
                 )
             );
             _ = Services.AddCodeFirstGrpcReflection();
+        }
+
+        public static void AddCustomGrpcResolver<T>(LoadBalancerFactory customLoadBalancerFactory = null) where T : ResolverFactory {
+            _ = Services.AddSingleton<ResolverFactory, T>();
+            _ = Services.AddSingleton(typeof(LoadBalancerFactory), customLoadBalancerFactory ?? new CGRpcRandomBalancerFactory());
         }
 
         public static void AutoMapGrpcService() {

@@ -6,7 +6,7 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Untuk Binding Grpc
+ * Catatan      :: Untuk Binding GRpc
  *              :: Tidak Untuk Didaftarkan Ke DI Container
  * 
  */
@@ -19,11 +19,11 @@ using ProtoBuf.Grpc.Configuration;
 
 namespace bifeldy_sd3_lib_60.Grpcs {
 
-    public sealed class GrpcBinder : ServiceBinder {
+    public sealed class CGRpcBinder : ServiceBinder {
 
         private readonly IServiceCollection services;
 
-        public GrpcBinder(IServiceCollection services) {
+        public CGRpcBinder(IServiceCollection services) {
             this.services = services;
         }
 
