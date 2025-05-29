@@ -184,7 +184,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 sqlTextQueryParameters = regex.Replace(sqlTextQueryParameters, pVal.ToString(), 1);
             }
 
-            sqlTextQueryParameters = sqlTextQueryParameters.Replace($"\r\n", " ");
+            sqlTextQueryParameters = sqlTextQueryParameters.Replace(Environment.NewLine, " ");
             sqlTextQueryParameters = Regex.Replace(sqlTextQueryParameters, @"\s+", " ");
             this._logger.LogInformation("[SQL_PARAMETERS] {sqlTextQueryParameters}", sqlTextQueryParameters.Trim());
         }
@@ -403,7 +403,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 }
 
                 string sqlQuery = $"SELECT * FROM ({rawQueryVulnerableSqlInjection}) alias_{DateTime.Now.Ticks}";
-                sqlQuery = sqlQuery.Replace($"\r\n", " ");
+                sqlQuery = sqlQuery.Replace(Environment.NewLine, " ");
                 sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
                 this._logger.LogInformation("[BULK_GET_CSV] {sqlQuery}", sqlQuery);
                 using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, commandBehavior: CommandBehavior.SequentialAccess)) {
