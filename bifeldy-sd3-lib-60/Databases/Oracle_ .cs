@@ -53,7 +53,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             // --
             this.InitializeConnection();
             // --
-            this.Database.SetCommandTimeout(1800); // 30 Minute
+            this.Database.SetCommandTimeout(3600); // 60 Minute
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
@@ -80,7 +80,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.DbName = _dbName;
             this.DbUsername = dbUsername ?? this._as.GetVariabel("UserOrcl", this._envVar.KUNCI_GXXX);
             this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordOrcl", this._envVar.KUNCI_GXXX);
-            this.DbConnectionString = $"Data Source={this.DbTnsOdp};User ID={this.DbUsername};Password={this.DbPassword};Connection Timeout=180;"; // 3 menit
+            this.DbConnectionString = $"Data Source={this.DbTnsOdp};User ID={this.DbUsername};Password={this.DbPassword};Connection Timeout=180;"; // 3 Minutes
         }
 
         protected override DbCommand CreateCommand() {

@@ -110,13 +110,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         protected virtual DbCommand CreateCommand() {
             if (this.Database.CurrentTransaction == null) {
                 DbCommand cmd = this.GetConnection().CreateCommand();
-                cmd.CommandTimeout = 1800; // 30 Minutes
+                cmd.CommandTimeout = 3600; // 60 Minutes
                 return cmd;
             }
             else {
                 if (CurrentActiveCommandTransaction == null) {
                     CurrentActiveCommandTransaction = this.GetConnection().CreateCommand();
-                    CurrentActiveCommandTransaction.CommandTimeout = 1800; // 30 Minutes
+                    CurrentActiveCommandTransaction.CommandTimeout = 3600; // 60 Minutes
                 }
 
                 return CurrentActiveCommandTransaction;

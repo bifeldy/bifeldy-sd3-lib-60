@@ -60,7 +60,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             // --
             this.InitializeConnection();
             // --
-            this.Database.SetCommandTimeout(1800); // 30 Minute
+            this.Database.SetCommandTimeout(3600); // 60 Minute
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
@@ -76,7 +76,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.DbUsername = dbUsername ?? this._as.GetVariabel("UserPostgres", this._envVar.KUNCI_GXXX);
             this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordPostgres", this._envVar.KUNCI_GXXX);
             this.DbName = dbName ?? this._as.GetVariabel("DatabasePostgres", this._envVar.KUNCI_GXXX);
-            this.DbConnectionString = $"Host={this.DbIpAddrss};Port={this.DbPort};Username={this.DbUsername};Password={this.DbPassword};Database={this.DbName};Timeout=180;ApplicationName={this._as.AppName}_{this._as.AppVersion};"; // 3 menit
+            this.DbConnectionString = $"Host={this.DbIpAddrss};Port={this.DbPort};Username={this.DbUsername};Password={this.DbPassword};Database={this.DbName};Timeout=180;ApplicationName={this._as.AppName}_{this._as.AppVersion};"; // 3 Minutes
         }
 
         protected override void BindQueryParameter(DbCommand cmd, List<CDbQueryParamBind> parameters) {
