@@ -223,7 +223,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     Marshal.FreeCoTaskMem(mimeTypePtr);
                 }
 
-                return "unknown/unknown";
+                return "application/octet-stream";
             }
         }
 

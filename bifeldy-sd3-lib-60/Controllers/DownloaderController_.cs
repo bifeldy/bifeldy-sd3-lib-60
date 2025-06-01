@@ -1,0 +1,230 @@
+﻿/**
+ * 
+ * Author       :: Basilius Bias Astho Christyono
+ * Phone        :: (+62) 889 236 6466
+ * 
+ * Department   :: IT SD 03
+ * Mail         :: bias@indomaret.co.id
+ * 
+ * Catatan      :: Hash Files Untuk Check Update
+ *              :: Tidak Untuk Didaftarkan Ke DI Container
+ * 
+ */
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+
+using Quartz.Impl.Matchers;
+using Quartz;
+
+using Swashbuckle.AspNetCore.Annotations;
+
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Databases;
+
+namespace bifeldy_sd3_lib_60.Controllers {
+
+    [ApiController]
+    [Route("downloader")]
+    [RouteExcludeAllDc]
+    [MinRole(UserSessionRole.USER_SD_SSD_3)]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public sealed class UpdaterController : ControllerBase {
+
+        private readonly IDistributedCache _cache;
+        private readonly IScheduler _scheduler;
+
+        private readonly IApplicationService _as;
+        private readonly IGlobalService _gs;
+        private readonly IChiperService _chiper;
+        private readonly IConverterService _converter;
+        private readonly IOraPg _orapg;
+
+        public UpdaterController(
+            IDistributedCache cache,
+            IScheduler scheduler,
+            IApplicationService @as,
+            IGlobalService gs,
+            IChiperService chiper,
+            IConverterService converter,
+            IOraPg orapg
+        ) {
+            this._cache = cache;
+            this._scheduler = scheduler;
+            this._as = @as;
+            this._gs = gs;
+            this._chiper = chiper;
+            this._converter = converter;
+            this._orapg = orapg;
+        }
+
+        [HttpGet]
+        [SwaggerOperation(Summary = "Untuk check Hash files")]
+        public async Task<IActionResult> ListAllFiles(
+            [FromQuery, SwaggerParameter("Nama file (ex. blablabla.csv)", Required = false)] string fileName = null,
+            [FromQuery, SwaggerParameter("Tipe file (ex. 'csv', 'zip')", Required = false)] string fileType = null,
+            [FromQuery, SwaggerParameter("Pastikan file sudah selesai ditulis dan bukan parsial", Required = false)] bool? completedOnly = false
+        ) {
+            try {
+                if (string.IsNullOrEmpty(fileName)) {
+                    Dictionary<string, string> fileHash = null;
+
+                    string cache = await this._cache.GetStringAsync(this.GetType().Name);
+                    if (string.IsNullOrEmpty(cache)) {
+                        fileHash = new Dictionary<string, string>();
+
+                        IEnumerable<FileInfo> fileInfos = Directory.GetFiles(this._as.AppLocation, "*", SearchOption.AllDirectories)
+                            .Where(p => {
+                                string dataPath = Path.Combine(this._as.AppLocation, "_data");
+                                return !p.Contains("appsettings.json") && !p.Contains(dataPath);
+                            })
+                            .Select(p => new FileInfo(p));
+                            // .OrderByDescending(fi => fi.LastWriteTime);
+
+                        foreach (FileInfo fi in fileInfos) {
+                            string crc32 = this._chiper.CalculateCRC32File(fi.FullName);
+                            if (crc32 != null) {
+                                string key = fi.FullName.Replace(this._as.AppLocation, string.Empty);
+                                fileHash[key] = crc32;
+                            }
+                        }
+
+                        await this._cache.SetStringAsync(this.GetType().Name, this._converter.ObjectToJson(fileHash), new DistributedCacheEntryOptions() {
+                            SlidingExpiration = TimeSpan.FromMinutes(30)
+                        });
+                    }
+                    else {
+                        fileHash = this._converter.JsonToObject<Dictionary<string, string>>(cache);
+                    }
+
+                    if (fileHash.Count <= 0) {
+                        return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
+                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            result = new ResponseJsonMessage() {
+                                message = "Tidak Tersedia Pembaharuan"
+                            }
+                        });
+                    }
+
+                    return this.Ok(new ResponseJsonSingle<dynamic>() {
+                        info = $"200 - {this.GetType().Name} :: Hash Files",
+                        result = fileHash
+                    });
+                }
+                else {
+                    while (fileName.StartsWith(".") || fileName.StartsWith("/") || fileName.StartsWith("\\") || fileName.StartsWith("~")) {
+                        fileName = fileName[1..];
+                    }
+
+                    string dirPath = this._as.AppLocation;
+                    string mimeType = null;
+
+                    fileType = fileType?.ToUpper();
+                    switch (fileType) {
+                        case "CSV":
+                            dirPath = this._gs.CsvFolderPath;
+                            mimeType = "text/csv";
+                            break;
+                        case "ZIP":
+                            dirPath = this._gs.ZipFolderPath;
+                            mimeType = "application/zip";
+                            break;
+                        default:
+                            dirPath = this._as.AppLocation;
+                            break;
+                    }
+
+                    string filePath = Path.Combine(dirPath, fileName);
+
+                    if (!System.IO.File.Exists(filePath)) {
+                        return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
+                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            result = new ResponseJsonMessage() {
+                                message = "File Tidak Ditemukan"
+                            }
+                        });
+                    }
+
+                    var fi = new FileInfo(filePath);
+                    bool isFileReady = false;
+
+                    if (completedOnly.GetValueOrDefault()) {
+                        IReadOnlyCollection<JobKey> jobKeys = await this._scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
+                        JobKey jk = jobKeys.Where(jk => jk.Name == fi.Name).FirstOrDefault();
+
+                        IJobDetail jd = null;
+                        if (jk != null) {
+                            jd = await this._scheduler.GetJobDetail(jk);
+                        }
+
+                        decimal recordCount = await this._orapg.ExecScalarAsync<decimal>(
+                            $@"
+                                SELECT COUNT(*)
+                                FROM api_quartz_job_queue
+                                WHERE job_name = :job_name
+                            ",
+                            new List<CDbQueryParamBind>() {
+                                new() { NAME = "job_name", VALUE = fi.Name }
+                            }
+                        );
+
+                        if (jd == null && recordCount > 0) {
+                            DateTime? completedAt = await this._orapg.ExecScalarAsync<DateTime?>(
+                                $@"
+                                    SELECT completed_at
+                                    FROM api_quartz_job_queue
+                                    WHERE job_name = :job_name
+                                ",
+                                new List<CDbQueryParamBind>() {
+                                    new() { NAME = "job_name", VALUE = fi.Name }
+                                }
+                            );
+
+                            if (completedAt != null && System.IO.File.Exists(fi.FullName)) {
+                                isFileReady = true;
+                            }
+                        }
+                    }
+                    else {
+                        if (System.IO.File.Exists(fi.FullName)) {
+                            isFileReady = true;
+                        }
+                    }
+
+                    if (!isFileReady) {
+                        return this.StatusCode(StatusCodes.Status406NotAcceptable, new ResponseJsonSingle<ResponseJsonMessage>() {
+                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            result = new ResponseJsonMessage() {
+                                message = "File Belum Tersedia"
+                            }
+                        });
+                    }
+
+                    string checksum = this._chiper.CalculateMD5File(fi.FullName);
+                    this.Response.Headers.Add("md5", checksum);
+
+                    if (string.IsNullOrEmpty(mimeType)) {
+                        mimeType = this._chiper.GetMimeFile(fi.FullName);
+                    }
+
+                    return this.PhysicalFile(fi.FullName, mimeType, fi.Name, true);
+                }
+            }
+            catch {
+                this._cache.Remove(this.GetType().Name);
+
+                return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
+                    info = $"400 - {this.GetType().Name} :: Hash File",
+                    result = new ResponseJsonMessage() {
+                        message = "Terjadi kesalahan saat proses data!"
+                    }
+                });
+            }
+        }
+
+    }
+
+}
