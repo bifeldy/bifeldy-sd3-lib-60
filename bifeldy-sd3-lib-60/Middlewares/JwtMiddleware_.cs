@@ -51,10 +51,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
             bool isGrpc = Bifeldy.GRPC_ROUTH_PATH.Contains(apiPathRequestedForGrpc);
+            bool isSignalr = apiPathRequested.StartsWith(Bifeldy.SIGNALR_PREFIX_HUB);
             bool isApi = apiPathRequested.StartsWith("/api/");
             bool isSwagger = apiPathRequested.StartsWith("/api/swagger");
 
-            if ((!isGrpc && !isApi) || isSwagger) {
+            if ((!isGrpc && !isSignalr && !isApi) || isSwagger) {
                 await this._next(context);
                 return;
             }

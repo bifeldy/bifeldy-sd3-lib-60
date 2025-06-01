@@ -40,6 +40,8 @@ using Microsoft.OpenApi.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 
+using Grpc.Net.Client.Balancer;
+
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -60,15 +62,15 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
-using Grpc.Net.Client.Balancer;
-using ProtoBuf.Meta;
 
 namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
 
         public static List<string> GRPC_ROUTH_PATH = new();
+        public static List<string> SIGNALR_ROUTH_PATH = new();
         public static bool IS_USING_API_KEY = false;
+        public static string SIGNALR_PREFIX_HUB = "/signalr";
 
         public static readonly string DEFAULT_DATA_FOLDER = "_data";
 
@@ -77,7 +79,6 @@ namespace bifeldy_sd3_lib_60 {
         public static IConfiguration Config = null;
         public static WebApplication App = null;
 
-        // private static readonly Dictionary<string, KeyValuePair<IJobDetail, ITrigger>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
         private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
 
         private static string NginxPathName = "x-forwarded-prefix";
@@ -323,9 +324,10 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton(typeof(LoadBalancerFactory), customLoadBalancerFactory ?? new CGRpcRandomBalancerFactory());
         }
 
-        public static void AutoMapGrpcService() {
-            App.AutoMapGrpcService();
+        public static List<string> AutoMapGrpcService() {
+            List<string> route = App.AutoMapGrpcService();
             _ = App.MapCodeFirstGrpcReflectionService();
+            return route;
         }
 
         /* ** */
@@ -460,6 +462,10 @@ namespace bifeldy_sd3_lib_60 {
         /* ** */
 
         public static void StartJobScheduler() {
+            _ = Services.AddSingleton<IScheduler>(sp => {
+                ISchedulerFactory scheduler = sp.GetRequiredService<ISchedulerFactory>();
+                return scheduler.GetScheduler().Result;
+            });
             _ = Services.AddQuartz(opt => {
                 // opt.UseMicrosoftDependencyInjectionJobFactory();
                 foreach (KeyValuePair<string, Dictionary<string, Type>> jl in jobList) {
@@ -608,6 +614,8 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
+
+        public static void UseRequestLoggerMiddleware() => App.UseMiddleware<RequestLoggerMiddleware>();
 
     }
 

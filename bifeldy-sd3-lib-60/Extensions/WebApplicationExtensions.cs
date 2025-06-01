@@ -27,7 +27,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class WebApplicationExtensions {
 
-        public static void AutoMapGrpcService(this WebApplication app) {
+        public static List<string> AutoMapGrpcService(this WebApplication app) {
             Type serviceContract = typeof(ServiceContractAttribute);
             Type generatedCode = typeof(GeneratedCodeAttribute);
 
@@ -62,6 +62,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 string schema = schemaGenerator.GetSchema(grpcService);
                 File.WriteAllText(Path.Combine(dirPath, $"{grpcService}.proto"), schema);
             }
+
+            return Bifeldy.GRPC_ROUTH_PATH;
         }
 
         public static List<string> AutoMapHubService(this WebApplication app, string signalrPrefixHub, Action<HttpConnectionDispatcherOptions> configureOptions = null) {
@@ -70,8 +72,6 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
             IEnumerable<Type> hubServices = libAsm.GetTypes().Concat(prgAsm.GetTypes())
                 .Where(c => c.IsClass && !c.IsAbstract && c.IsPublic && typeof(Hub).IsAssignableFrom(c));
-
-            var signalrHubPathList = new List<string>();
 
             foreach (Type hubService in hubServices) {
                 string urlPathPascaCaseToKebabCase = Regex.Replace(hubService.Name, "(?<!^)([A-Z][a-z]|(?<=[a-z])[A-Z0-9])", "-$1", RegexOptions.Compiled).Trim().ToLower();
@@ -110,10 +110,11 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     hubPath = hubPath[1..];
                 }
 
-                signalrHubPathList.Add(hubPath);
+                Bifeldy.SIGNALR_ROUTH_PATH.Add(hubPath);
             }
 
-            return signalrHubPathList;
+            Bifeldy.SIGNALR_PREFIX_HUB = signalrPrefixHub;
+            return Bifeldy.SIGNALR_ROUTH_PATH;
         }
 
     }
