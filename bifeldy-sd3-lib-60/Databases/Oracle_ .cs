@@ -45,8 +45,8 @@ namespace bifeldy_sd3_lib_60.Databases {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs,
-            ICsvService csv
-        ) : base(options, envVar, logger, cs, csv) {
+            IGlobalService gs
+        ) : base(options, envVar, logger, cs, gs) {
             this._logger = logger;
             this._envVar = envVar.Value;
             this._as = @as;

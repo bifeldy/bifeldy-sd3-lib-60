@@ -12,18 +12,15 @@
  */
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using Ionic.Zip;
 using Ionic.Zlib;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
-using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IZipService {
-        string ZipFolderPath { get; }
         int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileName = null, string password = null, string outputPath = null);
         int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputPath = null);
     }
@@ -31,27 +28,17 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CZipService : IZipService {
 
-        private readonly EnvVar _envVar;
         private readonly ILogger<CZipService> _logger;
+        private readonly IGlobalService _gs;
 
-        private readonly IApplicationService _as;
-
-        public string ZipFolderPath { get; }
-
-        public CZipService(IOptions<EnvVar> envVar, ILogger<CZipService> logger, IApplicationService @as) {
-            this._envVar = envVar.Value;
+        public CZipService(ILogger<CZipService> logger, IGlobalService gs) {
             this._logger = logger;
-            this._as = @as;
-
-            this.ZipFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.ZIP_FOLDER_PATH);
-            if (!Directory.Exists(this.ZipFolderPath)) {
-                _ = Directory.CreateDirectory(this.ZipFolderPath);
-            }
+            this._gs = gs;
         }
 
         public int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileForZip = null, string password = null, string outputPath = null) {
             int totalFileInZip = 0;
-            string path = Path.Combine(outputPath ?? this.ZipFolderPath, zipFileName);
+            string path = Path.Combine(outputPath ?? this._gs.ZipFolderPath, zipFileName);
             try {
                 var zip = new ZipFile();
                 if (!string.IsNullOrEmpty(password)) {
@@ -81,7 +68,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputPath = null) {
             int totalFileInZip = 0;
-            string path = Path.Combine(outputPath ?? this.ZipFolderPath, zipFileName);
+            string path = Path.Combine(outputPath ?? this._gs.ZipFolderPath, zipFileName);
             try {
                 var zip = new ZipFile {
                     CompressionLevel = CompressionLevel.BestCompression

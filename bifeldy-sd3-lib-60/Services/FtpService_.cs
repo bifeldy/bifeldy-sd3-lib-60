@@ -35,12 +35,12 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly ILogger<CFtpService> _logger;
         private readonly IApplicationService _as;
-        private readonly IBerkasService _bs;
+        private readonly IGlobalService _gs;
 
-        public CFtpService(ILogger<CFtpService> logger, IApplicationService @as, IBerkasService bs) {
+        public CFtpService(ILogger<CFtpService> logger, IApplicationService @as, IGlobalService gs) {
             this._logger = logger;
             this._as = @as;
-            this._bs = bs;
+            this._gs = gs;
         }
 
         public async Task<FtpClient> CreateFtpConnection(string ipDomainHost, int portNumber, string userName, string password, string remoteWorkDir) {
@@ -135,7 +135,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async Task<CFtpResultInfo> GetFtpFileDir(FtpClient ftpConnection, string localDirFilePath, bool isDirectory = false, Action<double> progress = null) {
             var ftpResultInfo = new CFtpResultInfo();
-            string saveDownloadTo = Path.Combine(this._bs.DownloadFolderPath, localDirFilePath);
+            string saveDownloadTo = Path.Combine(this._gs.DownloadFolderPath, localDirFilePath);
             IProgress<FtpProgress> ftpProgress = new Progress<FtpProgress>(data => {
                 progress?.Invoke(data.Progress);
             });
@@ -160,7 +160,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
             else {
                 string fileGet = "Fail";
-                FtpStatus ftpStatus = await ftpConnection.DownloadFileAsync(this._bs.DownloadFolderPath, localDirFilePath, FtpLocalExists.Overwrite, progress: ftpProgress);
+                FtpStatus ftpStatus = await ftpConnection.DownloadFileAsync(this._gs.DownloadFolderPath, localDirFilePath, FtpLocalExists.Overwrite, progress: ftpProgress);
                 var resultGet = new CFtpResultSendGet() {
                     FtpStatusSendGet = ftpStatus == FtpStatus.Success,
                     FileInformation = new FileInfo(saveDownloadTo)

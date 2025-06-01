@@ -187,7 +187,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<DateTime> OraPg_GetCurrentTimestamp() {
             return await this._orapg.ExecScalarAsync<DateTime>($@"
-                SELECT {(this._envVar.IS_USING_POSTGRES ? "CURRENT_TIMESTAMP" : "SYSDATE FROM DUAL")}
+                SELECT CURRENT_TIMESTAMP {(this._envVar.IS_USING_POSTGRES ? "" : "FROM DUAL")}
             ");
         }
 

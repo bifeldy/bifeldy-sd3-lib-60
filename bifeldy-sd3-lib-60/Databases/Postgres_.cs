@@ -43,7 +43,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         private readonly ILogger<CPostgres> _logger;
         private readonly EnvVar _envVar;
         private readonly IApplicationService _as;
-        private readonly ICsvService _csv;
+        private readonly IGlobalService _gs;
 
         public CPostgres(
             DbContextOptions<CPostgres> options,
@@ -51,12 +51,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs,
-            ICsvService csv
-        ) : base(options, envVar, logger, cs, csv) {
+            IGlobalService gs
+        ) : base(options, envVar, logger, cs, gs) {
             this._logger = logger;
             this._envVar = envVar.Value;
             this._as = @as;
-            this._csv = csv;
+            this._gs = gs;
             // --
             this.InitializeConnection();
             // --
@@ -312,24 +312,25 @@ namespace bifeldy_sd3_lib_60.Databases {
             return (exception == null) ? result : throw exception;
         }
 
-        public override async Task<string> BulkGetCsv(string rawQuery, string delimiter, string filename, string outputPath = null) {
+        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false) {
             string result = null;
             Exception exception = null;
             try {
-                string path = Path.Combine(outputPath ?? this._csv.CsvFolderPath, filename);
+                if (!useRawQueryWithoutParam) {
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputPath, useRawQueryWithoutParam);
+                }
+
+                if (bindParam != null) {
+                    throw new Exception("Parameter Binding Terdeteksi, Mohon Mematikan Fitur `useRawQueryWithoutParam`");
+                }
+
+                string path = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);
                 if (File.Exists(path)) {
                     File.Delete(path);
                 }
 
-                if (string.IsNullOrEmpty(rawQuery) || string.IsNullOrEmpty(delimiter)) {
-                    throw new Exception("Select Raw Query + Delimiter Harus Di Isi");
-                }
-
-                string sqlQuery = $"SELECT * FROM ({rawQuery}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
-                sqlQuery = sqlQuery.Replace(Environment.NewLine, " ");
-                sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
-                this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
-                using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(sqlQuery)) {
+                string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
+                using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(sqlQuery, bindParam)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
                     string struktur = columns.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
                     using (var streamWriter = new StreamWriter(path, true)) {
@@ -338,11 +339,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                     }
                 }
 
-                sqlQuery = $"COPY ({rawQuery}) TO STDOUT WITH CSV DELIMITER '{delimiter}' QUOTE '\b'";
-                sqlQuery = sqlQuery.Replace(Environment.NewLine, " ");
-                sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
-                this._logger.LogInformation("[{name}_BULK_GET_CSV] {sqlQuery}", this.GetType().Name, sqlQuery);
-
+                sqlQuery = $"COPY ({queryString}) TO STDOUT WITH CSV DELIMITER '{delimiter}' QUOTE '\b'";
                 using (TextReader reader = ((NpgsqlConnection) this.GetConnection()).BeginTextExport(sqlQuery)) {
                     using (var streamWriter = new StreamWriter(path, true)) {
                         string line = null;

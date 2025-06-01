@@ -15,8 +15,6 @@ using System.Data;
 using System.Reflection;
 using System.Text;
 
-using Microsoft.Extensions.Options;
-
 using ChoETL;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -26,7 +24,6 @@ using bifeldy_sd3_lib_60.Extensions;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface ICsvService {
-        string CsvFolderPath { get; }
         DataTable Csv2DataTable(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string tableName = null);
         string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn = null);
         List<T> Csv2List<T>(string filePath, string delimiter = ",", List<CCsvColumn> csvColumn = null);
@@ -35,39 +32,26 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CCsvService : ICsvService {
 
-        private readonly EnvVar _envVar;
-
-        private readonly IApplicationService _as;
-
-        public string CsvFolderPath { get; }
-
-        public CCsvService(IOptions<EnvVar> envVar, IApplicationService @as) {
-            this._envVar = envVar.Value;
-            this._as = @as;
-
-            this.CsvFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.CSV_FOLDER_PATH);
-            if (!Directory.Exists(this.CsvFolderPath)) {
-                _ = Directory.CreateDirectory(this.CsvFolderPath);
-            }
+        public CCsvService() {
+            //
         }
 
         // Posisi Kolom CSV Start Dari 1 Bukan 0
-        private ChoCSVReader<dynamic> ChoEtlSetupCsv(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
-            if (csvColumn == null || csvColumn?.Count <= 0) {
-                throw new Exception("Daftar Kolom Harus Di Isi");
-            }
-
+        private ChoCSVReader<dynamic> ChoEtlSetupCsv(string filePath, string delimiter, List<CCsvColumn> csvColumn = null) {
             ChoCSVReader<dynamic> csv = new ChoCSVReader(filePath).WithDelimiter(delimiter);
-            foreach (CCsvColumn cc in csvColumn) {
-                csv = csv.WithField(cc.ColumnName, cc.Position, cc.DataType);
+
+            if (csvColumn != null) {
+                csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
+
+                foreach (CCsvColumn cc in csvColumn) {
+                    csv = csv.WithField(cc.ColumnName, cc.Position, cc.DataType);
+                }
             }
 
-            csv = csv.WithFirstLineHeader(true).MayHaveQuotedFields().MayContainEOLInData();
-            return csv;
+            return csv.WithFirstLineHeader(true).MayHaveQuotedFields().MayContainEOLInData();
         }
 
-        public DataTable Csv2DataTable(string filePath, string delimiter, List<CCsvColumn> csvColumn, string tableName = null) {
-            csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
+        public DataTable Csv2DataTable(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string tableName = null) {
             var fi = new FileInfo(filePath);
 
             using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
@@ -75,8 +59,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
-            csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
+        public string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn = null) {
             var sb = new StringBuilder();
 
             using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
@@ -88,8 +71,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return sb.ToString();
         }
 
-        public List<T> Csv2List<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn) {
-            csvColumn = csvColumn.OrderBy(c => c.Position).ToList();
+        public List<T> Csv2List<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn = null) {
             using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(filePath, delimiter, csvColumn)) {
                 using (IDataReader dr = csv.AsDataReader()) {
                     var ls = new List<T>();

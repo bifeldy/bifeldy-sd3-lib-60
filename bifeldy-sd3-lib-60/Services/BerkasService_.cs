@@ -22,9 +22,6 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IBerkasService {
-        string BackupFolderPath { get; }
-        string TempFolderPath { get; }
-        string DownloadFolderPath { get; }
         void DeleteSingleFileInFolder(string fileName, string folderPath = null);
         void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false);
         void CleanUp();
@@ -40,44 +37,22 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly ILogger<CBerkasService> _logger;
 
         private readonly IApplicationService _as;
-        private readonly ICsvService _csv;
-        private readonly IZipService _zip;
-
-        public string BackupFolderPath { get; }
-        public string TempFolderPath { get; }
-        public string DownloadFolderPath { get; }
+        private readonly IGlobalService _gs;
 
         public CBerkasService(
             IOptions<EnvVar> envVar,
             ILogger<CBerkasService> logger,
             IApplicationService @as,
-            ICsvService csv,
-            IZipService zip
+            IGlobalService gs
         ) {
             this._envVar = envVar.Value;
             this._logger = logger;
             this._as = @as;
-            this._csv = csv;
-            this._zip = zip;
-
-            this.BackupFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.BACKUP_FOLDER_PATH);
-            if (!Directory.Exists(this.BackupFolderPath)) {
-                _ = Directory.CreateDirectory(this.BackupFolderPath);
-            }
-
-            this.TempFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.TEMP_FOLDER_PATH);
-            if (!Directory.Exists(this.TempFolderPath)) {
-                _ = Directory.CreateDirectory(this.TempFolderPath);
-            }
-
-            this.DownloadFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.DOWNLOAD_FOLDER_PATH);
-            if (!Directory.Exists(this.DownloadFolderPath)) {
-                _ = Directory.CreateDirectory(this.DownloadFolderPath);
-            }
+            this._gs = gs;
         }
 
         public void DeleteSingleFileInFolder(string fileName, string folderPath = null) {
-            string path = folderPath ?? this.TempFolderPath;
+            string path = folderPath ?? this._gs.TempFolderPath;
             try {
                 var fi = new FileInfo(Path.Combine(path, fileName));
                 if (fi.Exists) {
@@ -90,9 +65,9 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false) {
-            string path = folderPath ?? this.TempFolderPath;
-            if (!isInRecursive && path == this.TempFolderPath) {
-                this.BackupAllFilesInFolder(this.TempFolderPath);
+            string path = folderPath ?? this._gs.TempFolderPath;
+            if (!isInRecursive && path == this._gs.TempFolderPath) {
+                this.BackupAllFilesInFolder(this._gs.TempFolderPath);
             }
 
             try {
@@ -118,11 +93,11 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public void CleanUp() {
             this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this.BackupFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._csv.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._zip.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._gs.BackupFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._gs.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
         }
 
         public void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false) {
@@ -140,7 +115,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public void BackupAllFilesInFolder(string folderPath) {
             var diSource = new DirectoryInfo(folderPath);
-            var diTarget = new DirectoryInfo(this.BackupFolderPath);
+            var diTarget = new DirectoryInfo(this._gs.BackupFolderPath);
             this.CopyAllFilesAndDirectories(diSource, diTarget);
         }
 

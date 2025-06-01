@@ -13,6 +13,7 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
@@ -21,6 +22,11 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IGlobalService {
+        string BackupFolderPath { get; set; }
+        string TempFolderPath { get; set; }
+        string DownloadFolderPath { get; set; }
+        string CsvFolderPath { get; set; }
+        string ZipFolderPath { get; set; }
         SortedDictionary<string, string> SignalrClients { get; }
         List<string> AllowedIpOrigin { get; set; }
         string GetSecretData(HttpRequest request, RequestJson reqBody);
@@ -28,14 +34,24 @@ namespace bifeldy_sd3_lib_60.Services {
         string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false);
         string CleanIpOrigin(string ipOrigin);
         string GetTokenData(HttpRequest request, RequestJson reqBody);
+        Task<(string, string)> ParseRequestBodyString(HttpRequest request);
         Task<RequestJson> GetRequestBody(HttpRequest request);
     }
 
     [SingletonServiceRegistration]
     public sealed class CGlobalService : IGlobalService {
 
+        private readonly EnvVar _envVar;
+
         private readonly ILogger<CGlobalService> _logger;
+        private readonly IApplicationService _as;
         private readonly IConverterService _cs;
+
+        public string BackupFolderPath { get; set; }
+        public string TempFolderPath { get; set; }
+        public string DownloadFolderPath { get; set; }
+        public string CsvFolderPath { get; set; }
+        public string ZipFolderPath { get; set; }
 
         public SortedDictionary<string, string> SignalrClients { get; } = new();
 
@@ -44,11 +60,42 @@ namespace bifeldy_sd3_lib_60.Services {
         };
 
         public CGlobalService(
+            IOptions<EnvVar> envVar,
             ILogger<CGlobalService> logger,
+            IApplicationService @as,
             IConverterService cs
         ) {
+            this._envVar = envVar.Value;
             this._logger = logger;
+            this._as = @as;
             this._cs = cs;
+
+            // --
+
+            this.BackupFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.BACKUP_FOLDER_PATH);
+            if (!Directory.Exists(this.BackupFolderPath)) {
+                _ = Directory.CreateDirectory(this.BackupFolderPath);
+            }
+
+            this.TempFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.TEMP_FOLDER_PATH);
+            if (!Directory.Exists(this.TempFolderPath)) {
+                _ = Directory.CreateDirectory(this.TempFolderPath);
+            }
+
+            this.DownloadFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.DOWNLOAD_FOLDER_PATH);
+            if (!Directory.Exists(this.DownloadFolderPath)) {
+                _ = Directory.CreateDirectory(this.DownloadFolderPath);
+            }
+
+            this.CsvFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.CSV_FOLDER_PATH);
+            if (!Directory.Exists(this.CsvFolderPath)) {
+                _ = Directory.CreateDirectory(this.CsvFolderPath);
+            }
+
+            this.ZipFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.ZIP_FOLDER_PATH);
+            if (!Directory.Exists(this.ZipFolderPath)) {
+                _ = Directory.CreateDirectory(this.ZipFolderPath);
+            }
         }
 
         public string GetSecretData(HttpRequest request, RequestJson reqBody) {
@@ -172,18 +219,27 @@ namespace bifeldy_sd3_lib_60.Services {
             return token;
         }
 
+        public async Task<(string, string)> ParseRequestBodyString(HttpRequest request) {
+            string contentType = request.ContentType ?? request.Headers["content-type"].ToString();
+
+            string rbString = null;
+            if (contentType == "application/grpc" || SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
+                rbString = await request.GetRequestBodyStringAsync();
+            }
+
+            return (contentType, rbString);
+        }
+
         public async Task<RequestJson> GetRequestBody(HttpRequest request) {
             RequestJson reqBody = null;
-            string contentType = request.ContentType ?? request.Headers["content-type"].ToString();
-            if (contentType == "application/grpc" || SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
-                string rbString = await request.GetRequestBodyStringAsync();
-                if (!string.IsNullOrEmpty(rbString)) {
-                    try {
-                        reqBody = this._cs.XmlJsonToObject<RequestJson>(contentType, rbString);
-                    }
-                    catch (Exception ex) {
-                        this._logger.LogError("[JSON_BODY] 🌸 {ex}", ex.Message);
-                    }
+
+            (string contentType, string rbString) = await this.ParseRequestBodyString(request);
+            if (!string.IsNullOrEmpty(rbString)) {
+                try {
+                    reqBody = this._cs.XmlJsonToObject<RequestJson>(contentType, rbString);
+                }
+                catch (Exception ex) {
+                    this._logger.LogError("[JSON_BODY] 🌸 {ex}", ex.Message);
                 }
             }
 

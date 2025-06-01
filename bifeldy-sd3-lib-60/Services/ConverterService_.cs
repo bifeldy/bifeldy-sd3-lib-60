@@ -105,7 +105,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 case MediaTypeNames.Application.Json:
                     return this.JsonToObject<T>(text, settings);
                 default:
-                    throw new NotImplementedException("No Type Available!");
+                    throw new NotImplementedException("No Media Type / MiMe Available!");
             }
         }
 

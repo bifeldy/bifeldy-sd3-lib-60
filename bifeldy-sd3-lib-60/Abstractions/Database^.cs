@@ -47,7 +47,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
-        Task<string> BulkGetCsv(string rawQuery, string delimiter, string filename, string outputPath = null);
+        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false);
         Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
         Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null);
     }
@@ -58,7 +58,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         private readonly ILogger<CDatabase> _logger;
         private readonly IConverterService _cs;
-        private readonly ICsvService _csv;
+        private readonly IGlobalService _gs;
 
         public string DbUsername { get; set; }
         public string DbPassword { get; set; }
@@ -72,11 +72,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         private DbCommand CurrentActiveCommandTransaction = null;
 
-        public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs, ICsvService csv) : base(options) {
+        public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs, IGlobalService gs) : base(options) {
             this._envVar = envVar.Value;
             this._logger = logger;
             this._cs = cs;
-            this._csv = csv;
+            this._gs = gs;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
@@ -175,9 +175,16 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             string sqlTextQueryParameters = databaseCommand.CommandText;
             for (int i = 0; i < databaseCommand.Parameters.Count; i++) {
                 dynamic pVal = databaseCommand.Parameters[i].Value;
-                Type pValType = (pVal == null) ? typeof(string) : pVal.GetType();
-                if (pValType == typeof(string) || pValType == typeof(DateTime)) {
+
+                Type pValType = pVal?.GetType();
+                if (pValType == null || pValType == typeof(DBNull)) {
+                    pVal = "NULL";
+                }
+                else if (pValType == typeof(string)) {
                     pVal = $"'{pVal}'";
+                }
+                else if (pValType == typeof(DateTime)) {
+                    pVal = $"TO_TIMESTAMP('{((DateTime)pVal).ToLocalTime():yyyy-MM-dd HH:mm:ss}', 'yyyy-MM-dd HH24:mi:ss')";
                 }
 
                 var regex = new Regex($"{databaseParameterPrefix}{databaseCommand.Parameters[i].ParameterName}");
@@ -186,7 +193,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
             sqlTextQueryParameters = sqlTextQueryParameters.Replace(Environment.NewLine, " ");
             sqlTextQueryParameters = Regex.Replace(sqlTextQueryParameters, @"\s+", " ");
-            this._logger.LogInformation("[SQL_PARAMETERS] {sqlTextQueryParameters}", sqlTextQueryParameters.Trim());
+            sqlTextQueryParameters = sqlTextQueryParameters.Trim();
+
+            this._logger.LogInformation("[SQL_PARAMETERS] {sqlTextQueryParameters}", sqlTextQueryParameters);
         }
 
         protected virtual async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, DbCommand databaseCommand) {
@@ -389,24 +398,17 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        public virtual async Task<string> BulkGetCsv(string rawQueryVulnerableSqlInjection, string delimiter, string filename, string outputPath = null) {
+        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParamWithoutParam = false) {
             string result = null;
             Exception exception = null;
             try {
-                string path = Path.Combine(outputPath ?? this._csv.CsvFolderPath, filename);
+                string path = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);
                 if (File.Exists(path)) {
                     File.Delete(path);
                 }
 
-                if (string.IsNullOrEmpty(rawQueryVulnerableSqlInjection) || string.IsNullOrEmpty(delimiter)) {
-                    throw new Exception("Select Raw Query + Delimiter Harus Di Isi");
-                }
-
-                string sqlQuery = $"SELECT * FROM ({rawQueryVulnerableSqlInjection}) alias_{DateTime.Now.Ticks}";
-                sqlQuery = sqlQuery.Replace(Environment.NewLine, " ");
-                sqlQuery = Regex.Replace(sqlQuery, @"\s+", " ");
-                this._logger.LogInformation("[BULK_GET_CSV] {sqlQuery}", sqlQuery);
-                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, commandBehavior: CommandBehavior.SequentialAccess)) {
+                string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks}";
+                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess)) {
                     rdr.ToCsv(delimiter, path);
                     result = path;
                 }
