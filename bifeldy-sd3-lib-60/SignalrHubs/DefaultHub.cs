@@ -63,7 +63,9 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
             return base.OnDisconnectedAsync(exception);
         }
 
+        //
         // -- TODO :: Auth, Claim, User .. etc
+        //
 
         public void RegisterIdentity(string clientName) {
             string clientId = this.Context.ConnectionId;
