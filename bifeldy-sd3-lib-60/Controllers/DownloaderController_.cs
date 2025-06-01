@@ -24,6 +24,7 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Databases;
+using Newtonsoft.Json;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
@@ -66,7 +67,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
         public async Task<IActionResult> ListAllFiles(
             [FromQuery, SwaggerParameter("Nama file (ex. blablabla.csv)", Required = false)] string fileName = null,
             [FromQuery, SwaggerParameter("Tipe file (ex. 'csv', 'zip')", Required = false)] string fileType = null,
-            [FromQuery, SwaggerParameter("Pastikan file sudah selesai ditulis dan bukan parsial", Required = false)] bool? completedOnly = false
+            [FromQuery, SwaggerParameter("Pastikan file sudah selesai ditulis dan bukan parsial", Required = false)] bool? completedOnly = false,
+            [FromQuery, SwaggerParameter("Bandingkan file kalau berbeda akan unduh baru", Required = false)] string compareMd5 = null
         ) {
             try {
                 if (string.IsNullOrEmpty(fileName)) {
@@ -208,6 +210,12 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     if (string.IsNullOrEmpty(mimeType)) {
                         mimeType = this._chiper.GetMimeFile(fi.FullName);
+                    }
+
+                    if (!string.IsNullOrEmpty(compareMd5)) {
+                        if (compareMd5 == checksum) {
+                            return this.NoContent();
+                        }
                     }
 
                     return this.PhysicalFile(fi.FullName, mimeType, fi.Name, true);
