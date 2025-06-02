@@ -24,14 +24,13 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Databases;
-using Newtonsoft.Json;
 
 namespace bifeldy_sd3_lib_60.Controllers {
 
     [ApiController]
     [Route("downloader")]
     [RouteExcludeAllDc]
-    [MinRole(UserSessionRole.USER_SD_SSD_3)]
+    [MinRole(UserSessionRole.EXTERNAL_BOT)]
     [ApiExplorerSettings(IgnoreApi = true)]
     public sealed class UpdaterController : ControllerBase {
 
@@ -66,12 +65,23 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Untuk check Hash files")]
         public async Task<IActionResult> ListAllFiles(
             [FromQuery, SwaggerParameter("Nama file (ex. blablabla.csv)", Required = false)] string fileName = null,
-            [FromQuery, SwaggerParameter("Tipe file (ex. 'csv', 'zip')", Required = false)] string fileType = null,
+            [FromQuery, SwaggerParameter("Tipe file (tersedia: 'csv', 'zip')", Required = false)] string fileType = null,
             [FromQuery, SwaggerParameter("Pastikan file sudah selesai ditulis dan bukan parsial", Required = false)] bool? completedOnly = false,
-            [FromQuery, SwaggerParameter("Bandingkan file kalau berbeda akan unduh baru", Required = false)] string compareMd5 = null
+            [FromQuery, SwaggerParameter("Bandingkan file kalau berbeda akan dapat balikan unduhan baru", Required = false)] string compareMd5 = null
         ) {
             try {
+                var user = (UserApiSession)this.HttpContext.Items["user"];
+
                 if (string.IsNullOrEmpty(fileName)) {
+                    if (user.role > UserSessionRole.USER_SD_SSD_3) {
+                        return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
+                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            result = new ResponseJsonMessage() {
+                                message = "Harap input nama file ?fileName=blablabla.ext"
+                            }
+                        });
+                    }
+
                     Dictionary<string, string> fileHash = null;
 
                     string cache = await this._cache.GetStringAsync(this.GetType().Name);
@@ -135,6 +145,15 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             mimeType = "application/zip";
                             break;
                         default:
+                            if (user.role > UserSessionRole.USER_SD_SSD_3) {
+                                return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
+                                    info = $"404 - {this.GetType().Name} :: Hash Files",
+                                    result = new ResponseJsonMessage() {
+                                        message = "Harap input tipe file ?fileType=csv / ?fileType=zip"
+                                    }
+                                });
+                            }
+
                             dirPath = this._as.AppLocation;
                             break;
                     }
@@ -154,8 +173,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     bool isFileReady = false;
 
                     if (completedOnly.GetValueOrDefault()) {
+                        string jobName = $"ExportFile___{fi.Name}";
                         IReadOnlyCollection<JobKey> jobKeys = await this._scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-                        JobKey jk = jobKeys.Where(jk => jk.Name == fi.Name).FirstOrDefault();
+                        JobKey jk = jobKeys.Where(jk => jk.Name == jobName).FirstOrDefault();
 
                         IJobDetail jd = null;
                         if (jk != null) {
@@ -166,10 +186,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             $@"
                                 SELECT COUNT(*)
                                 FROM api_quartz_job_queue
-                                WHERE job_name = :job_name
+                                WHERE
+                                    app_name = :app_name
+                                    AND job_name = :job_name
                             ",
                             new List<CDbQueryParamBind>() {
-                                new() { NAME = "job_name", VALUE = fi.Name }
+                                new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
+                                new() { NAME = "job_name", VALUE = jobName }
                             }
                         );
 
@@ -178,10 +201,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
                                 $@"
                                     SELECT completed_at
                                     FROM api_quartz_job_queue
-                                    WHERE job_name = :job_name
+                                    WHERE
+                                        app_name = :app_name
+                                        AND job_name = :job_name
                                 ",
                                 new List<CDbQueryParamBind>() {
-                                    new() { NAME = "job_name", VALUE = fi.Name }
+                                    new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
+                                    new() { NAME = "job_name", VALUE = jobName }
                                 }
                             );
 
@@ -197,7 +223,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
 
                     if (!isFileReady) {
-                        return this.StatusCode(StatusCodes.Status406NotAcceptable, new ResponseJsonSingle<ResponseJsonMessage>() {
+                        return this.StatusCode(StatusCodes.Status410Gone, new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = $"404 - {this.GetType().Name} :: Hash Files",
                             result = new ResponseJsonMessage() {
                                 message = "File Belum Tersedia"

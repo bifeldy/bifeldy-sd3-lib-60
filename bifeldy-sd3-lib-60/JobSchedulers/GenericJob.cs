@@ -16,6 +16,7 @@ using Quartz;
 
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.JobSchedulers {
 
@@ -23,11 +24,18 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
 
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<GenericJob> _logger;
+        private readonly IApplicationService _as;
         private readonly IOraPg _orapg;
 
-        public GenericJob(IServiceProvider serviceProvider, ILogger<GenericJob> logger, IOraPg orapg) {
+        public GenericJob(
+            IServiceProvider serviceProvider,
+            ILogger<GenericJob> logger,
+            IApplicationService @as,
+            IOraPg orapg
+        ) {
             this._serviceProvider = serviceProvider;
             this._logger = logger;
+            this._as = @as;
             this._orapg = orapg;
         }
 
@@ -39,9 +47,12 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
                     _ = await this._orapg.ExecQueryAsync(
                         $@"
                             DELETE FROM api_quartz_job_queue
-                            WHERE job_name = :job_name
+                            WHERE
+                                app_name = :app_name
+                                AND job_name = :job_name
                         ",
                         new List<CDbQueryParamBind>() {
+                            new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                             new() { NAME = "job_name", VALUE = jdm.Key }
                         }
                     );
@@ -51,10 +62,11 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
 
                         _ = await this._orapg.ExecQueryAsync(
                             $@"
-                                INSERT INTO api_quartz_job_queue (job_name, start_at, completed_at, error_message)
-                                VALUES (:job_name, CURRENT_TIMESTAMP, NULL, NULL)
+                                INSERT INTO api_quartz_job_queue (app_name, job_name, start_at, completed_at, error_message)
+                                VALUES (:app_name, :job_name, CURRENT_TIMESTAMP, NULL, NULL)
                             ",
                             new List<CDbQueryParamBind>() {
+                                new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                                 new() { NAME = "job_name", VALUE = jdm.Key }
                             }
                         );
@@ -69,13 +81,20 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
                         $@"
                             UPDATE api_quartz_job_queue
                             SET error_message = :error_message {(string.IsNullOrEmpty(errorMessage) ? ", completed_at = CURRENT_TIMESTAMP" : "")}
-                            WHERE job_name = :job_name
+                            WHERE
+                                app_name = :app_name
+                                AND job_name = :job_name
                         ",
                         new List<CDbQueryParamBind>() {
                             new() { NAME = "error_message", VALUE = errorMessage },
+                            new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                             new() { NAME = "job_name", VALUE = jdm.Key }
                         }
                     );
+                }
+                catch (JobExecutionException e) {
+                    this._logger.LogError("[{Name}_ERROR] ⌚ {Message}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
+                    throw;
                 }
                 catch (Exception e) {
                     this._logger.LogError("[{Name}_ERROR] ⌚ {Message}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
