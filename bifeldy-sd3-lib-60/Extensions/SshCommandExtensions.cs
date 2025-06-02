@@ -10,6 +10,8 @@
  * 
  */
 
+using System.Text;
+
 using Renci.SshNet;
 
 using bifeldy_sd3_lib_60.Models;
@@ -45,11 +47,13 @@ namespace bifeldy_sd3_lib_60.Extensions {
             }
         }
 
-        public static async Task ExecuteAsync(this SshCommand sshCommand, CancellationToken cancellationToken, IProgress<CScriptOutputLine> progress = null) {
+        public static async Task ExecuteAsync(this SshCommand sshCommand, CancellationToken cancellationToken, IProgress<CScriptOutputLine> progress = null, Encoding encoding = null) {
             IAsyncResult asyncResult = sshCommand.BeginExecute();
 
-            var stdoutStreamReader = new StreamReader(sshCommand.OutputStream);
-            var stderrStreamReader = new StreamReader(sshCommand.ExtendedOutputStream);
+            encoding ??= Encoding.Default;
+
+            var stdoutStreamReader = new StreamReader(sshCommand.OutputStream, encoding);
+            var stderrStreamReader = new StreamReader(sshCommand.ExtendedOutputStream, encoding);
 
             while (!asyncResult.IsCompleted) {
                 await Task.Yield();

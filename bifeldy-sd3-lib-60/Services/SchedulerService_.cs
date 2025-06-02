@@ -15,10 +15,10 @@ using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Impl.Triggers;
 
+using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Databases;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -30,7 +30,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay, TimeSpan interval);
         public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval);
         Task<JobExecutionException> CreateThrowRetry(string jobName, IJobExecutionContext ctx, Exception ex, int delaySecond = 1);
-        Task<bool> CheckJobIsNeedToCreateNew(string fileName, bool orCustomBoolCheck = false);
+        Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, bool orCustomBoolCheck = false);
     }
 
     [SingletonServiceRegistration]
@@ -38,16 +38,13 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IScheduler _scheduler;
         private readonly IApplicationService _app;
-        private readonly IOraPg _orapg;
 
         public CSchedulerService(
             IScheduler scheduler,
-            IApplicationService app,
-            IOraPg orapg
+            IApplicationService app
         ) {
             this._scheduler = scheduler;
             this._app = app;
-            this._orapg = orapg;
         }
 
         public Task<DateTimeOffset> ScheduleJobRunNow(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action) {
@@ -87,7 +84,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return new JobExecutionException(ex, false);
         }
 
-        public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, bool orCustomBoolCheck = false) {
+        public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, IDatabase db, bool orCustomBoolCheck = false) {
             bool bikinJobBaru = false;
 
             IReadOnlyCollection<JobKey> jobKeys = await this._scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
@@ -98,7 +95,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 jd = await this._scheduler.GetJobDetail(jk);
             }
 
-            decimal recordCount = await this._orapg.ExecScalarAsync<decimal>(
+            decimal recordCount = await db.ExecScalarAsync<decimal>(
                 $@"
                     SELECT COUNT(*)
                     FROM api_quartz_job_queue
@@ -113,7 +110,7 @@ namespace bifeldy_sd3_lib_60.Services {
             );
 
             if (jd != null && recordCount <= 0) {
-                _ = await this._orapg.ExecQueryAsync(
+                _ = await db.ExecQueryAsync(
                     $@"
                         INSERT INTO api_quartz_job_queue (app_name, job_name, start_at, completed_at)
                         VALUES (:app_name, :job_name, CURRENT_TIMESTAMP, NULL)
@@ -131,7 +128,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 bikinJobBaru = true;
             }
             else if (jd == null && recordCount > 0) {
-                DateTime? completedAt = await this._orapg.ExecScalarAsync<DateTime?>(
+                DateTime? completedAt = await db.ExecScalarAsync<DateTime?>(
                     $@"
                         SELECT completed_at
                         FROM api_quartz_job_queue

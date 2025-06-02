@@ -13,6 +13,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Reflection;
+using System.Text;
 
 namespace bifeldy_sd3_lib_60.Extensions {
 
@@ -57,10 +58,10 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return ls;
         }
 
-        public static void ToCsv(this DbDataReader dr, string separator, string outputFilePath = null) {
-            using (var streamWriter = new StreamWriter(outputFilePath, true)) {
+        public static void ToCsv(this DbDataReader dr, string separator, string outputFilePath = null, Encoding encoding = null) {
+            using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
                 string struktur = Enumerable.Range(0, dr.FieldCount).Select(i => dr.GetName(i)).Aggregate((i, j) => $"{i}{separator}{j}");
-                streamWriter.WriteLine(struktur.ToUpper());
+                streamWriter.WriteLine(struktur.ToUpper().Replace(Environment.NewLine, string.Empty));
                 streamWriter.Flush();
 
                 while (dr.Read()) {
@@ -74,9 +75,9 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         _colValue.Add(val);
                     }
 
-                    string line = _colValue.Aggregate((i, j) => $"{i}{separator}{j}");
+                    string line = _colValue.Aggregate((i, j) => $"{i}{separator}{j}").Replace(Environment.NewLine, string.Empty);
                     if (!string.IsNullOrEmpty(line)) {
-                        streamWriter.WriteLine(line.ToUpper());
+                        streamWriter.WriteLine(line.ToUpper().Replace(Environment.NewLine, string.Empty));
                         streamWriter.Flush();
                     }
                 }

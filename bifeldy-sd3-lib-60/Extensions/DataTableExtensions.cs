@@ -50,8 +50,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return ls;
         }
 
-        public static void ToCsv(this DataTable dt, string separator, string outputFilePath = null) {
-            using (var writer = new StreamWriter(outputFilePath)) {
+        public static void ToCsv(this DataTable dt, string separator, string outputFilePath = null, Encoding encoding = null) {
+            using (var writer = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
                 string sep = string.Empty;
                 var builder = new StringBuilder();
                 foreach (DataColumn col in dt.Columns) {
@@ -60,7 +60,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 }
 
                 // Untuk Export *.CSV Di Buat NAMA_KOLOM Besar Semua Tanpa Petik "NAMA_KOLOM"
-                writer.WriteLine(builder.ToString().ToUpper());
+                writer.WriteLine(builder.ToString().ToUpper().Replace(Environment.NewLine, string.Empty));
                 foreach (DataRow row in dt.Rows) {
                     sep = string.Empty;
                     builder = new StringBuilder();
@@ -69,7 +69,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         sep = separator;
                     }
 
-                    writer.WriteLine(builder.ToString());
+                    writer.WriteLine(builder.ToString().Replace(Environment.NewLine, string.Empty));
                 }
             }
         }

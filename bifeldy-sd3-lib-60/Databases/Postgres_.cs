@@ -315,28 +315,30 @@ namespace bifeldy_sd3_lib_60.Databases {
             return (exception == null) ? result : throw exception;
         }
 
-        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false) {
+        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, Encoding encoding = null) {
             string result = null;
             Exception exception = null;
             try {
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputPath, useRawQueryWithoutParam);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputPath, useRawQueryWithoutParam, encoding);
                 }
 
                 if (bindParam != null) {
                     throw new Exception("Parameter Binding Terdeteksi, Mohon Mematikan Fitur `useRawQueryWithoutParam`");
                 }
 
-                string path = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);
-                if (File.Exists(path)) {
-                    File.Delete(path);
+                string tempPath = Path.Combine(outputPath ?? this._gs.TempFolderPath, filename);
+                if (File.Exists(tempPath)) {
+                    File.Delete(tempPath);
                 }
+
+                encoding ??= Encoding.Default;
 
                 string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
                 using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(sqlQuery, bindParam)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
                     string struktur = columns.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
-                    using (var streamWriter = new StreamWriter(path, true)) {
+                    using (var streamWriter = new StreamWriter(tempPath, true, encoding)) {
                         streamWriter.WriteLine(struktur.ToUpper());
                         streamWriter.Flush();
                     }
@@ -344,7 +346,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
                 sqlQuery = $"COPY ({queryString}) TO STDOUT WITH CSV DELIMITER '{delimiter}' QUOTE '\b'";
                 using (TextReader reader = ((NpgsqlConnection) this.GetConnection()).BeginTextExport(sqlQuery)) {
-                    using (var streamWriter = new StreamWriter(path, true)) {
+                    using (var streamWriter = new StreamWriter(tempPath, true, encoding)) {
                         string line = null;
                         do {
                             line = reader.ReadLine()?.Trim();
@@ -354,9 +356,18 @@ namespace bifeldy_sd3_lib_60.Databases {
                             }
                         }
                         while (!string.IsNullOrEmpty(line));
-                        result = path;
                     }
                 }
+
+                string realPath = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);
+                if (File.Exists(realPath)) {
+                    File.Delete(realPath);
+                }
+
+                File.Move(tempPath, $"{realPath}.tmp", true);
+                File.Move($"{realPath}.tmp", realPath, true);
+
+                result = realPath;
             }
             catch (Exception ex) {
                 this._logger.LogError("[{name}_BULK_GET_CSV] {ex}", this.GetType().Name, ex.Message);
@@ -378,12 +389,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.ExecReaderAsync(cmd, commandBehavior);
         }
 
-        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null) {
+        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null) {
             var cmd = (NpgsqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName);
+            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding);
         }
 
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {

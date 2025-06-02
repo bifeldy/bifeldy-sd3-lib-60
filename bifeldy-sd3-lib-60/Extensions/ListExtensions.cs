@@ -13,6 +13,7 @@
 using System.ComponentModel;
 using System.Data;
 using System.Reflection;
+using System.Text;
 
 namespace bifeldy_sd3_lib_60.Extensions {
 
@@ -68,25 +69,28 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return table;
         }
 
-        public static void ToCsv<T>(this List<T> listData, string separator, string outputFilePath = null) {
-            using (var sw = new StreamWriter(outputFilePath)) {
+        public static void ToCsv<T>(this List<T> listData, string separator, string outputFilePath = null, Encoding encoding = null) {
+            using (var sw = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
                 PropertyInfo[] col = typeof(T).GetProperties();
                 for (int i = 0; i < col.Length - 1; i++) {
-                    sw.Write(col[i].Name + separator);
+                    string word = col[i].Name.Replace(Environment.NewLine, string.Empty);
+                    sw.Write(word + separator);
                 }
 
-                string hdr = col[col.Length - 1].Name;
+                string hdr = col[col.Length - 1].Name.Replace(Environment.NewLine, string.Empty);
                 sw.Write(hdr + sw.NewLine);
 
                 foreach (T item in listData) {
                     PropertyInfo[] row = typeof(T).GetProperties();
                     for (int i = 0; i < row.Length - 1; i++) {
                         PropertyInfo prop = row[i];
-                        sw.Write(prop.GetValue(item) + separator);
+                        string _word = prop.GetValue(item).ToString().Replace(Environment.NewLine, string.Empty);
+                        sw.Write(_word + separator);
                     }
 
                     PropertyInfo dtl = row[row.Length - 1];
-                    sw.Write(dtl.GetValue(item) + sw.NewLine);
+                    string word = dtl.GetValue(item).ToString().Replace(Environment.NewLine, string.Empty);
+                    sw.Write(word + sw.NewLine);
                 }
             }
         }

@@ -14,6 +14,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Microsoft.Data.SqlClient;
@@ -201,12 +202,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.ExecReaderAsync(cmd, commandBehavior);
         }
 
-        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null) {
+        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null) {
             var cmd = (SqlCommand) this.CreateCommand();
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName);
+            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding);
         }
 
         public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {

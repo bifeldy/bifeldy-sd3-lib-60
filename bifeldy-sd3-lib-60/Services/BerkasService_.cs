@@ -12,6 +12,7 @@
  */
 
 using System.Globalization;
+using System.Text;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -27,7 +28,7 @@ namespace bifeldy_sd3_lib_60.Services {
         void CleanUp();
         void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false);
         void BackupAllFilesInFolder(string folderPath);
-        bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true);
+        bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true, Encoding encoding = null);
     }
 
     [SingletonServiceRegistration]
@@ -119,7 +120,7 @@ namespace bifeldy_sd3_lib_60.Services {
             this.CopyAllFilesAndDirectories(diSource, diTarget);
         }
 
-        public bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true) {
+        public bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true, Encoding encoding = null) {
             if (isRequired && string.IsNullOrEmpty(signFull)) {
                 throw new Exception("Tidak Ada Tanda Tangan File");
             }
@@ -143,7 +144,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            using (var reader = new BinaryReader(new FileStream(fileInfo.FullName, FileMode.Open))) {
+            using (var reader = new BinaryReader(new FileStream(fileInfo.FullName, FileMode.Open), encoding ?? Encoding.Default)) {
                 byte[] buff = new byte[minFileSize];
                 _ = reader.BaseStream.Seek(0, SeekOrigin.Begin);
                 _ = reader.Read(buff, 0, buff.Length);

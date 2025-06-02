@@ -61,11 +61,13 @@ namespace bifeldy_sd3_lib_60.Services {
             this._cs = cs;
         }
 
-        private async Task<HttpContent> GetHttpContent(dynamic httpContent, string contentType) {
+        private async Task<HttpContent> GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
             HttpContent content = null;
 
+            encoding ??= Encoding.Default;
+
             if (httpContent.GetType() == typeof(string)) {
-                content = new StringContent(httpContent, Encoding.UTF8, contentType);
+                content = new StringContent(httpContent, encoding, contentType);
             }
             else if (typeof(HttpRequest).IsAssignableFrom(httpContent.GetType())) {
                 using (var ms = new MemoryStream()) {
@@ -82,7 +84,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 content = new ByteArrayContent(httpContent);
             }
             else {
-                content = new StringContent(this._cs.ObjectToJson(httpContent), Encoding.UTF8, contentType);
+                content = new StringContent(this._cs.ObjectToJson(httpContent), encoding, contentType);
             }
 
             content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);

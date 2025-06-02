@@ -33,11 +33,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null);
         Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode);
         Task<bool> Delete(string dckode);
-        MailAddress CreateEmailAddress(string address, string displayName = null);
+        MailAddress CreateEmailAddress(string address, string displayName = null, Encoding encoding = null);
         List<MailAddress> CreateEmailAddress(string[] address);
         Attachment CreateEmailAttachment(string filePath);
         List<Attachment> CreateEmailAttachment(string[] filePath);
-        MailMessage CreateEmailMessage(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
+        MailMessage CreateEmailMessage(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null, Encoding encoding = null);
         Task SendEmailMessage(MailMessage mailMessage, bool paksaDariHo = false);
         MailAddress GetDefaultBotSenderFromAddress();
         Task CreateAndSend(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
@@ -132,8 +132,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             };
         }
 
-        public MailAddress CreateEmailAddress(string address, string displayName = null) {
-            return string.IsNullOrEmpty(displayName) ? new MailAddress(address) : new MailAddress(address, displayName, Encoding.UTF8);
+        public MailAddress CreateEmailAddress(string address, string displayName = null, Encoding encoding = null) {
+            return string.IsNullOrEmpty(displayName) ? new MailAddress(address) : new MailAddress(address, displayName, encoding ?? Encoding.Default);
         }
 
         public List<MailAddress> CreateEmailAddress(string[] address) {
@@ -167,13 +167,16 @@ namespace bifeldy_sd3_lib_60.Repositories {
             List<MailAddress> cc = null,
             List<MailAddress> bcc = null,
             List<Attachment> attachments = null,
-            MailAddress from = null
+            MailAddress from = null,
+            Encoding encoding = null
         ) {
+            encoding ??= Encoding.Default;
+
             var mailMessage = new MailMessage() {
                 Subject = subject,
-                SubjectEncoding = Encoding.UTF8,
+                SubjectEncoding = encoding,
                 Body = body,
-                BodyEncoding = Encoding.UTF8,
+                BodyEncoding = encoding,
                 From = from ?? this.GetDefaultBotSenderFromAddress(),
                 IsBodyHtml = true
             };
