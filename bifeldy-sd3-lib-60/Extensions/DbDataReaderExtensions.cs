@@ -14,6 +14,7 @@ using System.Data;
 using System.Data.Common;
 using System.Reflection;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace bifeldy_sd3_lib_60.Extensions {
 
@@ -58,26 +59,42 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return ls;
         }
 
-        public static void ToCsv(this DbDataReader dr, string separator, string outputFilePath = null, Encoding encoding = null) {
+        public static void ToCsv(this DbDataReader dr, string delimiter, string outputFilePath = null, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
-                string struktur = Enumerable.Range(0, dr.FieldCount).Select(i => dr.GetName(i)).Aggregate((i, j) => $"{i}{separator}{j}");
-                streamWriter.WriteLine(struktur.ToUpper().Replace(Environment.NewLine, string.Empty));
+                string line = Enumerable.Range(0, dr.FieldCount).Select(i => {
+                    string text = dr.GetName(i);
+
+                    if (useDoubleQuote) {
+                        text = "\"" + text.Replace("\"", "\"\"") + "\"";
+                    }
+
+                    if (allUppercase) {
+                        text = text.ToUpper();
+                    }
+
+                    return text;
+                }).Aggregate((left, right) => $"{left}{delimiter}{right}");
+
+                streamWriter.WriteLine(line);
                 streamWriter.Flush();
 
                 while (dr.Read()) {
-                    var _colValue = new List<string>();
-                    for (int i = 0; i < dr.FieldCount; i++) {
-                        string val = string.Empty;
-                        if (!dr.IsDBNull(i)) {
-                            val = dr.GetValue(i).ToString();
+                    line = Enumerable.Range(0, dr.FieldCount).Select(i => {
+                        string text = dr.GetValue(i).ToString();
+
+                        if (useDoubleQuote) {
+                            text = "\"" + text.Replace("\"", "\"\"") + "\"";
                         }
 
-                        _colValue.Add(val);
-                    }
+                        if (allUppercase) {
+                            text = text.ToUpper();
+                        }
 
-                    string line = _colValue.Aggregate((i, j) => $"{i}{separator}{j}").Replace(Environment.NewLine, string.Empty);
+                        return text;
+                    }).Aggregate((left, right) => $"{left}{delimiter}{right}");
+
                     if (!string.IsNullOrEmpty(line)) {
-                        streamWriter.WriteLine(line.ToUpper().Replace(Environment.NewLine, string.Empty));
+                        streamWriter.WriteLine(line);
                         streamWriter.Flush();
                     }
                 }

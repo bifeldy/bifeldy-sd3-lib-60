@@ -315,12 +315,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return (exception == null) ? result : throw exception;
         }
 
-        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, Encoding encoding = null) {
+        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             string result = null;
             Exception exception = null;
             try {
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputPath, useRawQueryWithoutParam, encoding);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputPath, useRawQueryWithoutParam, useDoubleQuote, allUppercase, encoding);
                 }
 
                 if (bindParam != null) {
@@ -335,23 +335,47 @@ namespace bifeldy_sd3_lib_60.Databases {
                 encoding ??= Encoding.Default;
 
                 string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
+
                 using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(sqlQuery, bindParam)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
-                    string struktur = columns.Select(c => c.ColumnName).Aggregate((i, j) => $"{i}{delimiter}{j}");
+                    string line = columns.Select(c => {
+                        string text = c.ColumnName;
+
+                        if (useDoubleQuote) {
+                            text = "\"" + text.Replace("\"", "\"\"") + "\"";
+                        }
+
+                        if (allUppercase) {
+                            text = text.ToUpper();
+                        }
+
+                        return text;
+                    }).Aggregate((left, right) => $"{left}{delimiter}{right}");
+
                     using (var streamWriter = new StreamWriter(tempPath, true, encoding)) {
-                        streamWriter.WriteLine(struktur.ToUpper());
+                        streamWriter.WriteLine(line);
                         streamWriter.Flush();
                     }
                 }
 
-                sqlQuery = $"COPY ({queryString}) TO STDOUT WITH CSV DELIMITER '{delimiter}' QUOTE '\b'";
+                sqlQuery = $"COPY ({queryString}) TO STDOUT WITH CSV DELIMITER '{delimiter}'";
+
+                if (!useDoubleQuote) {
+                    sqlQuery += " QUOTE '\b'";
+                }
+
                 using (TextReader reader = ((NpgsqlConnection) this.GetConnection()).BeginTextExport(sqlQuery)) {
                     using (var streamWriter = new StreamWriter(tempPath, true, encoding)) {
                         string line = null;
+
                         do {
-                            line = reader.ReadLine()?.Trim();
+                            line = reader.ReadLine();
                             if (!string.IsNullOrEmpty(line)) {
-                                streamWriter.WriteLine(line.ToUpper());
+                                if (allUppercase) {
+                                    line = line.ToUpper();
+                                }
+
+                                streamWriter.WriteLine(line);
                                 streamWriter.Flush();
                             }
                         }

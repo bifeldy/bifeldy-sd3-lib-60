@@ -48,7 +48,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
-        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, Encoding encoding = null);
+        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null);
         Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
         Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null);
     }
@@ -399,7 +399,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParamWithoutParam = false, Encoding encoding = null) {
+        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             string result = null;
             Exception exception = null;
             try {
@@ -410,7 +410,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
                 string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks}";
                 using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess)) {
-                    rdr.ToCsv(delimiter, tempPath, encoding);
+                    rdr.ToCsv(delimiter, tempPath, useDoubleQuote, allUppercase, encoding);
                 }
 
                 string realPath = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);

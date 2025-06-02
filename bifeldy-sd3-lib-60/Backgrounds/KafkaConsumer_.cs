@@ -79,7 +79,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         }
 
         public override void Dispose() {
-            this.consumer?.Close();
+            this.consumer?.Dispose();
             this._pubSub?.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
             this._scopedService?.Dispose();
             base.Dispose();
@@ -153,11 +153,12 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         this._logger.LogError("[KAFKA_CONSUMER_MESSAGE] 🏗 {e}", e.Message);
                     }
                 }
-
-                this.consumer.Close();
             }
             catch (Exception ex) {
                 this._logger.LogError("[KAFKA_CONSUMER_ERROR] 🏗 {ex}", ex.Message);
+            }
+            finally {
+                this.consumer?.Close();
             }
         }
 
