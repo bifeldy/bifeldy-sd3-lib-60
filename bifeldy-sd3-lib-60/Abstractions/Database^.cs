@@ -48,7 +48,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
-        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null);
+        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null);
         Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
         Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null);
     }
@@ -399,11 +399,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             string result = null;
             Exception exception = null;
             try {
-                string tempPath = Path.Combine(outputPath ?? this._gs.TempFolderPath, filename);
+                string tempPath = Path.Combine(outputFolderPath ?? this._gs.TempFolderPath, filename);
                 if (File.Exists(tempPath)) {
                     File.Delete(tempPath);
                 }
@@ -413,7 +413,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     rdr.ToCsv(delimiter, tempPath, useDoubleQuote, allUppercase, encoding);
                 }
 
-                string realPath = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);
+                string realPath = Path.Combine(outputFolderPath ?? this._gs.CsvFolderPath, filename);
                 if (File.Exists(realPath)) {
                     File.Delete(realPath);
                 }

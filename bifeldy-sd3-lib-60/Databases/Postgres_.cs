@@ -315,19 +315,19 @@ namespace bifeldy_sd3_lib_60.Databases {
             return (exception == null) ? result : throw exception;
         }
 
-        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             string result = null;
             Exception exception = null;
             try {
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputPath, useRawQueryWithoutParam, useDoubleQuote, allUppercase, encoding);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, useDoubleQuote, allUppercase, encoding);
                 }
 
                 if (bindParam != null) {
                     throw new Exception("Parameter Binding Terdeteksi, Mohon Mematikan Fitur `useRawQueryWithoutParam`");
                 }
 
-                string tempPath = Path.Combine(outputPath ?? this._gs.TempFolderPath, filename);
+                string tempPath = Path.Combine(outputFolderPath ?? this._gs.TempFolderPath, filename);
                 if (File.Exists(tempPath)) {
                     File.Delete(tempPath);
                 }
@@ -383,7 +383,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                     }
                 }
 
-                string realPath = Path.Combine(outputPath ?? this._gs.CsvFolderPath, filename);
+                string realPath = Path.Combine(outputFolderPath ?? this._gs.CsvFolderPath, filename);
                 if (File.Exists(realPath)) {
                     File.Delete(realPath);
                 }

@@ -23,14 +23,13 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface ISchedulerService {
-        public Task<DateTimeOffset> ScheduleJobRunNow(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action);
-        public Task<DateTimeOffset> ScheduleJobRunNow(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action);
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelay(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay);
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelay(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay);
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay, TimeSpan interval);
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval);
         Task<JobExecutionException> CreateThrowRetry(string jobName, IJobExecutionContext ctx, Exception ex, int delaySecond = 1);
-        Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, bool forceOrCustomBoolCheck = false);
+        Task<IEnumerable<JobKey>> GetJobs(string jobName = null);
+        Task<int> JumlahJobYangSedangBerjalan(string jobName);
+        Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
     }
 
     [SingletonServiceRegistration]
@@ -47,30 +46,6 @@ namespace bifeldy_sd3_lib_60.Services {
             this._app = app;
         }
 
-        public Task<DateTimeOffset> ScheduleJobRunNow(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action) {
-            return this._scheduler.ScheduleJobRunNow(action);
-        }
-
-        public Task<DateTimeOffset> ScheduleJobRunNow(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action) {
-            return this._scheduler.ScheduleJobRunNow(jobName, action);
-        }
-
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelay(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay) {
-            return this._scheduler.ScheduleJobRunNowWithDelay(action, initialDelay);
-        }
-
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelay(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay) {
-            return this._scheduler.ScheduleJobRunNowWithDelay(jobName, action, initialDelay);
-        }
-
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay, TimeSpan interval) {
-            return this._scheduler.ScheduleJobRunNowWithDelayInterval(action, initialDelay, interval);
-        }
-
-        public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval) {
-            return this._scheduler.ScheduleJobRunNowWithDelayInterval(jobName, action, initialDelay, interval);
-        }
-
         public async Task<JobExecutionException> CreateThrowRetry(string jobName, IJobExecutionContext ctx, Exception ex, int delaySecond = 1) {
             var retryTrigger = new SimpleTriggerImpl(Guid.NewGuid().ToString()) {
                 Description = $"RetryTrigger_{jobName}",
@@ -84,11 +59,20 @@ namespace bifeldy_sd3_lib_60.Services {
             return new JobExecutionException(ex, false);
         }
 
-        public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, IDatabase db, bool forceOrCustomBoolCheck = false) {
-            bool bikinJobBaru = false;
-
+        public async Task<IEnumerable<JobKey>> GetJobs(string jobName = null) {
             IReadOnlyCollection<JobKey> jobKeys = await this._scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-            JobKey jk = jobKeys.Where(jk => jk.Name == jobName).FirstOrDefault();
+            return jobKeys.Where(jk => string.IsNullOrEmpty(jobName) || jk.Name == jobName);
+        }
+
+        public async Task<int> JumlahJobYangSedangBerjalan(string jobName) {
+            IEnumerable<JobKey> job = await this.GetJobs(jobName);
+            return job.Count();
+        }
+
+        public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, IDatabase db, Func<Task<bool>> forceCreateNew = null) {
+            bool needToCreateNewJob = false;
+
+            JobKey jk = (await this.GetJobs(jobName)).FirstOrDefault();
 
             IJobDetail jd = null;
             if (jk != null) {
@@ -125,7 +109,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 // SKIP -- Masih Proses
             }
             else if (jd == null && recordCount <= 0) {
-                bikinJobBaru = true;
+                needToCreateNewJob = true;
             }
             else if (jd == null && recordCount > 0) {
                 DateTime? completedAt = await db.ExecScalarAsync<DateTime?>(
@@ -142,12 +126,41 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 );
 
-                if (completedAt == null || forceOrCustomBoolCheck) {
-                    bikinJobBaru = true;
+                if (forceCreateNew != null) {
+                    needToCreateNewJob = await forceCreateNew();
+                }
+
+                if (completedAt == null || needToCreateNewJob) {
+                    bool res = await db.ExecQueryAsync(
+                        $@"
+                            DELETE FROM api_quartz_job_queue
+                            WHERE
+                                app_name = :app_name
+                                AND job_name = :job_name
+                        ",
+                        new List<CDbQueryParamBind>() {
+                            new() { NAME = "app_name", VALUE = this._app.AppName.ToUpper() },
+                            new() { NAME = "job_name", VALUE = jobName }
+                        }
+                    );
+
+                    needToCreateNewJob = true;
                 }
             }
 
-            return bikinJobBaru;
+            return needToCreateNewJob;
+        }
+
+        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null) {
+            return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNow(jobName, action) : null;
+        }
+
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
+            return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelay(jobName, action, initialDelay) : null;
+        }
+
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
+            return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelayInterval(jobName, action, initialDelay, interval) : null;
         }
 
     }

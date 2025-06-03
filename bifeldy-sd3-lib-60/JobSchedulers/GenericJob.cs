@@ -46,10 +46,8 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
 
                     _ = await this._orapg.ExecQueryAsync(
                         $@"
-                            DELETE FROM api_quartz_job_queue
-                            WHERE
-                                app_name = :app_name
-                                AND job_name = :job_name
+                            INSERT INTO api_quartz_job_queue (app_name, job_name, start_at, completed_at, error_message)
+                            VALUES (:app_name, :job_name, CURRENT_TIMESTAMP, NULL, NULL)
                         ",
                         new List<CDbQueryParamBind>() {
                             new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
@@ -59,18 +57,6 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
 
                     try {
                         var func = (Func<IJobExecutionContext, IServiceProvider, Task>)jdm.Value;
-
-                        _ = await this._orapg.ExecQueryAsync(
-                            $@"
-                                INSERT INTO api_quartz_job_queue (app_name, job_name, start_at, completed_at, error_message)
-                                VALUES (:app_name, :job_name, CURRENT_TIMESTAMP, NULL, NULL)
-                            ",
-                            new List<CDbQueryParamBind>() {
-                                new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
-                                new() { NAME = "job_name", VALUE = jdm.Key }
-                            }
-                        );
-
                         await func(context, this._serviceProvider);
                     }
                     catch (Exception ex) {
