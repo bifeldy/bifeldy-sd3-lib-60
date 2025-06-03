@@ -251,7 +251,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         dbCon = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                     }
                     else {
-                        dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT, dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                        dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
                     dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));

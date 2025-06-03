@@ -30,7 +30,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay, TimeSpan interval);
         public Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval);
         Task<JobExecutionException> CreateThrowRetry(string jobName, IJobExecutionContext ctx, Exception ex, int delaySecond = 1);
-        Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, bool orCustomBoolCheck = false);
+        Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, bool forceOrCustomBoolCheck = false);
     }
 
     [SingletonServiceRegistration]
@@ -84,7 +84,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return new JobExecutionException(ex, false);
         }
 
-        public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, IDatabase db, bool orCustomBoolCheck = false) {
+        public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, IDatabase db, bool forceOrCustomBoolCheck = false) {
             bool bikinJobBaru = false;
 
             IReadOnlyCollection<JobKey> jobKeys = await this._scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
@@ -142,7 +142,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 );
 
-                if (completedAt == null || orCustomBoolCheck) {
+                if (completedAt == null || forceOrCustomBoolCheck) {
                     bikinJobBaru = true;
                 }
             }
