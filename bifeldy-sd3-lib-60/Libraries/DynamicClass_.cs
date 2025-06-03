@@ -43,10 +43,10 @@ namespace bifeldy_sd3_lib_60.Libraries {
         }
 
         public override bool TrySetMember(SetMemberBinder binder, object value) {
-            if (_fields.ContainsKey(binder.Name)) {
+            if (this._fields.ContainsKey(binder.Name)) {
                 Type valueType = value.GetType();
 
-                Type _type = _fields[binder.Name].Key;
+                Type _type = this._fields[binder.Name].Key;
                 Type targetType = Nullable.GetUnderlyingType(_type) ?? _type;
 
                 if (valueType == targetType) {

@@ -25,14 +25,14 @@ namespace bifeldy_sd3_lib_60.Grpcs {
         private readonly int _port;
 
         public CGRpcFileResolver(Uri address, int defaultPort, ILoggerFactory loggerFactory) : base(loggerFactory) {
-            _address = address;
-            _port = defaultPort;
+            this._address = address;
+            this._port = defaultPort;
         }
 
         protected override async Task ResolveAsync(CancellationToken cancellationToken) {
-            string jsonString = await File.ReadAllTextAsync(_address.LocalPath);
+            string jsonString = await File.ReadAllTextAsync(this._address.LocalPath);
             string[] results = JsonSerializer.Deserialize<string[]>(jsonString);
-            BalancerAddress[] addresses = results.Select(r => new BalancerAddress(r, _port)).ToArray();
+            BalancerAddress[] addresses = results.Select(r => new BalancerAddress(r, this._port)).ToArray();
 
             this.Listener(ResolverResult.ForResult(addresses));
         }

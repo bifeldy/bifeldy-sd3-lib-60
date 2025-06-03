@@ -14,7 +14,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
+using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
@@ -23,6 +25,8 @@ using bifeldy_sd3_lib_60.Repositories;
 namespace bifeldy_sd3_lib_60.Middlewares {
 
     public sealed class SecretMiddleware {
+
+        private readonly EnvVar _env;
 
         private readonly RequestDelegate _next;
         private readonly ILogger<SecretMiddleware> _logger;
@@ -34,19 +38,21 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
         public SecretMiddleware(
             RequestDelegate next,
+            IOptions<EnvVar> env,
             ILogger<SecretMiddleware> logger,
             IApplicationService app,
             IGlobalService gs,
             IChiperService chiper
         ) {
             this._next = next;
+            this._env = env.Value;
             this._logger = logger;
             this._app = app;
             this._gs = gs;
             this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context, IApiKeyRepository _akRepo, IGeneralRepository _generalRepo) {
+        public async Task Invoke(HttpContext context, IOraPg _orapg, IApiKeyRepository _akRepo, IGeneralRepository _generalRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -74,15 +80,15 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 bool allowed = false;
                 string hashText = this._chiper.HashText(this._app.AppName);
 
-                bool isHo = await _generalRepo.IsHo();
+                bool isHo = await _generalRepo.IsHo(this._env.IS_USING_POSTGRES, _orapg);
                 if (isHo) {
-                    if (await _akRepo.SecretLogin(secret) != null) {
+                    if (await _akRepo.SecretLogin(this._env.IS_USING_POSTGRES, _orapg, secret) != null) {
                         allowed = true;
                     }
                 }
                 else {
                     string apiKey = this._gs.GetApiKeyData(request, reqBody);
-                    if (apiKey == hashText || await _akRepo.SecretLogin(secret) != null) {
+                    if (apiKey == hashText || await _akRepo.SecretLogin(this._env.IS_USING_POSTGRES, _orapg, secret) != null) {
                         allowed = true;
                     }
                 }

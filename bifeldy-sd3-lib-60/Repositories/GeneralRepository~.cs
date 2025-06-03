@@ -32,18 +32,17 @@ using bifeldy_sd3_lib_60.TableView;
 namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IGeneralRepository : IRepository {
-        string DbName { get; }
-        Task<string> GetURLWebService(string webType);
-        Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
-        Task<KAFKA_SERVER_T> GetKafkaServerInfo(string topicName);
-        Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk);
-        Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk);
-        Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget);
-        Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback);
-        Task<string> GetAppHoApiUrlBase(string apiPath);
+        Task<string> GetURLWebService(bool isPg, IDatabase db, string webType);
+        Task<bool> SaveKafkaToTable(bool isPg, IDatabase db, string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
+        Task<KAFKA_SERVER_T> GetKafkaServerInfo(bool isPg, IDatabase db, string topicName);
+        Task<List<DC_TABEL_V>> GetListBranchDbInformation(bool isPg, IDatabase db, string kodeDcInduk);
+        Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk);
+        Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget);
+        Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> Callback);
+        Task<string> GetAppHoApiUrlBase(bool isPg, IDatabase db, string apiPath);
     }
 
-    [TransientServiceRegistration]
+    [ScopedServiceRegistration]
     public class CGeneralRepository : CRepository, IGeneralRepository {
 
         private readonly EnvVar _envVar;
@@ -56,7 +55,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         private readonly IOracle _oracle;
         private readonly IPostgres _postgres;
-        private readonly IOraPg _orapg;
         private readonly IMsSQL _mssql;
 
         private IDictionary<
@@ -78,9 +76,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IConverterService converter,
             IOracle oracle,
             IPostgres postgres,
-            IOraPg orapg,
             IMsSQL mssql
-        ) : base(envVar, @as, orapg, mssql) {
+        ) {
             this._envVar = envVar.Value;
             this._as = @as;
             this._gs = gs;
@@ -89,108 +86,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
             this._converter = converter;
             this._oracle = oracle;
             this._postgres = postgres;
-            this._orapg = orapg;
             this._mssql = mssql;
         }
 
         /** Custom Queries */
 
-        public string DbName {
-            get {
-                string FullDbName = string.Empty;
-                try {
-                    FullDbName += this._orapg.DbName;
-                }
-                catch {
-                    FullDbName += "-";
-                }
-
-                FullDbName += " / ";
-                try {
-                    FullDbName += this._mssql.DbName;
-                }
-                catch {
-                    FullDbName += "-";
-                }
-
-                return FullDbName;
-            }
-        }
-
         /* ** */
 
-        public async Task<string> CekVersi() {
-            if (this._as.DebugMode) {
-                return "OKE";
-            }
-            else {
-                try {
-                    string res = await this._orapg.ExecScalarAsync<string>(
-                        $@"
-                            SELECT
-                                CASE
-                                    WHEN COALESCE(aprove, 'N') = 'Y' AND {(
-                                            this._envVar.IS_USING_POSTGRES
-                                            ? "COALESCE(tgl_berlaku, NOW())::DATE <= CURRENT_DATE"
-                                            : "TRUNC(COALESCE(tgl_berlaku, SYSDATE)) <= TRUNC(SYSDATE)"
-                                        )} 
-                                        THEN COALESCE(VERSI_BARU, '0')
-                                    WHEN COALESCE(aprove, 'N') = 'N'
-                                        THEN COALESCE(versi_lama, '0')
-                                    ELSE
-                                        COALESCE(versi_lama, '0')
-                                END AS VERSI
-                            FROM
-                                dc_program_vbdtl_t
-                            WHERE
-                                UPPER(dc_kode) = :dc_kode
-                                AND UPPER(nama_prog) LIKE :nama_prog
-                        ",
-                        new List<CDbQueryParamBind>() {
-                            new() { NAME = "dc_kode", VALUE = await this.GetKodeDc() },
-                            new() { NAME = "nama_prog", VALUE = $"%{this._as.AppName}%".ToUpper() }
-                        }
-                    );
-                    if (string.IsNullOrEmpty(res)) {
-                        res = $"Program :: {this._as.AppName}" + Environment.NewLine + "Belum Terdaftar Di Master Program DC";
-                    }
-                    else if (res == this._as.AppVersion) {
-                        res = "OKE";
-                    }
-                    else {
-                        res = $"Versi Program :: {this._as.AppName}" + Environment.NewLine + $"Tidak Sama Dengan Master Program = v{res}";
-                    }
-
-                    return res;
-                }
-                catch (Exception ex) {
-                    return ex.Message;
-                }
-            }
-        }
-
-        public async Task<bool> LoginUser(string userNameNik, string password) {
-            string loggedInUsername = await this._orapg.ExecScalarAsync<string>(
-                $@"
-                    SELECT
-                        user_name
-                    FROM
-                        dc_user_t
-                    WHERE
-                        (UPPER(user_name) = :user_name OR UPPER(user_nik) = :user_nik)
-                        AND UPPER(user_password) = :password
-                ",
-                new List<CDbQueryParamBind>() {
-                    new() { NAME = "user_name", VALUE = userNameNik.ToUpper() },
-                    new() { NAME = "user_nik", VALUE = userNameNik.ToUpper() },
-                    new() { NAME = "password", VALUE = password.ToUpper() }
-                }
-            );
-            return !string.IsNullOrEmpty(loggedInUsername);
-        }
-
-        public async Task<string> GetURLWebService(string webType) {
-            return await this._orapg.ExecScalarAsync<string>(
+        public async Task<string> GetURLWebService(bool isPg, IDatabase db, string webType) {
+            return await db.ExecScalarAsync<string>(
                 $@"SELECT web_url FROM dc_webservice_t WHERE UPPER(web_type) = :web_type",
                 new List<CDbQueryParamBind>() {
                     new() { NAME = "web_type", VALUE = webType.ToUpper() }
@@ -198,8 +102,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             );
         }
 
-        public async Task<bool> SaveKafkaToTable(string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName) {
-            return await this._orapg.ExecQueryAsync($@"
+        public async Task<bool> SaveKafkaToTable(bool isPg, IDatabase db, string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName) {
+            return await db.ExecQueryAsync($@"
                 INSERT INTO {logTableName} (TPC, OFFS, PARTT, KEY, VAL, TMSTAMP)
                 VALUES (:tpc, :offs, :partt, :key, :value, :tmstmp)
             ", new List<CDbQueryParamBind>() {
@@ -212,14 +116,14 @@ namespace bifeldy_sd3_lib_60.Repositories {
             });
         }
 
-        public async Task<KAFKA_SERVER_T> GetKafkaServerInfo(string topicName) {
-            return await this._orapg.Set<KAFKA_SERVER_T>().Where(k => k.TOPIC.ToUpper() == topicName.ToUpper()).FirstOrDefaultAsync();
+        public async Task<KAFKA_SERVER_T> GetKafkaServerInfo(bool isPg, IDatabase db, string topicName) {
+            return await db.Set<KAFKA_SERVER_T>().Where(k => k.TOPIC.ToUpper() == topicName.ToUpper()).FirstOrDefaultAsync();
         }
 
         /* ** */
 
-        public async Task<List<DC_TABEL_V>> GetListBranchDbInformation(string kodeDcInduk) {
-            string url = await this.GetURLWebService("SYNCHO") ?? this._envVar.WS_SYNCHO;
+        public async Task<List<DC_TABEL_V>> GetListBranchDbInformation(bool isPg, IDatabase db, string kodeDcInduk) {
+            string url = await this.GetURLWebService(isPg, db, "SYNCHO") ?? this._envVar.WS_SYNCHO;
             url += kodeDcInduk;
 
             HttpResponseMessage httpResponse = await this._http.PostData(url, null);
@@ -239,11 +143,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // IDictionary<string, (bool, CDatabase)> dbCon = await GetListBranchDbConnection("G001");
         // var res = dbCon["G055"].Item2.ExecScalarAsync<...>(...);
         //
-        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(string kodeDcInduk) {
+        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk) {
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
                 IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>(StringComparer.InvariantCultureIgnoreCase);
 
-                List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(kodeDcInduk);
+                List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(isPg, db, kodeDcInduk);
                 foreach (DC_TABEL_V dbi in dbInfo) {
                     CDatabase dbCon;
                     bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
@@ -263,20 +167,17 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return this.BranchConnectionInfo[kodeDcInduk];
         }
 
-        public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(string kodeDcTarget) {
-            CDatabase dbConHo = null;
+        public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget) {
+            IDatabase dbConHo = db;
 
-            string kodeDcSekarang = await this.GetKodeDc();
-            bool isHo = await this.IsHo();
+            string kodeDcSekarang = await this.GetKodeDc(isPg, db);
+            bool isHo = await this.IsHo(isPg, db);
             if (!isHo) {
-                List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation("DCHO");
+                List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(isPg, db, "DCHO");
                 DC_TABEL_V dcho = dbInfo.FirstOrDefault();
                 if (dcho != null) {
                     dbConHo = this._oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
                 }
-            }
-            else {
-                dbConHo = (CDatabase) this._orapg;
             }
 
             bool dbIsUsingPostgre = false;
@@ -301,13 +202,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return (dbIsUsingPostgre, dbOraPgDc, dbSqlDc);
         }
 
-        public async Task GetDcApiPathAppFromHo(HttpRequest request, string dcKode, Action<string, Uri> Callback) {
-            bool isHo = await this.IsHo();
+        public async Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> Callback) {
+            bool isHo = await this.IsHo(isPg, db);
             if (!isHo) {
                 throw new TidakMemenuhiException("Khusus HO!");
             }
 
-            List<ListApiDc> listApiDcs = await this._orapg.GetListAsync<ListApiDc>($@"
+            List<ListApiDc> listApiDcs = await db.GetListAsync<ListApiDc>($@"
                 SELECT
                     a.dc_kode,
                     a.ip_nginx,
@@ -349,11 +250,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 //
                 string currentPath = request.Path.Value;
                 if (!string.IsNullOrEmpty(currentPath)) {
-                    string findUrl = $"{_as.AppName.ToUpper()}HO";
+                    string findUrl = $"{this._as.AppName.ToUpper()}HO";
                     if (currentPath.ToUpper().Contains($"/{findUrl}")) {
                         int idx = currentPath.ToUpper().IndexOf(findUrl);
                         if (idx >= 0) {
-                            idx += _as.AppName.Length;
+                            idx += this._as.AppName.Length;
                             currentPath = $"{currentPath[..idx]}{dcKode.ToUpper()}{currentPath[(idx + 2)..]}";
                         }
                     }
@@ -380,12 +281,12 @@ namespace bifeldy_sd3_lib_60.Repositories {
             }
         }
 
-        public async Task<string> GetAppHoApiUrlBase(string apiPath) {
+        public async Task<string> GetAppHoApiUrlBase(bool isPg, IDatabase db, string apiPath) {
             //
             // http://xxx.xxx.xxx.xxx/{appNameAsPath}/api?secret=*********
             //
             string appNameAsPath = this._as.AppName.ToUpper();
-            string apiUrl = await this._orapg.ExecScalarAsync<string>($@"
+            string apiUrl = await db.ExecScalarAsync<string>($@"
                 SELECT web_url
                 FROM dc_webservice_t
                 WHERE web_type = '{appNameAsPath}_API_URL_BASE'

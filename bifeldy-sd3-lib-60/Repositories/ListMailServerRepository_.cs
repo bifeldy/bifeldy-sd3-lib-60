@@ -21,7 +21,6 @@ using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
-using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
@@ -29,49 +28,45 @@ using bifeldy_sd3_lib_60.TableView;
 namespace bifeldy_sd3_lib_60.Repositories {
 
     public interface IListMailServerRepository {
-        Task<bool> Create(DC_LISTMAILSERVER_T apiKey);
-        Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null);
-        Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode);
-        Task<bool> Delete(string dckode);
+        Task<bool> Create(bool isPg, IDatabase db, DC_LISTMAILSERVER_T apiKey);
+        Task<List<DC_LISTMAILSERVER_T>> GetAll(bool isPg, IDatabase db, string dckode = null);
+        Task<DC_LISTMAILSERVER_T> GetByDcKode(bool isPg, IDatabase db, string dckode);
+        Task<bool> Delete(bool isPg, IDatabase db, string dckode);
         MailAddress CreateEmailAddress(string address, string displayName = null, Encoding encoding = null);
         List<MailAddress> CreateEmailAddress(string[] address);
         Attachment CreateEmailAttachment(string filePath);
         List<Attachment> CreateEmailAttachment(string[] filePath);
         MailMessage CreateEmailMessage(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null, Encoding encoding = null);
-        Task SendEmailMessage(MailMessage mailMessage, bool paksaDariHo = false);
+        Task SendEmailMessage(bool isPg, IDatabase db, MailMessage mailMessage, bool paksaDariHo = false);
         MailAddress GetDefaultBotSenderFromAddress();
-        Task CreateAndSend(string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
+        Task CreateAndSend(bool isPg, IDatabase db, string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
     }
 
-    [TransientServiceRegistration]
+    [ScopedServiceRegistration]
     public sealed class CListMailServerRepository : CRepository, IListMailServerRepository {
 
         private readonly EnvVar _envVar;
         private readonly ILogger<CListMailServerRepository> _logger;
 
         private readonly IApplicationService _as;
-        private readonly IOraPg _orapg;
 
         public CListMailServerRepository(
             IOptions<EnvVar> envVar,
             ILogger<CListMailServerRepository> logger,
-            IApplicationService @as,
-            IOraPg orapg,
-            IMsSQL mssql
-        ) : base(envVar, @as, orapg, mssql) {
+            IApplicationService @as
+        ) {
             this._envVar = envVar.Value;
             this._logger = logger;
             this._as = @as;
-            this._orapg = orapg;
         }
 
-        public async Task<bool> Create(DC_LISTMAILSERVER_T apiKey) {
-            _ = this._orapg.Set<DC_LISTMAILSERVER_T>().Add(apiKey);
-            return await this._orapg.SaveChangesAsync() > 0;
+        public async Task<bool> Create(bool isPg, IDatabase db, DC_LISTMAILSERVER_T apiKey) {
+            _ = db.Set<DC_LISTMAILSERVER_T>().Add(apiKey);
+            return await db.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<DC_LISTMAILSERVER_T>> GetAll(string dckode = null) {
-            DbSet<DC_LISTMAILSERVER_T> dbSet = this._orapg.Set<DC_LISTMAILSERVER_T>();
+        public async Task<List<DC_LISTMAILSERVER_T>> GetAll(bool isPg, IDatabase db, string dckode = null) {
+            DbSet<DC_LISTMAILSERVER_T> dbSet = db.Set<DC_LISTMAILSERVER_T>();
             IQueryable<DC_LISTMAILSERVER_T> query = null;
             if (!string.IsNullOrEmpty(dckode)) {
                 _ = dbSet.Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper());
@@ -80,21 +75,21 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return await (query ?? dbSet).ToListAsync();
         }
 
-        public async Task<DC_LISTMAILSERVER_T> GetByDcKode(string dckode) {
-            return await this._orapg.Set<DC_LISTMAILSERVER_T>()
+        public async Task<DC_LISTMAILSERVER_T> GetByDcKode(bool isPg, IDatabase db, string dckode) {
+            return await db.Set<DC_LISTMAILSERVER_T>()
                 .Where(ms => ms.MAIL_DCKODE.ToUpper() == dckode.ToUpper())
                 .SingleOrDefaultAsync();
         }
 
-        public async Task<bool> Delete(string dckode) {
-            DC_LISTMAILSERVER_T apiKey = await this.GetByDcKode(dckode);
-            _ = this._orapg.Set<DC_LISTMAILSERVER_T>().Remove(apiKey);
-            return await this._orapg.SaveChangesAsync() > 0;
+        public async Task<bool> Delete(bool isPg, IDatabase db, string dckode) {
+            DC_LISTMAILSERVER_T apiKey = await this.GetByDcKode(isPg, db, dckode);
+            _ = db.Set<DC_LISTMAILSERVER_T>().Remove(apiKey);
+            return await db.SaveChangesAsync() > 0;
         }
 
         /* ** */
 
-        private async Task<SmtpClient> CreateSmtpClient(bool paksaDariHo = false) {
+        private async Task<SmtpClient> CreateSmtpClient(bool isPg, IDatabase db, bool paksaDariHo = false) {
             string host = null;
             int port = 0;
             string uname = null;
@@ -107,11 +102,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 upass = this._envVar.SMTP_SERVER_PASSWORD;
             }
             else {
-                string dcKode = await this.GetKodeDc();
-                DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(dcKode);
+                string dcKode = await this.GetKodeDc(isPg, db);
+                DC_LISTMAILSERVER_T mailServer = await this.GetByDcKode(isPg, db, dcKode);
 
                 if (mailServer == null) {
-                    return await this.CreateSmtpClient(true);
+                    return await this.CreateSmtpClient(isPg, db, true);
                 }
 
                 host = mailServer.MAIL_HOSTNAME;
@@ -205,12 +200,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return mailMessage;
         }
 
-        public async Task SendEmailMessage(MailMessage mailMessage, bool paksaDariHo = false) {
-            SmtpClient smtpClient = await this.CreateSmtpClient(paksaDariHo);
+        public async Task SendEmailMessage(bool isPg, IDatabase db, MailMessage mailMessage, bool paksaDariHo = false) {
+            SmtpClient smtpClient = await this.CreateSmtpClient(isPg, db, paksaDariHo);
             await smtpClient.SendMailAsync(mailMessage);
         }
 
         public async Task CreateAndSend(
+            bool isPg, IDatabase db,
             string subject,
             string body,
             List<MailAddress> to,
@@ -227,11 +223,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 );
                 try {
                     // Pakai Regional
-                    await this.SendEmailMessage(mail);
+                    await this.SendEmailMessage(isPg, db, mail);
                 }
                 catch {
                     // Via DCHO
-                    await this.SendEmailMessage(mail, true);
+                    await this.SendEmailMessage(isPg, db, mail, true);
                 }
             }
             catch (Exception ex) {

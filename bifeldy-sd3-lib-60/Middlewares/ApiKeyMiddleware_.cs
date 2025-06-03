@@ -17,10 +17,14 @@ using Microsoft.Extensions.Logging;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Models;
+using Microsoft.Extensions.Options;
+using bifeldy_sd3_lib_60.Databases;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
     public sealed class ApiKeyMiddleware {
+
+        private readonly EnvVar _env;
 
         private readonly RequestDelegate _next;
         private readonly ILogger<ApiKeyMiddleware> _logger;
@@ -30,19 +34,21 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
         public ApiKeyMiddleware(
             RequestDelegate next,
+            IOptions<EnvVar> env,
             ILogger<ApiKeyMiddleware> logger,
             IApplicationService app,
             IGlobalService gs,
             IChiperService chiper
         ) {
             this._next = next;
+            this._env = env.Value;
             this._logger = logger;
             this._app = app;
             this._gs = gs;
             this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context, IApiKeyRepository _akRepo) {
+        public async Task Invoke(HttpContext context, IOraPg _orapg, IApiKeyRepository _akRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -86,7 +92,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);
 
             // API Key Khusus Bypass ~ Case Sensitive
-            if (apiKey == this._chiper.HashText(this._app.AppName) || await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+            if (apiKey == this._chiper.HashText(this._app.AppName) || await _akRepo.CheckKeyOrigin(this._env.IS_USING_POSTGRES, _orapg, ipOrigin, apiKey)) {
                 await this._next(context);
             }
             else {

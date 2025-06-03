@@ -115,12 +115,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 return cmd;
             }
             else {
-                if (CurrentActiveCommandTransaction == null) {
-                    CurrentActiveCommandTransaction = this.GetConnection().CreateCommand();
-                    CurrentActiveCommandTransaction.CommandTimeout = 3600; // 60 Minutes
+                if (this.CurrentActiveCommandTransaction == null) {
+                    this.CurrentActiveCommandTransaction = this.GetConnection().CreateCommand();
+                    this.CurrentActiveCommandTransaction.CommandTimeout = 3600; // 60 Minutes
                 }
 
-                return CurrentActiveCommandTransaction;
+                return this.CurrentActiveCommandTransaction;
             }
         }
 
@@ -137,7 +137,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         /// <summary> Jangan Lupa Di Commit Atau Rollback Sebelum Menjalankan Ini </summary>
         public async Task CloseConnection(bool force = false) {
             if (this.Database.CurrentTransaction != null && force) {
-                CurrentActiveCommandTransaction = null;
+                this.CurrentActiveCommandTransaction = null;
             }
 
             if (this.Database.CurrentTransaction == null || force) {

@@ -11,16 +11,20 @@
  */
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Quartz;
 
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.Abstractions;
 
 namespace bifeldy_sd3_lib_60.JobSchedulers {
 
     public sealed class GenericJob : IJob {
+
+        private readonly EnvVar _env;
 
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<GenericJob> _logger;
@@ -28,11 +32,13 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
         private readonly IOraPg _orapg;
 
         public GenericJob(
+            IOptions<EnvVar> env,
             IServiceProvider serviceProvider,
             ILogger<GenericJob> logger,
             IApplicationService @as,
             IOraPg orapg
         ) {
+            this._env = env.Value;
             this._serviceProvider = serviceProvider;
             this._logger = logger;
             this._as = @as;
@@ -56,8 +62,8 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
                     );
 
                     try {
-                        var func = (Func<IJobExecutionContext, IServiceProvider, Task>)jdm.Value;
-                        await func(context, this._serviceProvider);
+                        var func = (Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task>)jdm.Value;
+                        await func(context, this._serviceProvider, this._env.IS_USING_POSTGRES, this._orapg);
                     }
                     catch (Exception ex) {
                         errorMessage = ex.Message;

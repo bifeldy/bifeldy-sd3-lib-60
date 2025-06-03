@@ -13,22 +13,29 @@
 
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Conventions {
 
     public sealed class HideSwaggerConvention : IApplicationModelConvention {
 
+        private readonly EnvVar _env;
+
+        private readonly IOraPg _orapg;
         private readonly IApplicationService _application;
         private readonly IGeneralRepository _generalRepository;
 
         public HideSwaggerConvention(IServiceProvider sp) {
-            _application = sp.GetRequiredService<IApplicationService>();
-            _generalRepository = sp.GetRequiredService<IGeneralRepository>();
+            this._env = sp.GetRequiredService<IOptions<EnvVar>>().Value;
+            this._orapg = sp.GetRequiredService<IOraPg>();
+            this._application = sp.GetRequiredService<IApplicationService>();
+            this._generalRepository = sp.GetRequiredService<IGeneralRepository>();
         }
 
         private void SwaggerHide(Type hideType, ActionModel action, string kodeDc, EJenisDc jenisDc) {
@@ -53,9 +60,9 @@ namespace bifeldy_sd3_lib_60.Conventions {
         }
 
         public void Apply(ApplicationModel application) {
-            string kodeDc = this._generalRepository.GetKodeDc().Result;
+            string kodeDc = this._generalRepository.GetKodeDc(this._env.IS_USING_POSTGRES, this._orapg).Result;
 
-            EJenisDc jenisDc = this._generalRepository.GetJenisDc().Result;
+            EJenisDc jenisDc = this._generalRepository.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg).Result;
 
             Type[] typesToCheck = new[] {
                 typeof(RouteExcludeDcHoAttribute),

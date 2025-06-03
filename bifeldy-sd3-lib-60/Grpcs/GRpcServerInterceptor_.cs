@@ -15,14 +15,17 @@ using System.Security.Claims;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 
+using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Grpcs {
 
@@ -30,28 +33,10 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
         private readonly ILogger<CGRpcServerInterceptor> _logger;
 
-        private readonly IApplicationService _app;
-        private readonly IGlobalService _gs;
-        private readonly IChiperService _chiper;
-        private readonly IApiKeyRepository _akRepo;
-        private readonly IGeneralRepository _generalRepo;
-
         public string SessionKey { get; } = "user-session";
 
-        public CGRpcServerInterceptor(
-            ILogger<CGRpcServerInterceptor> logger,
-            IApplicationService app,
-            IGlobalService gs,
-            IChiperService chiper,
-            IApiKeyRepository akRepo,
-            IGeneralRepository generalRepo
-        ) {
-            this._logger = logger;
-            this._app = app;
-            this._gs = gs;
-            this._chiper = chiper;
-            this._akRepo = akRepo;
-            this._generalRepo = generalRepo;
+        public CGRpcServerInterceptor(ILoggerFactory loggerFactory) {
+            this._logger = loggerFactory.CreateLogger<CGRpcServerInterceptor>();
         }
 
         public async Task CheckUserLogin(ServerCallContext context, dynamic body = null) {
@@ -59,7 +44,15 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                 HttpContext http = context.GetHttpContext();
                 ConnectionInfo connection = http.Connection;
                 HttpRequest request = http.Request;
-                
+
+                EnvVar env = http.RequestServices.GetRequiredService<IOptions<EnvVar>>().Value;
+                IOraPg orapg = http.RequestServices.GetRequiredService<IOraPg>();
+                IApplicationService app = http.RequestServices.GetRequiredService<IApplicationService>();
+                IGlobalService gs = http.RequestServices.GetRequiredService<IGlobalService>();
+                IChiperService chiper = http.RequestServices.GetRequiredService<IChiperService>();
+                IApiKeyRepository akRepo = http.RequestServices.GetRequiredService<IApiKeyRepository>();
+                IGeneralRepository generalRepo = http.RequestServices.GetRequiredService<IGeneralRepository>();
+
                 if (http.Items["user"] == null) {
                     if (body != null) {
                         string secret = body.secret;
@@ -69,18 +62,18 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                         // -- Secret
 
                         if (!string.IsNullOrEmpty(secret)) {
-                            string hashText = this._chiper.HashText(this._app.AppName);
+                            string hashText = chiper.HashText(app.AppName);
 
                             bool allowed = false;
-                            bool isHo = await this._generalRepo.IsHo();
+                            bool isHo = await generalRepo.IsHo(env.IS_USING_POSTGRES, orapg);
                             if (isHo) {
-                                if (await _akRepo.SecretLogin(secret) != null) {
+                                if (await akRepo.SecretLogin(env.IS_USING_POSTGRES, orapg, secret) != null) {
                                     allowed = true;
                                 }
                             }
                             else {
-                                apiKey = this._gs.GetApiKeyData(request, body);
-                                if (apiKey == hashText || await _akRepo.SecretLogin(secret) != null) {
+                                apiKey = gs.GetApiKeyData(request, body);
+                                if (apiKey == hashText || await akRepo.SecretLogin(env.IS_USING_POSTGRES, orapg, secret) != null) {
                                     allowed = true;
                                 }
                             }
@@ -95,9 +88,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             }
 
                             string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
-                                ? this._gs.GetIpOriginData(connection, request)
-                                : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
-                            token = this._chiper.EncodeJWT(new UserApiSession() {
+                                ? gs.GetIpOriginData(connection, request)
+                                : chiper.DecryptText(request.Query["mask_ip"], hashText);
+                            token = chiper.EncodeJWT(new UserApiSession() {
                                 name = maskIp,
                                 role = UserSessionRole.PROGRAM_SERVICE
                             });
@@ -128,11 +121,11 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
                         if (Bifeldy.IS_USING_API_KEY && !string.IsNullOrEmpty(apiKey)) {
                             http.Items["api_key"] = apiKey;
-                            string ipOrigin = this._gs.GetIpOriginData(connection, request);
+                            string ipOrigin = gs.GetIpOriginData(connection, request);
                             http.Items["ip_origin"] = ipOrigin;
                         
-                            string hashText = this._chiper.HashText(this._app.AppName);
-                            if (apiKey != hashText && !await _akRepo.CheckKeyOrigin(ipOrigin, apiKey)) {
+                            string hashText = chiper.HashText(app.AppName);
+                            if (apiKey != hashText && !await akRepo.CheckKeyOrigin(env.IS_USING_POSTGRES, orapg, ipOrigin, apiKey)) {
                                 throw new RpcException(
                                     new Status(
                                         StatusCode.PermissionDenied,
@@ -152,7 +145,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             http.Items["token"] = token;
 
                             try {
-                                IEnumerable<Claim> userClaim = this._chiper.DecodeJWT(token);
+                                IEnumerable<Claim> userClaim = chiper.DecodeJWT(token);
                                 var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
                                 http.User = new ClaimsPrincipal(userClaimIdentity);
 

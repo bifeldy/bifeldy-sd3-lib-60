@@ -96,9 +96,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 if (string.IsNullOrEmpty(secret)) {
                     UserSessionRole userRole = default;
 
-                    API_TOKEN_T apiTokenT = await this._apiTokenRepo.LoginBot(userName, password);
+                    API_TOKEN_T apiTokenT = await this._apiTokenRepo.LoginBot(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
                     if (apiTokenT == null) {
-                        DC_USER_T dcUserT = await _userRepo.GetByUserNameNikPassword(userName, password);
+                        DC_USER_T dcUserT = await this._userRepo.GetByUserNameNikPassword(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
                         if (dcUserT == null) {
                             return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                                 info = $"400 - {this.GetType().Name} :: Login Gagal",
@@ -121,7 +121,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     };
                 }
                 else {
-                    API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(secret);
+                    API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(this._envVar.IS_USING_POSTGRES, this._orapg, secret);
                     if (apiKeyT == null) {
                         return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = $"400 - {this.GetType().Name} :: Login Gagal",
@@ -165,7 +165,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Tidak wajib, hanya clean-up session saja")]
         public async Task<IActionResult> Logout() {
             if (this.UserTokenData.role == UserSessionRole.EXTERNAL_BOT) {
-                API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(this.UserTokenData.name);
+                API_TOKEN_T dcApiToken = await this._apiTokenRepo.GetByUserName(this._envVar.IS_USING_POSTGRES, this._orapg, this.UserTokenData.name);
                 dcApiToken.TOKEN_SEKALI_PAKAI = null;
                 _ = this._orapg.Set<API_TOKEN_T>().Update(dcApiToken);
                 _ = await this._orapg.SaveChangesAsync();

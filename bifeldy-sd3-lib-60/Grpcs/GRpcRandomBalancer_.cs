@@ -22,11 +22,11 @@ namespace bifeldy_sd3_lib_60.Grpcs {
         private readonly IReadOnlyList<Subchannel> _subchannels;
 
         public CGRpcRandomPicker(IReadOnlyList<Subchannel> subchannels) {
-            _subchannels = subchannels;
+            this._subchannels = subchannels;
         }
 
         public override PickResult Pick(PickContext context) {
-            return PickResult.ForSubchannel(_subchannels[Random.Shared.Next(0, _subchannels.Count)]);
+            return PickResult.ForSubchannel(this._subchannels[Random.Shared.Next(0, this._subchannels.Count)]);
         }
 
     }

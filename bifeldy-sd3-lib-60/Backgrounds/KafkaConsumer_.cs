@@ -13,11 +13,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Confluent.Kafka;
 
 using System.Reactive.Subjects;
 
+using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
@@ -27,6 +29,8 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaConsumer : BackgroundService {
 
+        private readonly EnvVar _env;
+
         private readonly IServiceScope _scopedService;
 
         private readonly ILogger<CKafkaConsumer> _logger;
@@ -35,6 +39,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly IPubSubService _pubSub;
         private readonly IKafkaService _kafka;
 
+        private readonly IOraPg _orapg;
         private readonly IGeneralRepository _generalRepo;
 
         private string _hostPort;
@@ -59,6 +64,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             string hostPort, string topicName, string logTableName = null, string groupId = null,
             bool suffixKodeDc = false, List<EJenisDc> excludeJenisDc = null, string pubSubName = null
         ) {
+            this._env = serviceProvider.GetRequiredService<IOptions<EnvVar>>().Value;
             this._logger = serviceProvider.GetRequiredService<ILogger<CKafkaConsumer>>();
             this._app = serviceProvider.GetRequiredService<IApplicationService>();
             this._converter = serviceProvider.GetRequiredService<IConverterService>();
@@ -66,6 +72,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             this._kafka = serviceProvider.GetRequiredService<IKafkaService>();
 
             this._scopedService = serviceProvider.CreateScope();
+            this._orapg = this._scopedService.ServiceProvider.GetRequiredService<IOraPg>();
             this._generalRepo = this._scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
             this._hostPort = hostPort;
@@ -88,14 +95,14 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             try {
                 if (this._excludeJenisDc != null) {
-                    EJenisDc jenisDc = await _generalRepo.GetJenisDc();
+                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg);
                     if (this._excludeJenisDc.Contains(jenisDc)) {
                         return;
                     }
                 }
 
                 if (string.IsNullOrEmpty(this._hostPort)) {
-                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._topicName);
+                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, this._orapg, this._topicName);
                     if (kafka == null) {
                         throw new Exception("KAFKA Tidak Tersedia!");
                     }
@@ -112,7 +119,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         this._topicName += "_";
                     }
 
-                    string kodeDc = await this._generalRepo.GetKodeDc();
+                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, this._orapg);
                     this._groupId += kodeDc;
                     this._topicName += kodeDc;
                 }
@@ -134,7 +141,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
                     try {
                         ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
-                        _ = await this._generalRepo.SaveKafkaToTable(result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
+                        _ = await this._generalRepo.SaveKafkaToTable(this._env.IS_USING_POSTGRES, this._orapg, result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
 
                         var msg = new Message<string, dynamic>() {
                             Headers = result.Message.Headers,

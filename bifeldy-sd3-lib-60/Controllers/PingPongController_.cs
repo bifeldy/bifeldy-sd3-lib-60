@@ -12,6 +12,7 @@
  */
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -29,15 +30,19 @@ namespace bifeldy_sd3_lib_60.Controllers {
     [ApiExplorerSettings(IgnoreApi = true)]
     public class PingPongController : ControllerBase {
 
+        private readonly EnvVar _env;
+
         private readonly IGlobalService _gs;
         private readonly IOraPg _orapg;
         private readonly IGeneralRepository _generalRepo;
 
         public PingPongController(
+            IOptions<EnvVar> env,
             IGlobalService gs,
             IOraPg orapg,
             IGeneralRepository generalRepo
         ) {
+            this._env = env.Value;
             this._gs = gs;
             this._orapg = orapg;
             this._generalRepo = generalRepo;
@@ -54,9 +59,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 true
             );
 
-            bool isHo = await this._generalRepo.IsHo();
+            bool isHo = await this._generalRepo.IsHo(this._env.IS_USING_POSTGRES, this._orapg);
             if (fd != null && isHo) {
-                _ = await _orapg.ExecQueryAsync($@"
+                _ = await this._orapg.ExecQueryAsync($@"
                     DELETE FROM api_ping_t
                     WHERE
                         UPPER(dc_kode) = :dc_kode
@@ -67,7 +72,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     new() { NAME = "ip_origin", VALUE = ipOrigin.ToUpper() },
                     new() { NAME = "version", VALUE = fd.version.ToUpper() }
                 });
-                _ = await _orapg.ExecQueryAsync($@"
+                _ = await this._orapg.ExecQueryAsync($@"
                     INSERT INTO api_ping_t (dc_kode, ip_origin, last_online, version, port_api, port_grpc)
                     VALUES (:dc_kode, :ip_origin, :last_online, :version, :port_api, :port_grpc)
                 ", new List<CDbQueryParamBind>() {

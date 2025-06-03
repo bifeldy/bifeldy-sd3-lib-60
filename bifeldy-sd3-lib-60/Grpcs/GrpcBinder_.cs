@@ -31,7 +31,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             Type resolvedServiceType = serviceType;
 
             if (serviceType.IsInterface) {
-                resolvedServiceType = services.SingleOrDefault(x => x.ServiceType == serviceType)?.ImplementationType ?? serviceType;
+                resolvedServiceType = this.services.SingleOrDefault(x => x.ServiceType == serviceType)?.ImplementationType ?? serviceType;
             }
 
             return base.GetMetadata(method, contractType, resolvedServiceType);
