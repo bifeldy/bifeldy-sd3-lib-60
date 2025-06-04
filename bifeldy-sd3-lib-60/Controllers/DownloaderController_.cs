@@ -15,9 +15,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 
-using Quartz.Impl.Matchers;
-using Quartz;
-
 using Swashbuckle.AspNetCore.Annotations;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -35,7 +32,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public sealed class UpdaterController : ControllerBase {
 
         private readonly IDistributedCache _cache;
-        private readonly IScheduler _scheduler;
+        private readonly ISchedulerService _scheduler;
 
         private readonly IApplicationService _as;
         private readonly IGlobalService _gs;
@@ -45,7 +42,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         public UpdaterController(
             IDistributedCache cache,
-            IScheduler scheduler,
+            ISchedulerService scheduler,
             IApplicationService @as,
             IGlobalService gs,
             IChiperService chiper,
@@ -174,46 +171,19 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     if (completedOnly.GetValueOrDefault()) {
                         string jobName = $"ExportFile___{fi.Name}";
-                        IReadOnlyCollection<JobKey> jobKeys = await this._scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-                        JobKey jk = jobKeys.Where(jk => jk.Name == jobName).FirstOrDefault();
 
-                        IJobDetail jd = null;
-                        if (jk != null) {
-                            jd = await this._scheduler.GetJobDetail(jk);
-                        }
-
-                        decimal recordCount = await this._orapg.ExecScalarAsync<decimal>(
-                            $@"
-                                SELECT COUNT(*)
-                                FROM api_quartz_job_queue
-                                WHERE
-                                    app_name = :app_name
-                                    AND job_name = :job_name
-                            ",
-                            new List<CDbQueryParamBind>() {
-                                new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
-                                new() { NAME = "job_name", VALUE = jobName }
+                        bool isJobCompleted = await this._scheduler.CheckJobIsCompleted(
+                            jobName,
+                            this._orapg,
+                            () => {
+                                string ___filePath = fi.FullName;
+                                bool ___additionalAndCheck = System.IO.File.Exists(___filePath);
+                                return Task.FromResult(___additionalAndCheck);
                             }
                         );
 
-                        if (jd == null && recordCount > 0) {
-                            DateTime? completedAt = await this._orapg.ExecScalarAsync<DateTime?>(
-                                $@"
-                                    SELECT completed_at
-                                    FROM api_quartz_job_queue
-                                    WHERE
-                                        app_name = :app_name
-                                        AND job_name = :job_name
-                                ",
-                                new List<CDbQueryParamBind>() {
-                                    new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
-                                    new() { NAME = "job_name", VALUE = jobName }
-                                }
-                            );
-
-                            if (completedAt != null && System.IO.File.Exists(fi.FullName)) {
-                                isFileReady = true;
-                            }
+                        if (isJobCompleted) {
+                            isFileReady = true;
                         }
                     }
                     else {

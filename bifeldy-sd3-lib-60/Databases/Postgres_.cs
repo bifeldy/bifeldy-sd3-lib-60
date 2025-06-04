@@ -315,12 +315,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return (exception == null) ? result : throw exception;
         }
 
-        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             string result = null;
             Exception exception = null;
             try {
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, useDoubleQuote, allUppercase, encoding);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding);
                 }
 
                 if (bindParam != null) {
@@ -333,53 +333,48 @@ namespace bifeldy_sd3_lib_60.Databases {
                 }
 
                 encoding ??= Encoding.Default;
+                string sqlQuery = string.Empty;
 
-                string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
+                if (includeHeader) {
+                    sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
 
-                using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(sqlQuery, bindParam)) {
-                    ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
-                    string line = columns.Select(c => {
-                        string text = c.ColumnName;
+                    using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(sqlQuery, bindParam)) {
+                        ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
+                        string header = string.Join(delimiter, columns.Select(c => {
+                            string text = c.ColumnName;
 
-                        if (useDoubleQuote) {
-                            text = "\"" + text.Replace("\"", "\"\"") + "\"";
+                            if (allUppercase) {
+                                text = text.ToUpper();
+                            }
+
+                            if (useDoubleQuote) {
+                                text = $"\"{text.Replace("\"", "\"\"")}\"";
+                            }
+
+                            return text;
+                        }));
+
+                        using (var writer = new StreamWriter(tempPath, false, encoding)) {
+                            writer.WriteLine(header);
                         }
-
-                        if (allUppercase) {
-                            text = text.ToUpper();
-                        }
-
-                        return text;
-                    }).Aggregate((left, right) => $"{left}{delimiter}{right}");
-
-                    using (var streamWriter = new StreamWriter(tempPath, true, encoding)) {
-                        streamWriter.WriteLine(line);
-                        streamWriter.Flush();
                     }
                 }
 
                 sqlQuery = $"COPY ({queryString}) TO STDOUT WITH CSV DELIMITER '{delimiter}'";
-
                 if (!useDoubleQuote) {
-                    sqlQuery += " QUOTE '\b'";
+                    sqlQuery += " QUOTE ''";
                 }
 
-                using (TextReader reader = ((NpgsqlConnection) this.GetConnection()).BeginTextExport(sqlQuery)) {
-                    using (var streamWriter = new StreamWriter(tempPath, true, encoding)) {
-                        string line = null;
-
-                        do {
-                            line = reader.ReadLine();
-                            if (!string.IsNullOrEmpty(line)) {
-                                if (allUppercase) {
-                                    line = line.ToUpper();
-                                }
-
-                                streamWriter.WriteLine(line);
-                                streamWriter.Flush();
+                using (TextReader reader = ((NpgsqlConnection)this.GetConnection()).BeginTextExport(sqlQuery)) {
+                    using (var writer = new StreamWriter(tempPath, true, encoding)) {
+                        string line = string.Empty;
+                        while ((line = reader.ReadLine()) != null) {
+                            if (allUppercase) {
+                                line = line.ToUpper();
                             }
+
+                            writer.WriteLine(line);
                         }
-                        while (!string.IsNullOrEmpty(line));
                     }
                 }
 

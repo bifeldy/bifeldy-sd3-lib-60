@@ -14,7 +14,6 @@ using System.Data;
 using System.Data.Common;
 using System.Reflection;
 using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace bifeldy_sd3_lib_60.Extensions {
 
@@ -59,44 +58,46 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return ls;
         }
 
-        public static void ToCsv(this DbDataReader dr, string delimiter, string outputFilePath = null, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public static void ToCsv(this DbDataReader dr, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
-                string line = Enumerable.Range(0, dr.FieldCount).Select(i => {
-                    string text = dr.GetName(i);
-
-                    if (useDoubleQuote) {
-                        text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                    }
-
-                    if (allUppercase) {
-                        text = text.ToUpper();
-                    }
-
-                    return text;
-                }).Aggregate((left, right) => $"{left}{delimiter}{right}");
-
-                streamWriter.WriteLine(line);
-                streamWriter.Flush();
-
-                while (dr.Read()) {
-                    line = Enumerable.Range(0, dr.FieldCount).Select(i => {
-                        string text = dr.GetValue(i).ToString();
-
-                        if (useDoubleQuote) {
-                            text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                        }
+                if (includeHeader) {
+                    string header = string.Join(delimiter, Enumerable.Range(0, dr.FieldCount).Select(i => {
+                        string text = dr.GetName(i);
 
                         if (allUppercase) {
                             text = text.ToUpper();
                         }
 
-                        return text;
-                    }).Aggregate((left, right) => $"{left}{delimiter}{right}");
+                        if (useDoubleQuote) {
+                            text = $"\"{text.Replace("\"", "\"\"")}\"";
+                        }
 
-                    if (!string.IsNullOrEmpty(line)) {
-                        streamWriter.WriteLine(line);
-                        streamWriter.Flush();
-                    }
+                        return text;
+                    }));
+
+                    streamWriter.WriteLine(header);
+                }
+
+                while (dr.Read()) {
+                    string line = string.Join(delimiter, Enumerable.Range(0, dr.FieldCount).Select(i => {
+                        if (dr.IsDBNull(i)) {
+                            return "";
+                        }
+
+                        string text = dr.GetValue(i).ToString();
+
+                        if (allUppercase) {
+                            text = text.ToUpper();
+                        }
+
+                        if (useDoubleQuote) {
+                            text = $"\"{text.Replace("\"", "\"\"")}\"";
+                        }
+
+                        return text;
+                    }));
+
+                    streamWriter.WriteLine(line);
                 }
             }
         }

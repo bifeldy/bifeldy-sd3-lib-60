@@ -52,55 +52,52 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return ls;
         }
 
-        public static void ToCsv(this DataTable dt, string delimiter, string outputFilePath = null, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public static void ToCsv(this DataTable dt, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
-                string sep = string.Empty;
-                var builder = new StringBuilder();
-
-                foreach (DataColumn col in dt.Columns) {
-                    string text = col.ColumnName;
-
-                    if (useDoubleQuote) {
-                        text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                    }
-
-                    if (allUppercase) {
-                        text = text.ToUpper();
-                    }
-
-                    _ = builder.Append(sep).Append(text);
-
-                    sep = delimiter;
-                }
-
-                streamWriter.WriteLine(builder.ToString());
-                streamWriter.Flush();
-
-                foreach (DataRow row in dt.Rows) {
-                    sep = string.Empty;
-                    builder = builder.Clear();
-
-                    foreach (DataColumn col in dt.Columns) {
-                        string text = row[col.ColumnName].ToString();
-
-                        if (useDoubleQuote) {
-                            text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                        }
+                if (includeHeader) {
+                    string header = string.Join(delimiter, dt.Columns.Cast<DataColumn>().Select(col => {
+                        string text = col.ColumnName;
 
                         if (allUppercase) {
                             text = text.ToUpper();
                         }
 
-                        _ = builder.Append(sep).Append(text);
+                        if (useDoubleQuote) {
+                            text = $"\"{text.Replace("\"", "\"\"")}\"";
+                        }
 
-                        sep = delimiter;
-                    }
+                        return text;
+                    }));
 
-                    streamWriter.WriteLine(builder.ToString());
-                    streamWriter.Flush();
+                    streamWriter.WriteLine(header);
+                }
+
+                foreach (DataRow row in dt.Rows) {
+                    string line = string.Join(delimiter, dt.Columns.Cast<DataColumn>().Select(col => {
+                        object value = row[col];
+
+                        if (value == DBNull.Value) {
+                            return "";
+                        }
+
+                        string text = value.ToString();
+
+                        if (allUppercase) {
+                            text = text.ToUpper();
+                        }
+
+                        if (useDoubleQuote) {
+                            text = $"\"{text.Replace("\"", "\"\"")}\"";
+                        }
+
+                        return text;
+                    }));
+
+                    streamWriter.WriteLine(line);
                 }
             }
         }
+
 
     }
 

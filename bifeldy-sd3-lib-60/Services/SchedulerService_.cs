@@ -27,6 +27,7 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<IEnumerable<JobKey>> GetJobs(string jobName = null);
         Task<int> JumlahJobYangSedangBerjalan(string jobName);
         Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, Func<Task<bool>> forceCreateNew = null);
+        Task<bool> CheckJobIsCompleted(string jobName, IDatabase db, Func<Task<bool>> additionalAndCheck = null);
         public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, Func<Task<bool>> forceCreateNew = null);
         public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
         public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
@@ -149,6 +150,59 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return needToCreateNewJob;
+        }
+
+        public async Task<bool> CheckJobIsCompleted(string jobName, IDatabase db, Func<Task<bool>> additionalAndCheck = null) {
+            bool isJobCompleted = false;
+
+            JobKey jk = (await this.GetJobs(jobName)).FirstOrDefault();
+
+            IJobDetail jd = null;
+            if (jk != null) {
+                jd = await this._scheduler.GetJobDetail(jk);
+            }
+
+            decimal recordCount = await db.ExecScalarAsync<decimal>(
+                $@"
+                    SELECT COUNT(*)
+                    FROM api_quartz_job_queue
+                    WHERE
+                        app_name = :app_name
+                        AND job_name = :job_name
+                ",
+                new List<CDbQueryParamBind>() {
+                    new() { NAME = "app_name", VALUE = this._app.AppName.ToUpper() },
+                    new() { NAME = "job_name", VALUE = jobName }
+                }
+            );
+
+            if (jd == null && recordCount > 0) {
+                DateTime? completedAt = await db.ExecScalarAsync<DateTime?>(
+                    $@"
+                        SELECT completed_at
+                        FROM api_quartz_job_queue
+                        WHERE
+                            app_name = :app_name
+                            AND job_name = :job_name
+                    ",
+                    new List<CDbQueryParamBind>() {
+                        new() { NAME = "app_name", VALUE = this._app.AppName.ToUpper() },
+                        new() { NAME = "job_name", VALUE = jobName }
+                    }
+                );
+
+
+                if (completedAt != null) {
+                    isJobCompleted = true;
+
+                    if (additionalAndCheck != null) {
+                        bool customBoolCheck = await additionalAndCheck();
+                        isJobCompleted = isJobCompleted && customBoolCheck;
+                    }
+                }
+            }
+
+            return isJobCompleted;
         }
 
         public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, Func<Task<bool>> forceCreateNew = null) {

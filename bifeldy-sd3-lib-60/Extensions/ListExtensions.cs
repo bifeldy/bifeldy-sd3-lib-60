@@ -69,70 +69,49 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return table;
         }
 
-        public static void ToCsv<T>(this List<T> listData, string delimiter, string outputFilePath = null, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public static void ToCsv<T>(this List<T> listData, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
-                string text = null;
+                PropertyInfo[] properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-                PropertyInfo[] col = typeof(T).GetProperties();
+                if (includeHeader) {
+                    string headerLine = string.Join(delimiter, properties.Select(prop => {
+                        string name = prop.Name;
 
-                for (int i = 0; i < col.Length - 1; i++) {
-                    text = col[i].Name;
-
-                    if (useDoubleQuote) {
-                        text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                    }
-
-                    if (allUppercase) {
-                        text = text.ToUpper();
-                    }
-
-                    streamWriter.Write(text + delimiter);
-                    streamWriter.Flush();
-                }
-
-                text = col[col.Length - 1].Name;
-
-                if (useDoubleQuote) {
-                    text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                }
-
-                if (allUppercase) {
-                    text = text.ToUpper();
-                }
-
-                streamWriter.Write(text + streamWriter.NewLine);
-                streamWriter.Flush();
-
-                foreach (T item in listData) {
-                    PropertyInfo[] row = typeof(T).GetProperties();
-
-                    for (int i = 0; i < row.Length - 1; i++) {
-                        text = row[i].GetValue(item).ToString();
+                        if (allUppercase) {
+                            name = name.ToUpper();
+                        }
 
                         if (useDoubleQuote) {
-                            text = "\"" + text.Replace("\"", "\"\"") + "\"";
+                            name = $"\"{name.Replace("\"", "\"\"")}\"";
                         }
+
+                        return name;
+                    }));
+
+                    streamWriter.WriteLine(headerLine);
+                }
+
+                foreach (T item in listData) {
+                    string line = string.Join(delimiter, properties.Select(prop => {
+                        object value = prop.GetValue(item);
+                        if (value == null) {
+                            return "";
+                        }
+
+                        string text = value.ToString();
 
                         if (allUppercase) {
                             text = text.ToUpper();
                         }
 
-                        streamWriter.Write(text + delimiter);
-                        streamWriter.Flush();
-                    }
+                        if (useDoubleQuote) {
+                            text = $"\"{text.Replace("\"", "\"\"")}\"";
+                        }
 
-                    text = row[row.Length - 1].GetValue(item).ToString();
+                        return text;
+                    }));
 
-                    if (useDoubleQuote) {
-                        text = "\"" + text.Replace("\"", "\"\"") + "\"";
-                    }
-
-                    if (allUppercase) {
-                        text = text.ToUpper();
-                    }
-
-                    streamWriter.Write(text + streamWriter.NewLine);
-                    streamWriter.Flush();
+                    streamWriter.WriteLine(line);
                 }
             }
         }
