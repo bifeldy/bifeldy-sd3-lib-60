@@ -128,7 +128,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public MailAddress CreateEmailAddress(string address, string displayName = null, Encoding encoding = null) {
-            return string.IsNullOrEmpty(displayName) ? new MailAddress(address) : new MailAddress(address, displayName, encoding ?? Encoding.Default);
+            return string.IsNullOrEmpty(displayName) ? new MailAddress(address) : new MailAddress(address, displayName, encoding ?? Encoding.UTF8);
         }
 
         public List<MailAddress> CreateEmailAddress(string[] address) {
@@ -165,7 +165,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             MailAddress from = null,
             Encoding encoding = null
         ) {
-            encoding ??= Encoding.Default;
+            encoding ??= Encoding.UTF8;
 
             var mailMessage = new MailMessage() {
                 Subject = subject,

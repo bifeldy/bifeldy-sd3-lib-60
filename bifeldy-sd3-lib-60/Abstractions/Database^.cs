@@ -365,7 +365,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                         }
 
                         using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write)) {
-                            using (var bw = new BinaryWriter(fs, encoding ?? Encoding.Default)) {
+                            using (var bw = new BinaryWriter(fs, encoding ?? Encoding.UTF8)) {
                                 long startIndex = 0;
                                 long retval = rdrGetBlob.GetBytes(0, startIndex, outByte, 0, bufferSize);
 

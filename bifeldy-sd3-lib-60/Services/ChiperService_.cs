@@ -145,7 +145,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     using (ICryptoTransform decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes)) {
                         using (var memoryStream = new MemoryStream(cipherTextBytes)) {
                             using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read)) {
-                                using (var streamReader = new StreamReader(cryptoStream, encoding ?? Encoding.Default)) {
+                                using (var streamReader = new StreamReader(cryptoStream, encoding ?? Encoding.UTF8)) {
                                     return streamReader.ReadToEnd();
                                 }
                             }

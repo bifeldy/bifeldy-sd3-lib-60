@@ -332,7 +332,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                     File.Delete(tempPath);
                 }
 
-                encoding ??= Encoding.Default;
+                encoding ??= Encoding.UTF8;
                 string sqlQuery = string.Empty;
 
                 if (includeHeader) {

@@ -64,7 +64,7 @@ namespace bifeldy_sd3_lib_60.Services {
         private async Task<HttpContent> GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
             HttpContent content = null;
 
-            encoding ??= Encoding.Default;
+            encoding ??= Encoding.UTF8;
 
             if (httpContent.GetType() == typeof(string)) {
                 content = new StringContent(httpContent, encoding, contentType);
