@@ -53,7 +53,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
         }
 
         public static void ToCsv(this DataTable dt, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
-            using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.Default)) {
+            using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.UTF8)) {
                 if (includeHeader) {
                     string header = string.Join(delimiter, dt.Columns.Cast<DataColumn>().Select(col => {
                         string text = col.ColumnName;
@@ -86,7 +86,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             text = text.ToUpper();
                         }
 
-                        if (useDoubleQuote) {
+                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains('\n') || text.Contains('\r');
+                        if (useDoubleQuote || mustQuote) {
                             text = $"\"{text.Replace("\"", "\"\"")}\"";
                         }
 
