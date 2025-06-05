@@ -24,8 +24,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public interface IBerkasService {
         void DeleteSingleFileInFolder(string fileName, string folderPath = null);
-        void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false);
-        void CleanUp();
+        void DeleteOldFilesInFolder(string folderPath, int maxOldHours, bool isInRecursive = false);
+        void CleanUp(bool clearWorkingFileDirectories = true);
         void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false);
         void BackupAllFilesInFolder(string folderPath);
         bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true, Encoding encoding = null);
@@ -65,7 +65,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public void DeleteOldFilesInFolder(string folderPath, int maxOldDays, bool isInRecursive = false) {
+        public void DeleteOldFilesInFolder(string folderPath, int maxOldHours, bool isInRecursive = false) {
             string path = folderPath ?? this._gs.TempFolderPath;
             if (!isInRecursive && path == this._gs.TempFolderPath) {
                 this.BackupAllFilesInFolder(this._gs.TempFolderPath);
@@ -77,10 +77,10 @@ namespace bifeldy_sd3_lib_60.Services {
                     FileSystemInfo[] fsis = di.GetFileSystemInfos();
                     foreach (FileSystemInfo fsi in fsis) {
                         if (fsi.Attributes == FileAttributes.Directory) {
-                            this.DeleteOldFilesInFolder(fsi.FullName, maxOldDays, true);
+                            this.DeleteOldFilesInFolder(fsi.FullName, maxOldHours, true);
                         }
 
-                        if (fsi.LastWriteTime <= DateTime.Now.AddDays(-maxOldDays)) {
+                        if (fsi.LastWriteTime <= DateTime.Now.AddHours(-maxOldHours)) {
                             this._logger.LogInformation("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {FullName}", fsi.FullName);
                             fsi.Delete();
                         }
@@ -92,13 +92,15 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public void CleanUp() {
+        public void CleanUp(bool clearWorkingFileDirectories = true) {
             this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), this._envVar.MAX_RETENTIONS_DAYS);
             this.DeleteOldFilesInFolder(this._gs.BackupFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._gs.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            if (clearWorkingFileDirectories) {
+                this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+                this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+                this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+                this.DeleteOldFilesInFolder(this._gs.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            }
         }
 
         public void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false) {

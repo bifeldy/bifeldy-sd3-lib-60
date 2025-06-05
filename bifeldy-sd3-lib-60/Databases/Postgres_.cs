@@ -40,11 +40,6 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public sealed class CPostgres : CDatabase, IPostgres {
 
-        private readonly ILogger<CPostgres> _logger;
-        private readonly EnvVar _envVar;
-        private readonly IApplicationService _as;
-        private readonly IGlobalService _gs;
-
         public CPostgres(
             DbContextOptions<CPostgres> options,
             ILogger<CPostgres> logger,
@@ -52,14 +47,8 @@ namespace bifeldy_sd3_lib_60.Databases {
             IApplicationService @as,
             IConverterService cs,
             IGlobalService gs
-        ) : base(options, envVar, logger, cs, gs) {
-            this._logger = logger;
-            this._envVar = envVar.Value;
-            this._as = @as;
-            this._gs = gs;
-            // --
+        ) : base(options, logger, envVar, @as, cs, gs) {
             this.InitializeConnection();
-            // --
             this.Database.SetCommandTimeout(3600); // 60 Minute
         }
 

@@ -21,8 +21,8 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IZipService {
-        int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileName = null, string password = null, string outputPath = null);
-        int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputPath = null);
+        int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileName = null, string password = null, string outputFolderPath = null);
+        int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputFolderPath = null);
     }
 
     [SingletonServiceRegistration]
@@ -36,10 +36,15 @@ namespace bifeldy_sd3_lib_60.Services {
             this._gs = gs;
         }
 
-        public int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileForZip = null, string password = null, string outputPath = null) {
+        public int ZipListFileInFolder(string zipFileName, string folderPath, List<string> listFileForZip = null, string password = null, string outputFolderPath = null) {
             int totalFileInZip = 0;
-            string path = Path.Combine(outputPath ?? this._gs.ZipFolderPath, zipFileName);
+
             try {
+                string tempPath = Path.Combine(outputFolderPath ?? this._gs.TempFolderPath, zipFileName);
+                if (File.Exists(tempPath)) {
+                    File.Delete(tempPath);
+                }
+
                 var zip = new ZipFile();
                 if (!string.IsNullOrEmpty(password)) {
                     zip.Password = password;
@@ -56,8 +61,17 @@ namespace bifeldy_sd3_lib_60.Services {
                     this._logger.LogInformation("[ZIP_LIST_FILE_IN_FOLDER] {status} @ {filePath}", zipEntry == null ? "Fail" : "Ok", filePath);
                 }
 
-                zip.Save(path);
-                this._logger.LogInformation("[ZIP_LIST_FILE_IN_FOLDER] {path}", path);
+                zip.Save(tempPath);
+
+                string realPath = Path.Combine(outputFolderPath ?? this._gs.ZipFolderPath, zipFileName);
+                if (File.Exists(realPath)) {
+                    File.Delete(realPath);
+                }
+
+                File.Move(tempPath, $"{realPath}.tmp", true);
+                File.Move($"{realPath}.tmp", realPath, true);
+
+                this._logger.LogInformation("[ZIP_LIST_FILE_IN_FOLDER] {path}", realPath);
             }
             catch (Exception ex) {
                 this._logger.LogError("[ZIP_LIST_FILE_IN_FOLDER] {ex}", ex.Message);
@@ -66,10 +80,15 @@ namespace bifeldy_sd3_lib_60.Services {
             return totalFileInZip;
         }
 
-        public int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputPath = null) {
+        public int ZipAllFileInFolder(string zipFileName, string folderPath, string password = null, string outputFolderPath = null) {
             int totalFileInZip = 0;
-            string path = Path.Combine(outputPath ?? this._gs.ZipFolderPath, zipFileName);
+
             try {
+                string tempPath = Path.Combine(outputFolderPath ?? this._gs.TempFolderPath, zipFileName);
+                if (File.Exists(tempPath)) {
+                    File.Delete(tempPath);
+                }
+
                 var zip = new ZipFile {
                     CompressionLevel = CompressionLevel.BestCompression
                 };
@@ -89,8 +108,17 @@ namespace bifeldy_sd3_lib_60.Services {
                     this._logger.LogInformation("[ZIP_ALL_FILE_IN_FOLDER] {status} @ {FullName}", zipEntry == null ? "Fail" : "Ok", fileInfo.FullName);
                 }
 
-                zip.Save(path);
-                this._logger.LogInformation("[ZIP_ALL_FILE_IN_FOLDER] {path}", path);
+                zip.Save(tempPath);
+
+                string realPath = Path.Combine(outputFolderPath ?? this._gs.ZipFolderPath, zipFileName);
+                if (File.Exists(realPath)) {
+                    File.Delete(realPath);
+                }
+
+                File.Move(tempPath, $"{realPath}.tmp", true);
+                File.Move($"{realPath}.tmp", realPath, true);
+
+                this._logger.LogInformation("[ZIP_ALL_FILE_IN_FOLDER] {path}", realPath);
             }
             catch (Exception ex) {
                 this._logger.LogError("[ZIP_ALL_FILE_IN_FOLDER] {ex}", ex.Message);

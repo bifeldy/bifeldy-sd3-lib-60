@@ -36,10 +36,6 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public sealed class COracle : CDatabase, IOracle {
 
-        private readonly ILogger<COracle> _logger;
-        private readonly EnvVar _envVar;
-        private readonly IApplicationService _as;
-
         public COracle(
             DbContextOptions<COracle> options,
             ILogger<COracle> logger,
@@ -47,10 +43,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             IApplicationService @as,
             IConverterService cs,
             IGlobalService gs
-        ) : base(options, envVar, logger, cs, gs) {
-            this._logger = logger;
-            this._envVar = envVar.Value;
-            this._as = @as;
+        ) : base(options, logger, envVar, @as, cs, gs) {
             // --
             this.InitializeConnection();
             // --

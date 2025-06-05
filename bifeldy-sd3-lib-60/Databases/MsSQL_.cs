@@ -35,10 +35,6 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public sealed class CMsSQL : CDatabase, IMsSQL {
 
-        private readonly ILogger<CMsSQL> _logger;
-        private readonly EnvVar _envVar;
-        private readonly IApplicationService _as;
-
         public CMsSQL (
             DbContextOptions<CMsSQL> options,
             ILogger<CMsSQL> logger,
@@ -46,10 +42,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             IApplicationService @as,
             IConverterService cs,
             IGlobalService gs
-        ) : base(options, envVar, logger, cs, gs) {
-            this._logger = logger;
-            this._envVar = envVar.Value;
-            this._as = @as;
+        ) : base(options, logger, envVar, @as, cs, gs) {
             // --
             this.InitializeConnection();
             // --

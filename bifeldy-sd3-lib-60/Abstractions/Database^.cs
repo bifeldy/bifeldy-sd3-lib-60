@@ -55,11 +55,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
     public abstract partial class CDatabase : DbContext, IDatabase, ICloneable {
 
-        private readonly EnvVar _envVar;
+        protected readonly EnvVar _envVar;
 
-        private readonly ILogger<CDatabase> _logger;
-        private readonly IConverterService _cs;
-        private readonly IGlobalService _gs;
+        protected readonly ILogger<CDatabase> _logger;
+        protected readonly IConverterService _cs;
+        protected readonly IApplicationService _as;
+        protected readonly IGlobalService _gs;
 
         public string DbUsername { get; set; }
         public string DbPassword { get; set; }
@@ -73,9 +74,17 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         private DbCommand CurrentActiveCommandTransaction = null;
 
-        public CDatabase(DbContextOptions options, IOptions<EnvVar> envVar, ILogger<CDatabase> logger, IConverterService cs, IGlobalService gs) : base(options) {
+        public CDatabase(
+            DbContextOptions options,
+            ILogger<CDatabase> logger,
+            IOptions<EnvVar> envVar,
+            IApplicationService @as,
+            IConverterService cs,
+            IGlobalService gs
+        ) : base(options) {
             this._envVar = envVar.Value;
             this._logger = logger;
+            this._as = @as;
             this._cs = cs;
             this._gs = gs;
         }
