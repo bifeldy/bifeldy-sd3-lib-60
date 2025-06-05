@@ -43,10 +43,8 @@ namespace bifeldy_sd3_lib_60.Databases {
             IConverterService cs,
             IGlobalService gs
         ) : base(options, logger, envVar, @as, cs, gs) {
-            // --
             this.InitializeConnection();
-            // --
-            this.Database.SetCommandTimeout(3600); // 60 Minute
+            this.SetCommandTimeout();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
@@ -116,54 +114,54 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.LogQueryParameter(cmd, prefix);
         }
 
-        public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
-        public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetDataTableAsync(cmd);
         }
 
-        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetListAsync(cmd, token, callback);
         }
 
-        public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecScalarAsync<T>(cmd);
         }
 
-        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecQueryAsync(cmd, minRowsAffected, shouldEqualMinRowsAffected);
         }
 
-        public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = procedureName;
             cmd.CommandType = CommandType.StoredProcedure;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecProcedureAsync(cmd);
         }
 
-        public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable) {
+        public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600) {
             bool result = false;
             Exception exception = null;
             try {
@@ -187,16 +185,16 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
-        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecReaderAsync(cmd, commandBehavior);
         }
 
-        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null) {
-            var cmd = (SqlCommand) this.CreateCommand();
+        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -214,6 +212,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             var mssql = (CMsSQL) this.Clone();
             mssql.InitializeConnection(this.DbIpAddrss, this.DbUsername, this.DbPassword, this.DbName);
             mssql.ReSetConnectionString();
+            mssql.SetCommandTimeout();
             return mssql;
         }
 

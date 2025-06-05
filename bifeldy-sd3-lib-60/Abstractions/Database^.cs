@@ -41,16 +41,16 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<IDbContextTransaction> TransactionStart(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
         Task TransactionCommit(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task TransactionRollback(DbTransaction useTrx = null, bool forceCloseConnection = false);
-        Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
-        Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
-        Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null);
-        Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
-        Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
-        Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
-        Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
-        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null);
-        Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
-        Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null);
+        Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600);
+        Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
+        Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600);
+        Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600);
+        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600);
+        Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600);
+        Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600);
     }
 
     public abstract partial class CDatabase : DbContext, IDatabase, ICloneable {
@@ -117,16 +117,20 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         protected virtual DbConnection GetConnection() => this.Database.GetDbConnection();
 
-        protected virtual DbCommand CreateCommand() {
+        protected virtual void SetCommandTimeout(int commandTimeoutSeconds = 3600) {
+            this.Database.SetCommandTimeout(commandTimeoutSeconds); // 60 Minute
+        }
+
+        protected virtual DbCommand CreateCommand(int commandTimeoutSeconds) {
             if (this.Database.CurrentTransaction == null) {
                 DbCommand cmd = this.GetConnection().CreateCommand();
-                cmd.CommandTimeout = 3600; // 60 Minutes
+                cmd.CommandTimeout = commandTimeoutSeconds; // 60 Minutes
                 return cmd;
             }
             else {
                 if (this.CurrentActiveCommandTransaction == null) {
                     this.CurrentActiveCommandTransaction = this.GetConnection().CreateCommand();
-                    this.CurrentActiveCommandTransaction.CommandTimeout = 3600; // 60 Minutes
+                    this.CurrentActiveCommandTransaction.CommandTimeout = commandTimeoutSeconds; // 60 Minutes
                 }
 
                 return this.CurrentActiveCommandTransaction;
@@ -408,7 +412,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600) {
             string result = null;
             Exception exception = null;
             try {
@@ -418,7 +422,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 }
 
                 string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks}";
-                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess)) {
+                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess, commandTimeoutSeconds)) {
                     rdr.ToCsv(delimiter, tempPath, includeHeader, useDoubleQuote, allUppercase, encoding);
                 }
 
@@ -447,15 +451,15 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         protected abstract void BindQueryParameter(DbCommand databaseCommand, List<CDbQueryParamBind> parameters);
 
-        public abstract Task<DataColumnCollection> GetAllColumnTableAsync(string tableName);
-        public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null);
-        public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null);
-        public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null);
-        public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false);
-        public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null);
-        public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable);
-        public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default);
-        public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null);
+        public abstract Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600);
+        public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
+        public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600);
+        public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600);
+        public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600);
+        public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600);
 
     }
 

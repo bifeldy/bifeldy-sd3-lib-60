@@ -49,7 +49,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             IGlobalService gs
         ) : base(options, logger, envVar, @as, cs, gs) {
             this.InitializeConnection();
-            this.Database.SetCommandTimeout(3600); // 60 Minute
+            this.SetCommandTimeout();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
@@ -120,47 +120,47 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.LogQueryParameter(cmd, prefix);
         }
 
-        public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
-        public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetDataTableAsync(cmd);
         }
 
-        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetListAsync(cmd, token, callback);
         }
 
-        public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecScalarAsync<T>(cmd);
         }
 
-        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecQueryAsync(cmd, minRowsAffected, shouldEqualMinRowsAffected);
         }
 
-        public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             string sqlTextQueryParameters = "(";
             if (bindParam != null) {
                 for (int i = 0; i < bindParam.Count; i++) {
@@ -179,7 +179,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         // https://stackoverflow.com/questions/65687071/bulk-insert-copy-ienumerable-into-table-with-npgsql
-        public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable) {
+        public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600) {
             bool result = false;
             Exception exception = null;
             try {
@@ -197,7 +197,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 int[] lengths = new int[colCount];
                 string[] fieldNames = new string[colCount];
 
-                var cmd = (NpgsqlCommand) this.CreateCommand();
+                var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
                 cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
                 using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(cmd)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
@@ -304,12 +304,12 @@ namespace bifeldy_sd3_lib_60.Databases {
             return (exception == null) ? result : throw exception;
         }
 
-        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public override async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600) {
             string result = null;
             Exception exception = null;
             try {
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding, commandTimeoutSeconds);
                 }
 
                 if (bindParam != null) {
@@ -327,7 +327,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 if (includeHeader) {
                     sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks} WHERE 1 = 0";
 
-                    using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(sqlQuery, bindParam)) {
+                    using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess, commandTimeoutSeconds)) {
                         ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
                         string header = string.Join(delimiter, columns.Select(c => {
                             string text = c.ColumnName;
@@ -389,16 +389,16 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
-        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecReaderAsync(cmd, commandBehavior);
         }
 
-        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null) {
-            var cmd = (NpgsqlCommand) this.CreateCommand();
+        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -416,6 +416,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             var postgres = (CPostgres) this.Clone();
             postgres.InitializeConnection(this.DbIpAddrss, this.DbPort, this.DbUsername, this.DbPassword, this.DbName);
             postgres.ReSetConnectionString();
+            postgres.SetCommandTimeout();
             return postgres;
         }
 

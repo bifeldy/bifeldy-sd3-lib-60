@@ -44,10 +44,8 @@ namespace bifeldy_sd3_lib_60.Databases {
             IConverterService cs,
             IGlobalService gs
         ) : base(options, logger, envVar, @as, cs, gs) {
-            // --
             this.InitializeConnection();
-            // --
-            this.Database.SetCommandTimeout(3600); // 60 Minute
+            this.SetCommandTimeout();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
@@ -77,8 +75,8 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.DbConnectionString = $"Data Source={this.DbTnsOdp};User ID={this.DbUsername};Password={this.DbPassword};Connection Timeout=180;"; // 3 Minutes
         }
 
-        protected override DbCommand CreateCommand() {
-            var cmd = (OracleCommand) base.CreateCommand();
+        protected override DbCommand CreateCommand(int commandTimeoutSeconds) {
+            var cmd = (OracleCommand) base.CreateCommand(commandTimeoutSeconds);
             cmd.BindByName = true;
             cmd.InitialLOBFetchSize = -1;
             cmd.InitialLONGFetchSize = -1;
@@ -137,54 +135,54 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.LogQueryParameter(cmd, prefix);
         }
 
-        public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} WHERE ROWNUM <= 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
-        public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetDataTableAsync(cmd);
         }
 
-        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetListAsync(cmd, token, callback);
         }
 
-        public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecScalarAsync<T>(cmd);
         }
 
-        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecQueryAsync(cmd, minRowsAffected, shouldEqualMinRowsAffected);
         }
 
-        public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = procedureName;
             cmd.CommandType = CommandType.StoredProcedure;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecProcedureAsync(cmd);
         }
 
-        public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable) {
+        public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600) {
             bool result = false;
             Exception exception = null;
             try {
@@ -208,16 +206,16 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
-        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.ExecReaderAsync(cmd, commandBehavior);
         }
 
-        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null) {
-            var cmd = (OracleCommand) this.CreateCommand();
+        public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -236,6 +234,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             var oracle = (COracle) this.Clone();
             oracle.InitializeConnection(this.DbUsername, this.DbPassword, this.DbTnsOdp);
             oracle.ReSetConnectionString();
+            oracle.SetCommandTimeout();
             return oracle;
         }
 
