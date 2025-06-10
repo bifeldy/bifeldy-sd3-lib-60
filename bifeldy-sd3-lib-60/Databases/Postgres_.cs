@@ -308,8 +308,10 @@ namespace bifeldy_sd3_lib_60.Databases {
             string result = null;
             Exception exception = null;
             try {
+                encoding ??= Encoding.UTF8;
+
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding ?? Encoding.UTF8, commandTimeoutSeconds);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding, commandTimeoutSeconds);
                 }
 
                 if (bindParam != null) {
@@ -321,7 +323,6 @@ namespace bifeldy_sd3_lib_60.Databases {
                     File.Delete(tempPath);
                 }
 
-                encoding ??= Encoding.UTF8;
                 string sqlQuery = string.Empty;
 
                 if (includeHeader) {
@@ -351,7 +352,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
                 sqlQuery = $"COPY ({queryString}) TO STDOUT WITH CSV DELIMITER '{delimiter}'";
                 if (!useDoubleQuote) {
-                    sqlQuery += " QUOTE ''";
+                    sqlQuery += " QUOTE '\x01'";
                 }
 
                 using (TextReader reader = ((NpgsqlConnection)this.GetConnection()).BeginTextExport(sqlQuery)) {
@@ -360,6 +361,10 @@ namespace bifeldy_sd3_lib_60.Databases {
                         while ((line = reader.ReadLine()) != null) {
                             if (allUppercase) {
                                 line = line.ToUpper();
+                            }
+
+                            if (!useDoubleQuote) {
+                                line = line.Replace("\x01", "");
                             }
 
                             writer.WriteLine(line);
