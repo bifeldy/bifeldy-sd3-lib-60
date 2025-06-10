@@ -309,7 +309,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             Exception exception = null;
             try {
                 if (!useRawQueryWithoutParam) {
-                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding, commandTimeoutSeconds);
+                    return await base.BulkGetCsv(queryString, delimiter, filename, bindParam, outputFolderPath, useRawQueryWithoutParam, includeHeader, useDoubleQuote, allUppercase, encoding ?? Encoding.UTF8, commandTimeoutSeconds);
                 }
 
                 if (bindParam != null) {
@@ -402,7 +402,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding);
+            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding ?? Encoding.UTF8);
         }
 
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {

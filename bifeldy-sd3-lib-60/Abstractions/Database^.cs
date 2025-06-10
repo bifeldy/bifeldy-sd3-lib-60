@@ -423,7 +423,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
                 string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks}";
                 using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess, commandTimeoutSeconds)) {
-                    rdr.ToCsv(delimiter, tempPath, includeHeader, useDoubleQuote, allUppercase, encoding);
+                    rdr.ToCsv(delimiter, tempPath, includeHeader, useDoubleQuote, allUppercase, encoding ?? Encoding.UTF8);
                 }
 
                 string realPath = Path.Combine(outputFolderPath ?? this._gs.CsvFolderPath, filename);

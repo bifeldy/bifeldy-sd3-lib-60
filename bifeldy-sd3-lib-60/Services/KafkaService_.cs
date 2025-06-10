@@ -49,7 +49,7 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
 
-        private readonly TimeSpan timeout = TimeSpan.FromSeconds(600);
+        private readonly TimeSpan timeout = TimeSpan.FromSeconds(600); // 10 Minutes
 
         readonly IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
 

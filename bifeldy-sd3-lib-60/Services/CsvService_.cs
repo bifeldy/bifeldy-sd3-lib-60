@@ -83,7 +83,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public DataTable Csv2DataTable(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string tableName = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null) {
             var fi = new FileInfo(filePath);
 
-            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(fi.FullName, delimiter, csvColumn, nullValue, eolDelimiter, encoding)) {
+            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(fi.FullName, delimiter, csvColumn, nullValue, eolDelimiter, encoding ?? Encoding.UTF8)) {
                 DataTable dt = csv.AsDataTable(tableName ?? fi.Name);
 
                 foreach (DataRow row in dt.Rows) {
@@ -103,7 +103,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null) {
             var sb = new StringBuilder();
 
-            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(new FileInfo(filePath).FullName, delimiter, csvColumn, nullValue, eolDelimiter, encoding)) {
+            using (ChoCSVReader<dynamic> csv = this.ChoEtlSetupCsv(new FileInfo(filePath).FullName, delimiter, csvColumn, nullValue, eolDelimiter, encoding ?? Encoding.UTF8)) {
                 IEnumerable<Dictionary<string, object>> cleaned = csv.Select(record => {
                     var dict = new Dictionary<string, object>();
                     foreach (dynamic kvp in record) {
@@ -127,7 +127,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public IDataReader Csv2DataReader(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null) {
-            return this.ChoEtlSetupCsv(new FileInfo(filePath).FullName, delimiter, csvColumn, nullValue, eolDelimiter, encoding).AsDataReader();
+            return this.ChoEtlSetupCsv(new FileInfo(filePath).FullName, delimiter, csvColumn, nullValue, eolDelimiter, encoding ?? Encoding.UTF8).AsDataReader();
         }
 
         public IEnumerable<T> Csv2Enumerable<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null) {

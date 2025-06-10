@@ -219,7 +219,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
-            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding);
+            return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding ?? Encoding.UTF8);
         }
 
         public COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid) {
