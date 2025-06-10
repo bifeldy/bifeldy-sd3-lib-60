@@ -364,7 +364,9 @@ namespace bifeldy_sd3_lib_60.Databases {
                             }
 
                             if (!useDoubleQuote) {
-                                line = line.Replace("\x01", "");
+                                if (line.Contains("\x01")) {
+                                    line = line.Replace("\x01", "");
+                                }
                             }
 
                             writer.WriteLine(line);
