@@ -235,21 +235,23 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 _ = await this._scheduler.DeleteJobs(jobKeys);
 
-                _ = await db.ExecQueryAsync(
-                    $@"
-                        UPDATE api_quartz_job_queue
-                        SET
-                            error_message = :error_message
-                        WHERE
-                            app_name = :app_name
-                            AND job_name IN (:job_name)
-                    ",
-                    new List<CDbQueryParamBind>() {
-                        new() { NAME = "error_message", VALUE = reason },
-                        new() { NAME = "app_name", VALUE = this._app.AppName.ToUpper() },
-                        new() { NAME = "job_name", VALUE = jks.ToArray() }
-                    }
-                );
+                if (jks.Count > 0) {
+                    _ = await db.ExecQueryAsync(
+                        $@"
+                            UPDATE api_quartz_job_queue
+                            SET
+                                error_message = :error_message
+                            WHERE
+                                app_name = :app_name
+                                AND job_name IN (:job_name)
+                        ",
+                        new List<CDbQueryParamBind>() {
+                            new() { NAME = "error_message", VALUE = reason },
+                            new() { NAME = "app_name", VALUE = this._app.AppName.ToUpper() },
+                            new() { NAME = "job_name", VALUE = jks.ToArray() }
+                        }
+                    );
+                }
             }
         }
 
