@@ -16,6 +16,7 @@ using System.Text;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
@@ -23,22 +24,23 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
-        HttpClient CreateHttpClient(int timeoutSeconds = 600);
-        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, int timeoutSeconds = 600);
-        Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null);
-        Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, int timeoutSeconds = 600, Encoding encoding = null);
-        Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null);
+        HttpClient CreateHttpClient(uint timeoutSeconds = 15);
+        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 15);
+        Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null);
+        Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
+        Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null);
     }
 
     [SingletonServiceRegistration]
     public sealed class CHttpService : IHttpService {
 
+        private readonly ILogger<CHttpService> _logger;
         private readonly IConverterService _cs;
 
         private string[] ProhibitedHeaders { get; } = new string[] {
@@ -57,7 +59,8 @@ namespace bifeldy_sd3_lib_60.Services {
             "content-encoding", "set-cookie"
         };
 
-        public CHttpService(IConverterService cs) {
+        public CHttpService(ILogger<CHttpService> logger, IConverterService cs) {
+            this._logger = logger;
             this._cs = cs;
         }
 
@@ -91,7 +94,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return content;
         }
 
-        private async Task<HttpRequestMessage> FetchApi(
+        private async Task<HttpRequestMessage> ParseApiData(
             string httpUri, HttpMethod httpMethod,
             dynamic httpContent = null, bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
             string[] contentKeyName = null, string[] contentType = null,
@@ -152,13 +155,35 @@ namespace bifeldy_sd3_lib_60.Services {
             return httpRequestMessage;
         }
 
-        public HttpClient CreateHttpClient(int timeoutSeconds = 600) {
+        public async Task<HttpResponseMessage> SendWithRetry(HttpRequestMessage httpRequestMessage, uint timeoutSeconds = 15, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead) {
+            HttpResponseMessage httpResponseMessage = null;
+            HttpClient httpClient = this.CreateHttpClient(timeoutSeconds);
+
+            for (int retry = 0; retry < maxRetry; retry++) {
+                try {
+                    httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, readOpt);
+                    if (((int)httpResponseMessage.StatusCode) < 500) {
+                        break;
+                    }
+                }
+                catch (Exception ex) {
+                    this._logger.LogError("[HTTP_REQUEST_{method}] {ex.Message}", httpRequestMessage.Method.Method, ex.Message);
+                }
+                finally {
+                    await Task.Delay(Math.Min((int)timeoutSeconds / 3 * retry, 5 * retry));
+                }
+            }
+
+            return httpResponseMessage;
+        }
+
+        public HttpClient CreateHttpClient(uint timeoutSeconds = 15) {
             return new HttpClient() {
                 Timeout = TimeSpan.FromSeconds(timeoutSeconds)
             };
         }
 
-        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, int timeoutSeconds = 600) {
+        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 15) {
             string[] hdrListReq = this.ProhibitedHeaders.Union(this.RequestHeadersToRemove).ToArray();
             var lsHeader = new List<Tuple<string, string>>();
             foreach (KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues> header in request.Headers) {
@@ -182,7 +207,7 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             HttpResponseMessage res = await this.CreateHttpClient(timeoutSeconds).SendAsync(
-                await this.FetchApi(
+                await this.ParseApiData(
                     urlTarget,
                     new HttpMethod(request.Method),
                     request,
@@ -243,40 +268,49 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await this.FetchApi(urlPath, HttpMethod.Head, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await this.ParseApiData(urlPath, HttpMethod.Head, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await this.FetchApi(urlPath, HttpMethod.Get, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8), readOpt);
+        public async Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await this.ParseApiData(urlPath, HttpMethod.Get, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry, readOpt);
         }
 
-        public async Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await this.FetchApi(urlPath, HttpMethod.Delete, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await this.ParseApiData(urlPath, HttpMethod.Delete, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await FetchApi(urlPath, HttpMethod.Post, objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await ParseApiData(urlPath, HttpMethod.Post, objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await FetchApi(urlPath, HttpMethod.Put, objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await ParseApiData(urlPath, HttpMethod.Put, objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await this.FetchApi(urlPath, new HttpMethod("CONNECT"), httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await this.ParseApiData(urlPath, new HttpMethod("CONNECT"), httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await this.FetchApi(urlPath, new HttpMethod("OPTIONS"), httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await this.ParseApiData(urlPath, new HttpMethod("OPTIONS"), httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await FetchApi(urlPath, new HttpMethod("PATCH"), objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await ParseApiData(urlPath, new HttpMethod("PATCH"), objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
-        public async Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, int timeoutSeconds = 600, Encoding encoding = null) {
-            return await this.CreateHttpClient(timeoutSeconds).SendAsync(await this.FetchApi(urlPath, HttpMethod.Trace, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8));
+        public async Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 15, uint maxRetry = 3, Encoding encoding = null) {
+            HttpRequestMessage httpRequestMessage = await this.ParseApiData(urlPath, HttpMethod.Trace, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8);
+            return await this.SendWithRetry(httpRequestMessage, timeoutSeconds, maxRetry);
         }
 
     }
