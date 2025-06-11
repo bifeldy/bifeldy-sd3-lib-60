@@ -13,6 +13,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace bifeldy_sd3_lib_60.Extensions {
@@ -24,20 +25,31 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
             if (dr.HasRows) {
                 while (dr.Read() && !token.IsCancellationRequested) {
-                    var cols = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
-                    for (int i = 0; i < dr.FieldCount; i++) {
-                        if (!dr.IsDBNull(i)) {
-                            cols[dr.GetName(i).ToUpper()] = dr.GetValue(i);
+                    T objT = default;
+
+                    Type t = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+                    if (t.IsPrimitive || t == typeof(string) || t == typeof(DateTime)) {
+                        if (!dr.IsDBNull(0)) {
+                            objT = (T)dr.GetValue(0);
                         }
                     }
+                    else {
+                        objT = Activator.CreateInstance<T>();
 
-                    T objT = Activator.CreateInstance<T>();
-                    foreach (PropertyInfo pro in properties) {
-                        string key = pro.Name.ToUpper();
-                        if (cols.ContainsKey(key)) {
-                            dynamic val = cols[key];
-                            if (val != null) {
-                                pro.SetValue(objT, val);
+                        var cols = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
+                        for (int i = 0; i < dr.FieldCount; i++) {
+                            if (!dr.IsDBNull(i)) {
+                                cols[dr.GetName(i).ToUpper()] = dr.GetValue(i);
+                            }
+                        }
+
+                        foreach (PropertyInfo pro in properties) {
+                            string key = pro.Name.ToUpper();
+                            if (cols.ContainsKey(key)) {
+                                dynamic val = cols[key];
+                                if (val != null) {
+                                    pro.SetValue(objT, val);
+                                }
                             }
                         }
                     }
