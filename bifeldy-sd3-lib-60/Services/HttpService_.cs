@@ -155,7 +155,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return httpRequestMessage;
         }
 
-        public async Task<HttpResponseMessage> SendWithRetry(HttpRequestMessage httpRequestMessage, uint timeoutSeconds = 15, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead) {
+        private async Task<HttpResponseMessage> SendWithRetry(HttpRequestMessage httpRequestMessage, uint timeoutSeconds = 15, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead) {
             HttpResponseMessage httpResponseMessage = null;
             HttpClient httpClient = this.CreateHttpClient(timeoutSeconds);
 
