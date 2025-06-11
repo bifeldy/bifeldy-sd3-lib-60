@@ -58,7 +58,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return ls;
         }
 
-        public static void ToCsv(this DbDataReader dr, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public static async Task ToCsv(this DbDataReader dr, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, CancellationToken token = default) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.UTF8)) {
                 if (includeHeader) {
                     string header = string.Join(delimiter, Enumerable.Range(0, dr.FieldCount).Select(i => {
@@ -75,10 +75,10 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return text;
                     }));
 
-                    streamWriter.WriteLine(header);
+                    await streamWriter.WriteAsync(header.AsMemory(), token);
                 }
 
-                while (dr.Read()) {
+                while (await dr.ReadAsync(token)) {
                     string line = string.Join(delimiter, Enumerable.Range(0, dr.FieldCount).Select(i => {
                         if (dr.IsDBNull(i)) {
                             return "";
@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return text;
                     }));
 
-                    streamWriter.WriteLine(line);
+                    await streamWriter.WriteAsync(line.AsMemory(), token);
                 }
             }
         }

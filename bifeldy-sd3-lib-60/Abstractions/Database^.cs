@@ -42,15 +42,15 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task TransactionCommit(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task TransactionRollback(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600);
-        Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
-        Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
-        Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600);
-        Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
-        Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600);
-        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600);
-        Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600);
-        Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600);
+        Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
     }
 
     public abstract partial class CDatabase : DbContext, IDatabase, ICloneable {
@@ -217,13 +217,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return dt.Columns;
         }
 
-        protected virtual async Task<DataTable> GetDataTableAsync(DbCommand databaseCommand) {
+        protected virtual async Task<DataTable> GetDataTableAsync(DbCommand databaseCommand, CancellationToken token = default) {
             var result = new DataTable();
             Exception exception = null;
             try {
                 // await OpenConnection();
                 // dataAdapter.Fill(result);
-                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand)) {
+                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.Default, token)) {
                     result.Load(dr);
                 }
             }
@@ -242,7 +242,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             var result = new List<T>();
             Exception exception = null;
             try {
-                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess)) {
+                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess, token)) {
                     result = dr.ToList(token, callback);
                 }
             }
@@ -257,12 +257,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<T> ExecScalarAsync<T>(DbCommand databaseCommand) {
+        protected virtual async Task<T> ExecScalarAsync<T>(DbCommand databaseCommand, CancellationToken token = default) {
             T result = default;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                object _obj = await databaseCommand.ExecuteScalarAsync();
+                object _obj = await databaseCommand.ExecuteScalarAsync(token);
                 if (_obj != null && _obj != DBNull.Value) {
                     result = this._cs.ObjectToT<T>(_obj);
                 }
@@ -278,12 +278,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false) {
+        protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, CancellationToken token = default) {
             bool result = false;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                int res = await databaseCommand.ExecuteNonQueryAsync();
+                int res = await databaseCommand.ExecuteNonQueryAsync(token);
                 result = shouldEqualMinRowsAffected ? res == minRowsAffected : res >= minRowsAffected;
             }
             catch (Exception ex) {
@@ -297,7 +297,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<CDbExecProcResult> ExecProcedureAsync(DbCommand databaseCommand) {
+        protected virtual async Task<CDbExecProcResult> ExecProcedureAsync(DbCommand databaseCommand, CancellationToken token = default) {
             var result = new CDbExecProcResult() {
                 STATUS = false,
                 QUERY = databaseCommand.CommandText,
@@ -306,7 +306,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                result.STATUS = await databaseCommand.ExecuteNonQueryAsync() == -1;
+                result.STATUS = await databaseCommand.ExecuteNonQueryAsync(token) == -1;
                 result.PARAMETERS = databaseCommand.Parameters;
             }
             catch (Exception ex) {
@@ -323,12 +323,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         /// <summary> Saat Setelah Selesai Baca Dan Tidak Digunakan Lagi </summary>
         /// <summary> Bisa Pakai Manual Panggil Fungsi Close / Commit / Rollback Di Atas </summary>
-        protected virtual async Task<DbDataReader> ExecReaderAsync(DbCommand databaseCommand, CommandBehavior commandBehavior = CommandBehavior.Default) {
+        protected virtual async Task<DbDataReader> ExecReaderAsync(DbCommand databaseCommand, CommandBehavior commandBehavior, CancellationToken token = default) {
             DbDataReader result = null;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                result = await databaseCommand.ExecuteReaderAsync(commandBehavior);
+                result = await databaseCommand.ExecuteReaderAsync(commandBehavior, token);
             }
             catch (Exception ex) {
                 this._logger.LogError("[EXEC_READER] {ex}", ex.Message);
@@ -342,19 +342,19 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<List<string>> RetrieveBlob(DbCommand databaseCommand, string stringPathDownload, string stringFileName = null, Encoding encoding = null) {
+        protected virtual async Task<List<string>> RetrieveBlob(DbCommand databaseCommand, string stringPathDownload, string stringFileName = null, Encoding encoding = null, CancellationToken token = default) {
             var result = new List<string>();
             Exception exception = null;
             try {
                 string _oldCmdTxt = databaseCommand.CommandText;
                 databaseCommand.CommandText = $"SELECT COUNT(*) FROM ( {_oldCmdTxt} ) RetrieveBlob_{DateTime.Now.Ticks}";
-                ulong _totalFiles = await this.ExecScalarAsync<ulong>(databaseCommand);
+                ulong _totalFiles = await this.ExecScalarAsync<ulong>(databaseCommand, token);
                 if (_totalFiles <= 0) {
                     throw new Exception("File Tidak Ditemukan");
                 }
 
                 databaseCommand.CommandText = _oldCmdTxt;
-                using (DbDataReader rdrGetBlob = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess)) {
+                using (DbDataReader rdrGetBlob = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess, token)) {
                     if (string.IsNullOrEmpty(stringFileName) && rdrGetBlob.FieldCount != 2) {
                         throw new Exception($"Jika Nama File Kosong Maka Harus Berjumlah 2 Kolom{Environment.NewLine}SELECT kolom_blob_data, kolom_nama_file FROM ...");
                     }
@@ -365,7 +365,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     int bufferSize = 1024;
                     byte[] outByte = new byte[bufferSize];
 
-                    while (await rdrGetBlob.ReadAsync()) {
+                    while (await rdrGetBlob.ReadAsync(token)) {
                         string filePath = Path.Combine(stringPathDownload, stringFileName);
 
                         if (rdrGetBlob.FieldCount == 2) {
@@ -412,7 +412,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600) {
+        public virtual async Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParamWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
             string result = null;
             Exception exception = null;
             try {
@@ -422,8 +422,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 }
 
                 string sqlQuery = $"SELECT * FROM ({queryString}) alias_{DateTime.Now.Ticks}";
-                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess, commandTimeoutSeconds)) {
-                    rdr.ToCsv(delimiter, tempPath, includeHeader, useDoubleQuote, allUppercase, encoding ?? Encoding.UTF8);
+                using (DbDataReader rdr = await this.ExecReaderAsync(sqlQuery, bindParam, CommandBehavior.SequentialAccess, commandTimeoutSeconds, token)) {
+                    await rdr.ToCsv(delimiter, tempPath, includeHeader, useDoubleQuote, allUppercase, encoding ?? Encoding.UTF8, token);
                 }
 
                 string realPath = Path.Combine(outputFolderPath ?? this._gs.CsvFolderPath, filename);
@@ -452,14 +452,14 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         protected abstract void BindQueryParameter(DbCommand databaseCommand, List<CDbQueryParamBind> parameters);
 
         public abstract Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600);
-        public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
+        public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
-        public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
-        public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600);
-        public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600);
-        public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600);
-        public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600);
-        public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600);
+        public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
 
     }
 

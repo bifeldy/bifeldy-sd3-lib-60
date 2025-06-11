@@ -69,7 +69,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return table;
         }
 
-        public static void ToCsv<T>(this List<T> listData, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null) {
+        public static async Task ToCsv<T>(this List<T> listData, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, CancellationToken token = default) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.UTF8)) {
                 PropertyInfo[] properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
@@ -88,7 +88,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return name;
                     }));
 
-                    streamWriter.WriteLine(headerLine);
+                    await streamWriter.WriteLineAsync(headerLine.AsMemory(), token);
                 }
 
                 foreach (T item in listData) {
@@ -112,7 +112,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return text;
                     }));
 
-                    streamWriter.WriteLine(line);
+                    await streamWriter.WriteAsync(line.AsMemory(), token);
                 }
             }
         }

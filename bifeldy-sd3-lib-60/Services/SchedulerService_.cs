@@ -31,6 +31,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, Func<Task<bool>> forceCreateNew = null);
         public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
         public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
+        Task CancelAndDeleteJob(JobKey[] jobKeys, IDatabase db, string reason = "Job Dibatalkan");
     }
 
     [SingletonServiceRegistration]
@@ -215,6 +216,41 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
             return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelayInterval(jobName, action, initialDelay, interval) : null;
+        }
+
+        public async Task CancelAndDeleteJob(JobKey[] jobKeys, IDatabase db, string reason = "Job Dibatalkan") {
+            if (jobKeys?.Count() > 0) {
+                var jks = new List<string>();
+
+                foreach (JobKey jobKey in jobKeys) {
+                    IJobDetail jobDetail = null;
+                    if (jobKey != null) {
+                        jobDetail = await this._scheduler.GetJobDetail(jobKey);
+                    }
+
+                    if (jobDetail != null) {
+                        jks.Add(jobDetail.Key.Name);
+                    }
+                }
+
+                _ = await this._scheduler.DeleteJobs(jobKeys);
+
+                _ = await db.ExecQueryAsync(
+                    $@"
+                        UPDATE api_quartz_job_queue
+                        SET
+                            error_message = :error_message
+                        WHERE
+                            app_name = :app_name
+                            AND job_name IN (:job_name)
+                    ",
+                    new List<CDbQueryParamBind>() {
+                        new() { NAME = "error_message", VALUE = reason },
+                        new() { NAME = "app_name", VALUE = this._app.AppName.ToUpper() },
+                        new() { NAME = "job_name", VALUE = jks.ToArray() }
+                    }
+                );
+            }
         }
 
     }

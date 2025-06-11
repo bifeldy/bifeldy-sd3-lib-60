@@ -23,8 +23,8 @@ namespace bifeldy_sd3_lib_60.Services {
         void CopyTo(Stream src, Stream dest);
         string GZipDecompressString(byte[] byteData);
         byte[] GZipCompressString(string text);
-        List<byte[]> ReadFileAsBinaryChunk(string filePath, int maxChunk = 1024);
-        MemoryStream ReadFileAsBinaryStream(string filePath, int maxChunk = 1024);
+        Task<List<byte[]>> ReadFileAsBinaryChunk(string filePath, int maxChunk = 1024, CancellationToken token = default);
+        Task<MemoryStream> ReadFileAsBinaryStream(string filePath, int maxChunk = 1024, CancellationToken token = default);
     }
 
     [SingletonServiceRegistration]
@@ -67,9 +67,9 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public List<byte[]> ReadFileAsBinaryChunk(string filePath, int maxChunk = 1024) {
+        public async Task<List<byte[]>> ReadFileAsBinaryChunk(string filePath, int maxChunk = 1024, CancellationToken token = default) {
             var res = new List<byte[]>();
-            using (MemoryStream ms = this.ReadFileAsBinaryStream(filePath, maxChunk)) {
+            using (MemoryStream ms = await this.ReadFileAsBinaryStream(filePath, maxChunk, token)) {
                 byte[] data = ms.ToArray();
                 foreach (byte[] d in data.Split(maxChunk)) {
                     res.Add(d);
@@ -79,13 +79,13 @@ namespace bifeldy_sd3_lib_60.Services {
             return res;
         }
 
-        public MemoryStream ReadFileAsBinaryStream(string filePath, int maxChunk = 1024) {
+        public async Task<MemoryStream> ReadFileAsBinaryStream(string filePath, int maxChunk = 1024, CancellationToken token = default) {
             var dest = new MemoryStream();
             using (Stream source = File.OpenRead(filePath)) {
                 byte[] buffer = new byte[maxChunk];
                 int bytesRead = 0;
-                while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0) {
-                    dest.Write(buffer, 0, bytesRead);
+                while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length, token)) > 0) {
+                    await dest.WriteAsync(buffer, 0, bytesRead);
                 }
             }
 
