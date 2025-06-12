@@ -200,7 +200,7 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.imageFolderPath = value;
         }
 
-        private int maxRetentionDays = 14 * 24; // Pakainya Jam Soalnya ~
+        private int maxRetentionDays = 14;
         public int MAX_RETENTIONS_DAYS {
             get {
                 string maxRetentionDaysEnv = GetEnvVar("MAX_RETENTIONS_DAYS");

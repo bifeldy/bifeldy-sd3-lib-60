@@ -93,13 +93,14 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public void CleanUp(bool clearWorkingFileDirectories = true) {
-            this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), this._envVar.MAX_RETENTIONS_DAYS);
-            this.DeleteOldFilesInFolder(this._gs.BackupFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+            int daysFromHours = this._envVar.MAX_RETENTIONS_DAYS * 24; // Pakainya Jam
+            this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), daysFromHours);
+            this.DeleteOldFilesInFolder(this._gs.BackupFolderPath, daysFromHours);
             if (clearWorkingFileDirectories) {
-                this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-                this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-                this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
-                this.DeleteOldFilesInFolder(this._gs.TempFolderPath, this._envVar.MAX_RETENTIONS_DAYS);
+                this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.TempFolderPath, daysFromHours);
             }
         }
 
