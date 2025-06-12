@@ -89,14 +89,14 @@ namespace bifeldy_sd3_lib_60.Conventions {
                 }
 
                 foreach (ActionModel action in controller.Actions) {
-                    foreach(object actAttrib in action.Attributes) {
+                    foreach (object actAttrib in action.Attributes) {
                         Type type = actAttrib.GetType();
                         if (typesToCheck.Contains(type)) {
                             this.SwaggerHide(type, action, kodeDc, jenisDc);
                         }
                     }
                     
-                    foreach(Type type in typeToHide) {
+                    foreach (Type type in typeToHide) {
                         this.SwaggerHide(type, action, kodeDc, jenisDc);
                     }
                 }

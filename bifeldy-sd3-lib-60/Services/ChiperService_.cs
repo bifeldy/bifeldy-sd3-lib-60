@@ -58,11 +58,13 @@ namespace bifeldy_sd3_lib_60.Services {
 
         // This constant is used to determine the keysize of the encryption algorithm in bits.
         // We divide this by 8 within the code below to get the equivalent number of bytes.
-        private const int Keysize = 128;
-        private const int Blocksize = 128;
+        private const int KEY_SIZE = 128;
+        private const int BLOCK_SIZE = 128;
 
         // This constant determines the number of iterations for the password bytes generation function.
-        private const int DerivationIterations = 1000;
+        private const int DERIVATION_ITERATIONS = 1000;
+
+        private const int MAX_CONTENT = 256;
 
         private string pubKeyPath { get; }
         private string privKeyPath { get; }
@@ -100,10 +102,10 @@ namespace bifeldy_sd3_lib_60.Services {
             byte[] saltStringBytes = this.Generate128BitsOfRandomEntropy();
             byte[] ivStringBytes = this.Generate128BitsOfRandomEntropy();
             byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
-                byte[] keyBytes = password.GetBytes(Keysize / 8);
+            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DERIVATION_ITERATIONS)) {
+                byte[] keyBytes = password.GetBytes(KEY_SIZE / 8);
                 using (var symmetricKey = Aes.Create()) {
-                    symmetricKey.BlockSize = Blocksize;
+                    symmetricKey.BlockSize = BLOCK_SIZE;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform encryptor = symmetricKey.CreateEncryptor(keyBytes, ivStringBytes)) {
@@ -131,15 +133,15 @@ namespace bifeldy_sd3_lib_60.Services {
             // [32 bytes of Salt] + [32 bytes of IV] + [n bytes of CipherText]
             byte[] cipherTextBytesWithSaltAndIv = Convert.FromBase64String(cipherText);
             // Get the saltbytes by extracting the first 32 bytes from the supplied cipherText bytes.
-            byte[] saltStringBytes = cipherTextBytesWithSaltAndIv.Take(Keysize / 8).ToArray();
+            byte[] saltStringBytes = cipherTextBytesWithSaltAndIv.Take(KEY_SIZE / 8).ToArray();
             // Get the IV bytes by extracting the next 32 bytes from the supplied cipherText bytes.
-            byte[] ivStringBytes = cipherTextBytesWithSaltAndIv.Skip(Keysize / 8).Take(Keysize / 8).ToArray();
+            byte[] ivStringBytes = cipherTextBytesWithSaltAndIv.Skip(KEY_SIZE / 8).Take(KEY_SIZE / 8).ToArray();
             // Get the actual cipher text bytes by removing the first 64 bytes from the cipherText string.
-            byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip(Keysize / 8 * 2).Take(cipherTextBytesWithSaltAndIv.Length - (Keysize / 8 * 2)).ToArray();
-            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations)) {
-                byte[] keyBytes = password.GetBytes(Keysize / 8);
+            byte[] cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip(KEY_SIZE / 8 * 2).Take(cipherTextBytesWithSaltAndIv.Length - (KEY_SIZE / 8 * 2)).ToArray();
+            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DERIVATION_ITERATIONS)) {
+                byte[] keyBytes = password.GetBytes(KEY_SIZE / 8);
                 using (var symmetricKey = Aes.Create()) {
-                    symmetricKey.BlockSize = Blocksize;
+                    symmetricKey.BlockSize = BLOCK_SIZE;
                     symmetricKey.Mode = CipherMode.CBC;
                     symmetricKey.Padding = PaddingMode.PKCS7;
                     using (ICryptoTransform decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes)) {
@@ -195,11 +197,10 @@ namespace bifeldy_sd3_lib_60.Services {
                 throw new FileNotFoundException(filePath + " Not Found");
             }
 
-            const int maxContent = 256;
-            byte[] buffer = new byte[maxContent];
+            byte[] buffer = new byte[MAX_CONTENT];
             using (var fs = new FileStream(filePath, FileMode.Open)) {
-                if (fs.Length >= maxContent) {
-                    _ = fs.Read(buffer, 0, maxContent);
+                if (fs.Length >= MAX_CONTENT) {
+                    _ = fs.Read(buffer, 0, MAX_CONTENT);
                 }
                 else {
                     _ = fs.Read(buffer, 0, (int) fs.Length);
@@ -208,7 +209,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
             IntPtr mimeTypePtr = IntPtr.Zero;
             try {
-                int result = FindMimeFromData(IntPtr.Zero, null, buffer, maxContent, null, 0, out mimeTypePtr, 0);
+                int result = FindMimeFromData(IntPtr.Zero, null, buffer, MAX_CONTENT, null, 0, out mimeTypePtr, 0);
                 if (result != 0) {
                     Marshal.FreeCoTaskMem(mimeTypePtr);
                     throw Marshal.GetExceptionForHR(result);

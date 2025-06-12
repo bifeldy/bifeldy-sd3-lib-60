@@ -21,8 +21,8 @@ namespace bifeldy_sd3_lib_60.TableView {
     public sealed class API_QUARTZ_JOB_QUEUE : EntityTableView {
         [Key][JsonIgnore] public string APP_NAME { set; get; }
         [Key] public string JOB_NAME { set; get; }
-        public bool? ACTIVE { set; get; }
-        public DateTime? START_AT { set; get; } // Tambahan Doank Ini Di Tabel Database Aslinya Ga Ada ~
+        public string STATUS { set; get; } // Tambahan Doank Ini Di Tabel Database Aslinya Ga Ada ~
+        public DateTime? START_AT { set; get; }
         public DateTime? COMPLETED_AT { set; get; }
         public string ERROR_MESSAGE { set; get; }
     }

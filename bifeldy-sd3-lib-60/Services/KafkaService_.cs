@@ -51,7 +51,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly TimeSpan timeout = TimeSpan.FromSeconds(600); // 10 Minutes
 
-        readonly IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
+        private readonly IDictionary<string, dynamic> keyValuePairs = new ExpandoObject();
+
+        private const ulong COMMIT_AFTER_N_MESSAGES = 10;
 
         public CKafkaService(ILogger<CKafkaService> logger, IConverterService converter, IPubSubService pubSub) {
             this._logger = logger;
@@ -219,7 +221,6 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public async Task CreateKafkaConsumerListener<T>(string hostPort, string topicName, string groupId, string suffixKodeDc = null, Action<Message<string, T>> execLambda = null, string pubSubName = null, CancellationToken stoppingToken = default) {
-            const ulong COMMIT_AFTER_N_MESSAGES = 10; 
             (topicName, groupId) = this.GetTopicNameConsumerListener(topicName, groupId, suffixKodeDc);
             await this.CreateTopicIfNotExist(hostPort, topicName);
             string key = !string.IsNullOrEmpty(pubSubName) ? pubSubName : $"KAFKA_CONSUMER_{hostPort.ToUpper()}#{topicName.ToUpper()}";

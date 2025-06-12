@@ -24,16 +24,16 @@ namespace bifeldy_sd3_lib_60.Extensions {
         //     <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss:fffZ"))</SourceRevisionId>
         // </PropertyGroup>
 
-        const string BuildVersionMetadataPrefix = "+build";
+        private const string BUILD_VERSION_METADATA_PREFIX = "+build";
 
         public static DateTime? GetLinkerBuildTime(this Assembly assembly) {
 
             AssemblyInformationalVersionAttribute attribute = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             if (attribute?.InformationalVersion != null) {
                 string value = attribute.InformationalVersion;
-                int index = value.IndexOf(BuildVersionMetadataPrefix);
+                int index = value.IndexOf(BUILD_VERSION_METADATA_PREFIX);
                 if (index > 0) {
-                    value = value[(index + BuildVersionMetadataPrefix.Length)..];
+                    value = value[(index + BUILD_VERSION_METADATA_PREFIX.Length)..];
                     return DateTime.ParseExact(value, "yyyy-MM-ddTHH:mm:ss:fffZ", CultureInfo.InvariantCulture);
                 }
             }

@@ -19,6 +19,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class SchedulerExtensions {
 
+        private const string SCHEDULER_HIT_AND_RUN_GROUP = "HIT_AND_RUN";
+
         public static Task<DateTimeOffset> ScheduleJobRunNow(this IScheduler scheduler, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task>> action) {
             string jobName = string.Join("___", action.Select(a => a.Key));
             var jobData = new JobDataMap();
@@ -27,7 +29,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 jobData.Add(kvp.Key, kvp.Value);
             }
 
-            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName).UsingJobData(jobData).Build();
+            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).Build();
             ITrigger trigger = TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(1))).Build();
 
             return scheduler.ScheduleJob(jobDetail, trigger);
@@ -49,7 +51,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 jobData.Add(kvp.Key, kvp.Value);
             }
 
-            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName).UsingJobData(jobData).Build();
+            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).Build();
             ITrigger trigger = TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow.Add(initialDelay)).Build();
 
             return scheduler.ScheduleJob(jobDetail, trigger);
@@ -71,7 +73,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 jobData.Add(kvp.Key, kvp.Value);
             }
 
-            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName).UsingJobData(jobData).Build();
+            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).Build();
 
             ITrigger trigger = TriggerBuilder.Create()
                 .StartAt(DateTimeOffset.UtcNow.Add(initialDelay))

@@ -73,7 +73,7 @@ namespace bifeldy_sd3_lib_60.Libraries {
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result) {
             result = null;
 
-            foreach(object idx in indexes) {
+            foreach (object idx in indexes) {
                 string keyName = idx.ToString();
                 if (this._fields.ContainsKey(keyName)) {
                     if (result == null) {

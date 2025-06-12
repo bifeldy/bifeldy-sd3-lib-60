@@ -67,12 +67,13 @@ namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
 
+        public const string DEFAULT_DATA_FOLDER = "_data";
+
         public static List<string> GRPC_ROUTH_PATH = new();
         public static List<string> SIGNALR_ROUTH_PATH = new();
         public static bool IS_USING_API_KEY = false;
-        public static string SIGNALR_PREFIX_HUB = "/signalr";
 
-        public static readonly string DEFAULT_DATA_FOLDER = "_data";
+        public static string SIGNALR_PREFIX_HUB = "/signalr";
 
         public static WebApplicationBuilder Builder = null;
         public static IServiceCollection Services = null;
