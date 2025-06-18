@@ -10,11 +10,10 @@
  * 
  */
 
+using System.ComponentModel;
 using System.Data;
-using System.IO;
 using System.Reflection;
 using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace bifeldy_sd3_lib_60.Extensions {
 
@@ -40,7 +39,16 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     string key = pro.Name.ToUpper();
                     if (cols.ContainsKey(key)) {
                         dynamic val = cols[key];
+
                         if (val != null) {
+                            TypeConverter converter = TypeDescriptor.GetConverter(pro.PropertyType);
+                            if (converter.CanConvertFrom(val.GetType())) {
+                                val = converter.ConvertFrom(val);
+                            }
+                            else {
+                                val = Convert.ChangeType(val, pro.PropertyType);
+                            }
+
                             pro.SetValue(objT, val);
                         }
                     }

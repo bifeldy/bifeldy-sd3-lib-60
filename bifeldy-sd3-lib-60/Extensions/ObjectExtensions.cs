@@ -58,12 +58,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
             }
 
             // Khusus collection / yang bisa di looping (list, array, enum, dict)
-            if (!propertyType.Equals(typeof(string)) && typeof(IEnumerable).IsAssignableFrom(propertyType)) {
+            if (typeof(IEnumerable).IsAssignableFrom(propertyType)) {
                 return ConvertIEnumerableToDictionary((IEnumerable) propertyInfo.GetValue(owner));
             }
 
             // Khusus tipe data standar (int, bool, ...) + string, udahan
-            if (propertyType.IsPrimitive || propertyType.Equals(typeof(string))) {
+            if (propertyType.IsPrimitive || propertyType == typeof(string) || propertyType == typeof(DateTime) || propertyType == typeof(decimal)) {
                 return propertyValue;
             }
 

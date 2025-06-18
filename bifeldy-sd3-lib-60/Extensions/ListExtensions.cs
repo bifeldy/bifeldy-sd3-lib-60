@@ -36,7 +36,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             // ListToDataTable(ls, "tblNm", "tblCl");
             //
 
-            if (typeof(T).IsValueType || typeof(T).Equals(typeof(string))) {
+            if (typeof(T).IsValueType || typeof(T) == typeof(string) || typeof(T) == typeof(DateTime) || typeof(T) == typeof(decimal)) {
                 if (string.IsNullOrEmpty(arrayListSingleValueColumnName)) {
                     throw new Exception("Nama Kolom Tabel Wajib Diisi");
                 }

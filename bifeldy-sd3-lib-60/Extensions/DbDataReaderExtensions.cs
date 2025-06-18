@@ -10,10 +10,10 @@
  * 
  */
 
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Reflection;
-using System.Runtime.Serialization;
 using System.Text;
 
 namespace bifeldy_sd3_lib_60.Extensions {
@@ -28,9 +28,19 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     T objT = default;
 
                     Type t = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-                    if (t.IsPrimitive || t == typeof(string) || t == typeof(DateTime)) {
+                    if (t.IsPrimitive || t == typeof(string) || t == typeof(DateTime) || t == typeof(decimal)) {
                         if (!dr.IsDBNull(0)) {
-                            objT = (T)dr.GetValue(0);
+                            dynamic val = dr.GetValue(0);
+
+                            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
+                            if (converter.CanConvertFrom(val.GetType())) {
+                                val = converter.ConvertFrom(val);
+                            }
+                            else {
+                                val = Convert.ChangeType(val, typeof(T));
+                            }
+
+                            objT = val;
                         }
                     }
                     else {
@@ -47,7 +57,16 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             string key = pro.Name.ToUpper();
                             if (cols.ContainsKey(key)) {
                                 dynamic val = cols[key];
+
                                 if (val != null) {
+                                    TypeConverter converter = TypeDescriptor.GetConverter(pro.PropertyType);
+                                    if (converter.CanConvertFrom(val.GetType())) {
+                                        val = converter.ConvertFrom(val);
+                                    }
+                                    else {
+                                        val = Convert.ChangeType(val, pro.PropertyType);
+                                    }
+
                                     pro.SetValue(objT, val);
                                 }
                             }
