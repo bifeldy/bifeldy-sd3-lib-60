@@ -280,11 +280,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         protected virtual async Task<int> ExecQueryWithResultAsync(DbCommand databaseCommand, CancellationToken token = default) {
-            int result = 0;
+            int affectedRows = 0;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                result = await databaseCommand.ExecuteNonQueryAsync(token);
+                affectedRows = await databaseCommand.ExecuteNonQueryAsync(token);
             }
             catch (Exception ex) {
                 this._logger.LogError("[EXEC_QUERY] {ex}", ex.Message);
@@ -294,12 +294,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 await this.CloseConnection();
             }
 
-            return (exception == null) ? result : throw exception;
+            return (exception == null) ? affectedRows : throw exception;
         }
 
         protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, CancellationToken token = default) {
-            int res = await this.ExecQueryWithResultAsync(databaseCommand, token);
-            return shouldEqualMinRowsAffected ? res == minRowsAffected : res >= minRowsAffected;
+            int affectedRows = await this.ExecQueryWithResultAsync(databaseCommand, token);
+            return shouldEqualMinRowsAffected ? affectedRows == minRowsAffected : affectedRows >= minRowsAffected;
         }
 
         protected virtual async Task<CDbExecProcResult> ExecProcedureAsync(DbCommand databaseCommand, CancellationToken token = default) {
