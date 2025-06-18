@@ -45,6 +45,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default);
@@ -278,13 +279,12 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
-        protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, CancellationToken token = default) {
-            bool result = false;
+        protected virtual async Task<int> ExecQueryWithResultAsync(DbCommand databaseCommand, CancellationToken token = default) {
+            int result = 0;
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                int res = await databaseCommand.ExecuteNonQueryAsync(token);
-                result = shouldEqualMinRowsAffected ? res == minRowsAffected : res >= minRowsAffected;
+                result = await databaseCommand.ExecuteNonQueryAsync(token);
             }
             catch (Exception ex) {
                 this._logger.LogError("[EXEC_QUERY] {ex}", ex.Message);
@@ -295,6 +295,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             }
 
             return (exception == null) ? result : throw exception;
+        }
+
+        protected virtual async Task<bool> ExecQueryAsync(DbCommand databaseCommand, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, CancellationToken token = default) {
+            int res = await this.ExecQueryWithResultAsync(databaseCommand, token);
+            return shouldEqualMinRowsAffected ? res == minRowsAffected : res >= minRowsAffected;
         }
 
         protected virtual async Task<CDbExecProcResult> ExecProcedureAsync(DbCommand databaseCommand, CancellationToken token = default) {
@@ -455,6 +460,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
         public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default);

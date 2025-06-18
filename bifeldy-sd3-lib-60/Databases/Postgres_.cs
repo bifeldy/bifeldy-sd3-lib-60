@@ -151,6 +151,14 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.ExecScalarAsync<T>(cmd, token);
         }
 
+        public override async Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
+            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            cmd.CommandText = queryString;
+            cmd.CommandType = CommandType.Text;
+            this.BindQueryParameter(cmd, bindParam);
+            return await this.ExecQueryWithResultAsync(cmd, token);
+        }
+
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
             var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
