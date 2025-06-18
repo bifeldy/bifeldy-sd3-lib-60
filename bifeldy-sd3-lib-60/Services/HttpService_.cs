@@ -170,7 +170,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     this._logger.LogError("[HTTP_REQUEST_{method}] {ex.Message}", httpRequestMessage.Method.Method, ex.Message);
                 }
                 finally {
-                    await Task.Delay(Math.Min((int)timeoutSeconds / (int)maxRetry * retry, 5 * retry));
+                    await Task.Delay(Math.Min((int)timeoutSeconds / (int)maxRetry * retry, 5 * retry) * 1000);
                 }
             }
 
