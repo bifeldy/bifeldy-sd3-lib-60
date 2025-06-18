@@ -36,12 +36,13 @@ namespace bifeldy_sd3_lib_60.Extensions {
             // ListToDataTable(ls, "tblNm", "tblCl");
             //
 
-            if (typeof(T).IsValueType || typeof(T) == typeof(string) || typeof(T) == typeof(DateTime) || typeof(T) == typeof(decimal)) {
+            Type t = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+            if (t.IsValueType || t == typeof(string) || t == typeof(DateTime) || t == typeof(decimal)) {
                 if (string.IsNullOrEmpty(arrayListSingleValueColumnName)) {
                     throw new Exception("Nama Kolom Tabel Wajib Diisi");
                 }
 
-                var dc = new DataColumn(arrayListSingleValueColumnName, typeof(T));
+                var dc = new DataColumn(arrayListSingleValueColumnName, t);
                 table.Columns.Add(dc);
                 foreach (T item in listData) {
                     DataRow dr = table.NewRow();
@@ -50,7 +51,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 }
             }
             else {
-                PropertyDescriptorCollection properties = TypeDescriptor.GetProperties(typeof(T));
+                PropertyDescriptorCollection properties = TypeDescriptor.GetProperties(t);
                 foreach (PropertyDescriptor prop in properties) {
                     _ = table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
                 }

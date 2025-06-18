@@ -28,6 +28,7 @@ using Microsoft.Extensions.Options;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using System.DirectoryServices.ActiveDirectory;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
@@ -191,7 +192,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             for (int i = 0; i < databaseCommand.Parameters.Count; i++) {
                 dynamic pVal = databaseCommand.Parameters[i].Value;
 
-                Type pValType = pVal?.GetType();
+                Type pValType = Nullable.GetUnderlyingType(pVal?.GetType()) ?? pVal?.GetType();
                 if (pValType == null || pValType == typeof(DBNull)) {
                     pVal = "NULL";
                 }
