@@ -13,12 +13,12 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
+using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Models;
-using Microsoft.Extensions.Options;
-using bifeldy_sd3_lib_60.Databases;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
@@ -60,9 +60,10 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             bool isSignalr = apiPathRequested.StartsWith(Bifeldy.SIGNALR_PREFIX_HUB);
             bool isApi = apiPathRequested.StartsWith("/api/");
             bool isSwagger = apiPathRequested.StartsWith("/api/swagger");
-            bool haveSecret = string.IsNullOrEmpty(context.Items["secret"]?.ToString());
 
-            if ((!isGrpc && !isSignalr && !isApi) || isSwagger || !haveSecret) {
+            string secret = context.Items["secret"]?.ToString();
+            bool haveSecret = !string.IsNullOrEmpty(secret);
+            if ((!isGrpc && !isSignalr && !isApi) || isSwagger || haveSecret) {
                 await this._next(context);
                 return;
             }
@@ -84,15 +85,17 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 this._gs.AllowedIpOrigin.Add(ipDomainProxy);
             }
 
-            string apiKey = this._gs.GetApiKeyData(request, await this._gs.GetRequestBody(request));
+            RequestJson reqBody = await this._gs.GetRequestBody(request);
+            string apiKey = this._gs.GetApiKeyData(request, reqBody);
             context.Items["api_key"] = apiKey;
             string ipOrigin = this._gs.GetIpOriginData(connection, request);
             context.Items["ip_origin"] = ipOrigin;
 
             this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);
 
-            // API Key Khusus Bypass ~ Case Sensitive
-            if (apiKey == this._chiper.HashText(this._app.AppName) || await _akRepo.CheckKeyOrigin(this._env.IS_USING_POSTGRES, _orapg, ipOrigin, apiKey)) {
+            // API Khusus Bypass ~ Case Sensitive
+            string hashText = this._chiper.HashText(this._app.AppName);
+            if (apiKey == hashText || await _akRepo.CheckKeyOrigin(this._env.IS_USING_POSTGRES, _orapg, ipOrigin, apiKey)) {
                 await this._next(context);
             }
             else {

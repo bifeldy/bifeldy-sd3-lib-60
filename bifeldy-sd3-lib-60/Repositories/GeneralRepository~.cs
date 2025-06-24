@@ -266,9 +266,12 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 string hashText = this._chiper.HashText(this._as.AppName);
                 request.Headers["x-api-key"] = hashText;
 
-                // API Key Khusus Bypass ~ Case Sensitive
+                // API Khusus Bypass ~ Case Sensitive
                 NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
+
+                queryApiDc.Set("secret", hashText);
                 queryApiDc.Set("key", hashText);
+                queryApiDc.Set("token", request.HttpContext.Items["token"]?.ToString());
 
                 string ipOrigin = this._gs.GetIpOriginData(request.HttpContext.Connection, request.HttpContext.Request, true);
                 queryApiDc.Set("mask_ip", this._chiper.EncryptText(ipOrigin));

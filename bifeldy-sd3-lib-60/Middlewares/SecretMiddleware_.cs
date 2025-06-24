@@ -52,7 +52,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             this._chiper = chiper;
         }
 
-        public async Task Invoke(HttpContext context, IOraPg _orapg, IApiKeyRepository _akRepo, IGeneralRepository _generalRepo) {
+        public async Task Invoke(HttpContext context, IOraPg _orapg, IApiKeyRepository _akRepo) {
             ConnectionInfo connection = context.Connection;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -80,17 +80,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 bool allowed = false;
                 string hashText = this._chiper.HashText(this._app.AppName);
 
-                bool isHo = await _generalRepo.IsHo(this._env.IS_USING_POSTGRES, _orapg);
-                if (isHo) {
-                    if (await _akRepo.SecretLogin(this._env.IS_USING_POSTGRES, _orapg, secret) != null) {
-                        allowed = true;
-                    }
-                }
-                else {
-                    string apiKey = this._gs.GetApiKeyData(request, reqBody);
-                    if (apiKey == hashText || await _akRepo.SecretLogin(this._env.IS_USING_POSTGRES, _orapg, secret) != null) {
-                        allowed = true;
-                    }
+                if (secret == hashText || await _akRepo.SecretLogin(this._env.IS_USING_POSTGRES, _orapg, secret) != null) {
+                    allowed = true;
                 }
 
                 try {
@@ -101,6 +92,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
                         ? this._gs.GetIpOriginData(connection, request)
                         : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
+
                     string token = this._chiper.EncodeJWT(new UserApiSession() {
                         name = maskIp,
                         role = UserSessionRole.PROGRAM_SERVICE
@@ -108,7 +100,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
                     request.Headers.Authorization = $"Bearer {token}";
                     request.Headers["x-access-token"] = token;
-                    request.Headers["x-secret-key"] = string.Empty;
+                    request.Headers["x-secret-key"] = secret;
 
                     var queryitems = request.Query.SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value)).ToList();
                     var queryparameters = new List<KeyValuePair<string, string>>();
@@ -116,13 +108,18 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                         if (item.Key.ToLower() == "token") {
                             queryparameters.Add(new KeyValuePair<string, string>(item.Key, token));
                         }
-                        else if (item.Key.ToLower() != "secret") {
-                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, item.Value));
+
+                        if (item.Key.ToLower() != "secret") {
+                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, secret));
                         }
                     }
 
                     if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "token") == -1) {
                         queryparameters.Add(new KeyValuePair<string, string>("token", token));
+                    }
+
+                    if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "secret") == -1) {
+                        queryparameters.Add(new KeyValuePair<string, string>("secret", secret));
                     }
 
                     request.QueryString = new QueryBuilder(queryparameters).ToQueryString();

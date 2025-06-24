@@ -62,20 +62,11 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                         // -- Secret
 
                         if (!string.IsNullOrEmpty(secret)) {
+                            bool allowed = false;
                             string hashText = chiper.HashText(app.AppName);
 
-                            bool allowed = false;
-                            bool isHo = await generalRepo.IsHo(env.IS_USING_POSTGRES, orapg);
-                            if (isHo) {
-                                if (await akRepo.SecretLogin(env.IS_USING_POSTGRES, orapg, secret) != null) {
-                                    allowed = true;
-                                }
-                            }
-                            else {
-                                apiKey = gs.GetApiKeyData(request, body);
-                                if (apiKey == hashText || await akRepo.SecretLogin(env.IS_USING_POSTGRES, orapg, secret) != null) {
-                                    allowed = true;
-                                }
+                            if (secret == hashText || await akRepo.SecretLogin(env.IS_USING_POSTGRES, orapg, secret) != null) {
+                                allowed = true;
                             }
 
                             if (!allowed) {
@@ -90,6 +81,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
                                 ? gs.GetIpOriginData(connection, request)
                                 : chiper.DecryptText(request.Query["mask_ip"], hashText);
+
                             token = chiper.EncodeJWT(new UserApiSession() {
                                 name = maskIp,
                                 role = UserSessionRole.PROGRAM_SERVICE
@@ -97,7 +89,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
                             request.Headers.Authorization = $"Bearer {token}";
                             request.Headers["x-access-token"] = token;
-                            request.Headers["x-secret-key"] = string.Empty;
+                            request.Headers["x-secret-key"] = secret;
 
                             var queryitems = request.Query.SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value)).ToList();
                             var queryparameters = new List<KeyValuePair<string, string>>();
@@ -105,13 +97,18 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                                 if (item.Key.ToLower() == "token") {
                                     queryparameters.Add(new KeyValuePair<string, string>(item.Key, token));
                                 }
-                                else if (item.Key.ToLower() != "secret") {
-                                    queryparameters.Add(new KeyValuePair<string, string>(item.Key, item.Value));
+
+                                if (item.Key.ToLower() != "secret") {
+                                    queryparameters.Add(new KeyValuePair<string, string>(item.Key, secret));
                                 }
                             }
 
                             if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "token") == -1) {
                                 queryparameters.Add(new KeyValuePair<string, string>("token", token));
+                            }
+
+                            if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "secret") == -1) {
+                                queryparameters.Add(new KeyValuePair<string, string>("secret", secret));
                             }
 
                             request.QueryString = new QueryBuilder(queryparameters).ToQueryString();
@@ -120,6 +117,23 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                         // -- ApiKey
 
                         if (Bifeldy.IS_USING_API_KEY && !string.IsNullOrEmpty(apiKey)) {
+                            string[] serverIps = app.GetAllIpAddress();
+                            foreach (string ip in serverIps) {
+                                if (!gs.AllowedIpOrigin.Contains(ip)) {
+                                    gs.AllowedIpOrigin.Add(ip);
+                                }
+                            }
+
+                            string ipDomainHost = request.Host.Host;
+                            if (!gs.AllowedIpOrigin.Contains(ipDomainHost)) {
+                                gs.AllowedIpOrigin.Add(ipDomainHost);
+                            }
+
+                            string ipDomainProxy = request.Headers["x-forwarded-host"];
+                            if (!string.IsNullOrEmpty(ipDomainProxy) && !gs.AllowedIpOrigin.Contains(ipDomainProxy)) {
+                                gs.AllowedIpOrigin.Add(ipDomainProxy);
+                            }
+
                             http.Items["api_key"] = apiKey;
                             string ipOrigin = gs.GetIpOriginData(connection, request);
                             http.Items["ip_origin"] = ipOrigin;
