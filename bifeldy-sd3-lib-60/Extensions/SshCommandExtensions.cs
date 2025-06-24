@@ -50,10 +50,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
         public static async Task ExecuteAsync(this SshCommand sshCommand, CancellationToken cancellationToken, IProgress<CScriptOutputLine> progress = null, Encoding encoding = null) {
             IAsyncResult asyncResult = sshCommand.BeginExecute();
 
-            encoding ??= Encoding.UTF8;
-
-            var stdoutStreamReader = new StreamReader(sshCommand.OutputStream, encoding, encoding == null);
-            var stderrStreamReader = new StreamReader(sshCommand.ExtendedOutputStream, encoding, encoding == null);
+            var stdoutStreamReader = new StreamReader(sshCommand.OutputStream, encoding ?? Encoding.UTF8, encoding == null);
+            var stderrStreamReader = new StreamReader(sshCommand.ExtendedOutputStream, encoding ?? Encoding.UTF8, encoding == null);
 
             while (!asyncResult.IsCompleted) {
                 await Task.Yield();
