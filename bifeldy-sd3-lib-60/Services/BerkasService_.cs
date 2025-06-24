@@ -61,7 +61,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
             catch (Exception ex) {
-                this._logger.LogError("[BERKAS_DELETE_SINGLE_FILE_IN_FOLDER] {ex.Message}", ex.Message);
+                this._logger.LogError("[BERKAS_DELETE_SINGLE_FILE_IN_FOLDER] {ex}", ex.Message);
             }
         }
 

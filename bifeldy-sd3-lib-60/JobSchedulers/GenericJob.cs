@@ -85,11 +85,11 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
                     );
                 }
                 catch (JobExecutionException e) {
-                    this._logger.LogError("[{Name}_ERROR] ⌚ {Message}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
+                    this._logger.LogError("[{name}_ERROR] ⌚ {ex}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
                     throw;
                 }
                 catch (Exception e) {
-                    this._logger.LogError("[{Name}_ERROR] ⌚ {Message}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
+                    this._logger.LogError("[{name}_ERROR] ⌚ {ex}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
                 }
             }
         }
