@@ -52,8 +52,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
             encoding ??= Encoding.UTF8;
 
-            var stdoutStreamReader = new StreamReader(sshCommand.OutputStream, encoding);
-            var stderrStreamReader = new StreamReader(sshCommand.ExtendedOutputStream, encoding);
+            var stdoutStreamReader = new StreamReader(sshCommand.OutputStream, encoding, encoding == null);
+            var stderrStreamReader = new StreamReader(sshCommand.ExtendedOutputStream, encoding, encoding == null);
 
             while (!asyncResult.IsCompleted) {
                 await Task.Yield();

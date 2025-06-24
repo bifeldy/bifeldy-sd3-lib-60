@@ -31,7 +31,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             }
 
             _ = request.Body.Seek(0, SeekOrigin.Begin);
-            using (var reader = new StreamReader(request.Body, encoding ?? Encoding.UTF8, true, 1024, true)) {
+            using (var reader = new StreamReader(request.Body, encoding ?? Encoding.UTF8, encoding == null, 1024, true)) {
                 body = await reader.ReadToEndAsync();
             }
 

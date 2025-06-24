@@ -20,6 +20,7 @@ using ChoETL;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Extensions;
+using System.ComponentModel;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -52,11 +53,26 @@ namespace bifeldy_sd3_lib_60.Services {
 
         // Posisi Kolom CSV Start Dari 1 Bukan 0
         private ChoCSVReader<dynamic> ChoEtlSetupCsv(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null) {
+            if (string.IsNullOrEmpty(eolDelimiter)) {
+                using (var sr = new StreamReader(filePath, encoding, encoding == null)) {
+                    string line = sr.ReadLine();
+                    if (line.Contains("\r\n")) {
+                        eolDelimiter = "\r\n";
+                    }
+                    else if (line.Contains("\n")) {
+                        eolDelimiter = "\n";
+                    }
+                    else {
+                        eolDelimiter = Environment.NewLine;
+                    }
+                }
+            }
+
             var cfg = new ChoCSVRecordConfiguration() {
                 Delimiter = delimiter,
                 MayHaveQuotedFields = true,
                 MayContainEOLInData = true,
-                EOLDelimiter = eolDelimiter ?? Environment.NewLine,
+                EOLDelimiter = eolDelimiter,
                 NullValue = nullValue,
                 QuoteAllFields = true,
                 Encoding = encoding ?? Encoding.UTF8,
@@ -147,7 +163,16 @@ namespace bifeldy_sd3_lib_60.Services {
                         string key = pro.Name.ToUpper();
                         if (cols.ContainsKey(key)) {
                             dynamic val = cols[key];
+
                             if (val != null) {
+                                TypeConverter converter = TypeDescriptor.GetConverter(pro.PropertyType);
+                                if (converter.CanConvertFrom(val.GetType())) {
+                                    val = converter.ConvertFrom(val);
+                                }
+                                else {
+                                    val = Convert.ChangeType(val, pro.PropertyType);
+                                }
+
                                 if (val is string s) {
                                     if (s.Contains("\"\"")) {
                                         val = s.Replace("\"\"", "\"");
