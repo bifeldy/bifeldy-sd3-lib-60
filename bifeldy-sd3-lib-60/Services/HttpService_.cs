@@ -95,8 +95,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         private async Task<HttpRequestMessage> ParseApiData(
-            string httpUri, HttpMethod httpMethod,
-            dynamic httpContent = null, bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
+            string httpUri, HttpMethod httpMethod, dynamic httpContent = null,
+            bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
             string[] contentKeyName = null, string[] contentType = null,
             Encoding encoding = null
         ) {
@@ -156,8 +156,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         private async Task<HttpResponseMessage> SendWithRetry(
-            string httpUri, HttpMethod httpMethod,
-            dynamic httpContent = null, bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
+            string httpUri, HttpMethod httpMethod, dynamic httpContent = null,
+            bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
             string[] contentKeyName = null, string[] contentType = null,
             Encoding encoding = null,
             uint timeoutSeconds = 180, uint maxRetry = 3,
@@ -170,8 +170,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
             for (int retry = 0; retry < maxRetry; retry++) {
                 httpRequestMessage = await this.ParseApiData(
-                    httpUri, httpMethod,
-                    httpContent, multipart, httpHeaders,
+                    httpUri, httpMethod, httpContent,
+                    multipart, httpHeaders,
                     contentKeyName, contentType,
                     encoding ?? Encoding.UTF8
                 );
