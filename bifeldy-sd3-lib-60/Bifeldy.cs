@@ -71,7 +71,11 @@ namespace bifeldy_sd3_lib_60 {
 
         public static List<string> GRPC_ROUTH_PATH = new();
         public static List<string> SIGNALR_ROUTH_PATH = new();
+
+        public static bool IS_USING_REQUEST_LOGGER = false;
+        public static bool IS_USING_SECRET = false;
         public static bool IS_USING_API_KEY = false;
+        public static bool IS_USING_JWT = false;
 
         public static string SIGNALR_PREFIX_HUB = "/signalr";
 
@@ -570,7 +574,7 @@ namespace bifeldy_sd3_lib_60 {
                     catch (Exception ex) {
                         ILogger<T> _logger = context.RequestServices.GetRequiredService<ILogger<T>>();
 
-                        var user = (UserApiSession) context.Items["user"];
+                        var user = (UserApiSession)context.Items["user"];
 
                         HttpRequest request = context.Request;
                         HttpResponse response = context.Response;
@@ -629,16 +633,25 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void UseSecretMiddleware() => App.UseMiddleware<SecretMiddleware>();
+        public static void UseRequestLoggerMiddleware() {
+            _ = App.UseMiddleware<RequestLoggerMiddleware>();
+            IS_USING_REQUEST_LOGGER = true;
+        }
+
+        public static void UseSecretMiddleware() {
+            _ = App.UseMiddleware<SecretMiddleware>();
+            IS_USING_SECRET = true;
+        }
 
         public static void UseApiKeyMiddleware() {
             _ = App.UseMiddleware<ApiKeyMiddleware>();
             IS_USING_API_KEY = true;
         }
 
-        public static void UseJwtMiddleware() => App.UseMiddleware<JwtMiddleware>();
-
-        public static void UseRequestLoggerMiddleware() => App.UseMiddleware<RequestLoggerMiddleware>();
+        public static void UseJwtMiddleware() {
+            _ = App.UseMiddleware<JwtMiddleware>();
+            IS_USING_JWT = true;
+        }
 
     }
 

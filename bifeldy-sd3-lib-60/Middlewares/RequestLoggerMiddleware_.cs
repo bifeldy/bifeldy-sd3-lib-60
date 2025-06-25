@@ -42,6 +42,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
+            context.Items["request_start_at"] = DateTime.Now;
+
             string apiPathRequested = request.Path.Value;
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
