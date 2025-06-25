@@ -78,6 +78,7 @@ namespace bifeldy_sd3_lib_60 {
         public static bool IS_USING_JWT = false;
 
         public static string SIGNALR_PREFIX_HUB = "/signalr";
+        public static string NGINX_PATH_NAME = "x-forwarded-prefix";
 
         public static WebApplicationBuilder Builder = null;
         public static IServiceCollection Services = null;
@@ -85,8 +86,6 @@ namespace bifeldy_sd3_lib_60 {
         public static WebApplication App = null;
 
         private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
-
-        private static string NginxPathName = "x-forwarded-prefix";
 
         public static void AppContextOverride() {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -239,13 +238,13 @@ namespace bifeldy_sd3_lib_60 {
             string apiUrlPrefix = "api",
             string proxyHeaderName = "x-forwarded-prefix"
         ) {
-            NginxPathName = proxyHeaderName;
+            NGINX_PATH_NAME = proxyHeaderName;
             _ = App.UseSwagger(c => {
                 c.RouteTemplate = "{documentName}/swagger.json";
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
                     var openApiServers = new List<OpenApiServer>();
 
-                    if (request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
+                    if (request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
                         string proxyPath = pathBase.Last();
                         if (!string.IsNullOrEmpty(proxyPath)) {
                             openApiServers.Add(new OpenApiServer() {
@@ -530,7 +529,7 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseNginxProxyPathSegment() {
             _ = App.Use(async (context, next) => {
-                if (context.Request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
+                if (context.Request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
                     context.Request.PathBase = pathBase.Last();
                     if (context.Request.Path.StartsWithSegments(context.Request.PathBase, out PathString path)) {
                         context.Request.Path = path;
@@ -586,7 +585,7 @@ namespace bifeldy_sd3_lib_60 {
                             xRequestTraceProxy = response.Headers["x-request-trace-proxy"];
                         }
                         else {
-                            if (request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
+                            if (request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
                                 string proxyPath = pathBase.Last();
                                 if (!string.IsNullOrEmpty(proxyPath)) {
                                     xRequestTraceProxy = proxyPath;
