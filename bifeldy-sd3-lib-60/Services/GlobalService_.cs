@@ -34,7 +34,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false, bool removeReverseProxyRoute = false);
         string CleanIpOrigin(string ipOrigins);
         string GetTokenData(HttpRequest request, RequestJson reqBody);
-        Task<(string, string)> ParseRequestBodyString(HttpRequest request);
+        Task<(string, string)> ParseRequestBodyJsonString(HttpRequest request);
         Task<RequestJson> GetRequestBody(HttpRequest request);
     }
 
@@ -225,12 +225,17 @@ namespace bifeldy_sd3_lib_60.Services {
             return token;
         }
 
-        public async Task<(string, string)> ParseRequestBodyString(HttpRequest request) {
+        public async Task<(string, string)> ParseRequestBodyJsonString(HttpRequest request) {
             string contentType = request.ContentType ?? request.Headers["content-type"].ToString();
 
             string rbString = null;
             if (contentType == "application/grpc" || SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
-                rbString = await request.GetRequestBodyStringAsync();
+                try {
+                    rbString = await request.GetRequestBodyStringAsync();
+                }
+                catch {
+                    // Bukan Text
+                }
             }
 
             return (contentType, rbString);
@@ -239,7 +244,7 @@ namespace bifeldy_sd3_lib_60.Services {
         public async Task<RequestJson> GetRequestBody(HttpRequest request) {
             RequestJson reqBody = null;
 
-            (string contentType, string rbString) = await this.ParseRequestBodyString(request);
+            (string contentType, string rbString) = await this.ParseRequestBodyJsonString(request);
             if (!string.IsNullOrEmpty(rbString)) {
                 try {
                     reqBody = this._cs.XmlJsonToObject<RequestJson>(contentType, rbString);

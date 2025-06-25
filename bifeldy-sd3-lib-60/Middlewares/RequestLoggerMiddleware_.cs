@@ -70,7 +70,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             string activityId = Activity.Current?.Id;
             string traceId = context?.TraceIdentifier;
 
-            (string contentType, string rbString) = await this._gs.ParseRequestBodyString(request);
+            (string contentType, string rbString) = await this._gs.ParseRequestBodyJsonString(request);
 
             //
             // TODO :: Nge Log Request Sebelum
