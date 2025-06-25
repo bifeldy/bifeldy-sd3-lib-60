@@ -619,12 +619,22 @@ namespace bifeldy_sd3_lib_60 {
                         );
 
                         response.StatusCode = StatusCodes.Status500InternalServerError;
+
+                        string errMsg = ex.Message;
+                        string errDtl = errMsg + Environment.NewLine + ex.StackTrace;
+
+                        if (IS_USING_REQUEST_LOGGER) {
+                            string activityId = Activity.Current?.Id;
+                            string traceId = context?.TraceIdentifier;
+
+                            // TODO :: Update Log With Error
+                        }
+
+                        bool showErrorDetail = App.Environment.IsDevelopment() || user?.role <= UserSessionRole.USER_SD_SSD_3;
                         await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = "500 - Whoops :: Terjadi Kesalahan",
                             result = new ResponseJsonMessage() {
-                                message = (App.Environment.IsDevelopment() || user?.role <= UserSessionRole.USER_SD_SSD_3)
-                                    ? ex.Message
-                                    : "Gagal Memproses Data"
+                                message = showErrorDetail ? errDtl : "Gagal Memproses Data"
                             }
                         });
                     }

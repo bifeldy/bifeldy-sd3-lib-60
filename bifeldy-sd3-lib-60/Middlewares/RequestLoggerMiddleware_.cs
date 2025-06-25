@@ -42,7 +42,8 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            context.Items["request_start_at"] = DateTime.Now;
+            DateTime currentDateTime = DateTime.Now;
+            context.Items["request_start_at"] = currentDateTime;
 
             string apiPathRequested = request.Path.Value;
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
@@ -73,13 +74,13 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             (string contentType, string rbString) = await this._gs.ParseRequestBodyJsonString(request);
 
             //
-            // TODO :: Nge Log Request Sebelum
+            // TODO :: Log Request Mulai
             //
 
             await this._next(context);
 
             //
-            // TODO :: Nge Log Request Sesudah
+            // TODO :: Log Request Selesai
             //
 
         }

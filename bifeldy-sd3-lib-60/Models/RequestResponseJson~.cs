@@ -84,11 +84,4 @@ namespace bifeldy_sd3_lib_60.Models {
         [ProtoMember(5)][InheritedProtoMember(5)] public T[] data { get; set; }
     }
 
-    [ProtoContract]
-    public sealed class InputJsonDcPingPong : InputJsonDc {
-        [ProtoMember(5)] public string version { get; set; }
-        [ProtoMember(6)] public decimal port_api { get; set; }
-        [ProtoMember(7)] public decimal port_grpc { get; set; }
-    }
-
 }
