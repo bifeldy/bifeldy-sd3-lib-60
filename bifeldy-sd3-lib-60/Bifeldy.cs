@@ -577,23 +577,45 @@ namespace bifeldy_sd3_lib_60 {
 
                         response.Clear();
 
-                        if (request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
-                            string proxyPath = pathBase.Last();
-                            if (!string.IsNullOrEmpty(proxyPath)) {
-                                response.Headers.Add("x-request-trace-proxy", proxyPath);
+                        string xRequestTraceProxy = null;
+                        if (response.Headers.ContainsKey("x-request-trace-proxy")) {
+                            xRequestTraceProxy = response.Headers["x-request-trace-proxy"];
+                        }
+                        else {
+                            if (request.Headers.TryGetValue(NginxPathName, out StringValues pathBase)) {
+                                string proxyPath = pathBase.Last();
+                                if (!string.IsNullOrEmpty(proxyPath)) {
+                                    xRequestTraceProxy = proxyPath;
+                                    response.Headers.Add("x-request-trace-proxy", xRequestTraceProxy);
+                                }
                             }
                         }
 
-                        response.Headers.Add("x-request-trace-activity", Activity.Current?.Id);
-                        response.Headers.Add("x-request-trace-id", context.TraceIdentifier);
-                        response.StatusCode = StatusCodes.Status500InternalServerError;
+                        string xRequestTraceActivity = null;
+                        if (response.Headers.ContainsKey("x-request-trace-activity")) {
+                            xRequestTraceActivity = response.Headers["x-request-trace-activity"];
+                        }
+                        else {
+                            xRequestTraceActivity = Activity.Current?.Id;
+                            response.Headers.Add("x-request-trace-activity", xRequestTraceActivity);
+                        }
+
+                        string xRequestTraceId = null;
+                        if (response.Headers.ContainsKey("x-request-trace-id")) {
+                            xRequestTraceId = response.Headers["x-request-trace-id"];
+                        }
+                        else {
+                            xRequestTraceId = context.TraceIdentifier;
+                            response.Headers.Add("x-request-trace-id", xRequestTraceId);
+                        }
 
                         _logger.LogError(
-                            "[GLOBAL_ERROR_HANDLER] {TraceId} 💣 {Message}",
-                            Activity.Current?.Id ?? context?.TraceIdentifier,
+                            "[GLOBAL_ERROR_HANDLER] {TraceId} {xRequestTraceProxy} 💣 {Message}",
+                            xRequestTraceActivity, xRequestTraceProxy,
                             ex.Message + Environment.NewLine + ex.StackTrace
                         );
 
+                        response.StatusCode = StatusCodes.Status500InternalServerError;
                         await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = "500 - Whoops :: Terjadi Kesalahan",
                             result = new ResponseJsonMessage() {
