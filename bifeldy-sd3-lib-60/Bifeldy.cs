@@ -156,8 +156,8 @@ namespace bifeldy_sd3_lib_60 {
                     diagnosticContext.Set("TraceId", Activity.Current?.Id ?? httpContext?.TraceIdentifier);
 
                     IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
-                    string ipAddr = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true);
-                    string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request);
+                    string ipAddr = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true, true);
+                    string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, removeReverseProxyRoute: true);
                     diagnosticContext.Set("RemoteOriginIpAddress", origin == ipAddr ? origin : $"{origin}@{ipAddr}");
                 };
             });

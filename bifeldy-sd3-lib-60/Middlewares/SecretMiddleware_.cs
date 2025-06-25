@@ -90,7 +90,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     }
 
                     string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
-                        ? this._gs.GetIpOriginData(connection, request)
+                        ? this._gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true)
                         : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
 
                     string token = this._chiper.EncodeJWT(new UserApiSession() {

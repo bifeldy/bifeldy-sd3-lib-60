@@ -31,8 +31,8 @@ namespace bifeldy_sd3_lib_60.Services {
         List<string> AllowedIpOrigin { get; set; }
         string GetSecretData(HttpRequest request, RequestJson reqBody);
         string GetApiKeyData(HttpRequest request, RequestJson reqBody);
-        string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false);
-        string CleanIpOrigin(string ipOrigin);
+        string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false, bool removeReverseProxyRoute = false);
+        string CleanIpOrigin(string ipOrigins);
         string GetTokenData(HttpRequest request, RequestJson reqBody);
         Task<(string, string)> ParseRequestBodyString(HttpRequest request);
         Task<RequestJson> GetRequestBody(HttpRequest request);
@@ -128,7 +128,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return apiKey;
         }
 
-        public string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false) {
+        public string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false, bool removeReverseProxyRoute = false) {
             string ipOrigin = connection?.RemoteIpAddress?.ToString();
 
             if (request != null) {
@@ -152,53 +152,59 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            return this.CleanIpOrigin(ipOrigin);
+            string resultIpOrigin = this.CleanIpOrigin(ipOrigin);
+            return removeReverseProxyRoute ? resultIpOrigin.Split(",").Select(rio => rio?.Trim()).FirstOrDefault() : resultIpOrigin;
         }
 
-        public string CleanIpOrigin(string ipOrigin) {
-            ipOrigin ??= "";
-            // Remove Prefixes
-            if (ipOrigin.StartsWith("::ffff:")) {
-                ipOrigin = ipOrigin[7..];
-            }
+        public string CleanIpOrigin(string ipOrigins) {
+            return string.Join(", ", ipOrigins.Split(",").Select(io => {
+                string ipOrigin = io?.Trim() ?? string.Empty;
 
-            if (ipOrigin.StartsWith("http://")) {
-                ipOrigin = ipOrigin[7..];
-            }
-            else if (ipOrigin.StartsWith("https://")) {
-                ipOrigin = ipOrigin[8..];
-            }
-
-            if (ipOrigin.StartsWith("www.")) {
-                ipOrigin = ipOrigin[4..];
-            }
-            // Get Domain Or IP Maybe With Port Included And Remove Folder Path
-            ipOrigin = ipOrigin.Split("/")[0];
-            // Remove Port
-            int totalColon = 0;
-            for (int i = 0; i < ipOrigin.Length; i++) {
-                if (ipOrigin[i] == ':') {
-                    totalColon++;
+                // Remove Prefixes
+                if (ipOrigin.StartsWith("::ffff:")) {
+                    ipOrigin = ipOrigin[7..];
                 }
 
-                if (totalColon > 1) {
-                    break;
+                if (ipOrigin.StartsWith("http://")) {
+                    ipOrigin = ipOrigin[7..];
                 }
-            }
-
-            if (totalColon == 1) {
-                // IPv4
-                ipOrigin = ipOrigin.Split(":")[0];
-            }
-            else {
-                // IPv6
-                ipOrigin = ipOrigin.Split("]")[0];
-                if (ipOrigin.StartsWith("[")) {
-                    ipOrigin = ipOrigin[1..];
+                else if (ipOrigin.StartsWith("https://")) {
+                    ipOrigin = ipOrigin[8..];
                 }
-            }
 
-            return ipOrigin;
+                if (ipOrigin.StartsWith("www.")) {
+                    ipOrigin = ipOrigin[4..];
+                }
+
+                // Get Domain Or IP Maybe With Port Included And Remove Folder Path
+                ipOrigin = ipOrigin.Split("/")[0];
+
+                // Remove Port
+                int totalColon = 0;
+                for (int i = 0; i < ipOrigin.Length; i++) {
+                    if (ipOrigin[i] == ':') {
+                        totalColon++;
+                    }
+
+                    if (totalColon > 1) {
+                        break;
+                    }
+                }
+
+                if (totalColon == 1) {
+                    // IPv4
+                    ipOrigin = ipOrigin.Split(":")[0];
+                }
+                else {
+                    // IPv6
+                    ipOrigin = ipOrigin.Split("]")[0];
+                    if (ipOrigin.StartsWith("[")) {
+                        ipOrigin = ipOrigin[1..];
+                    }
+                }
+
+                return ipOrigin;
+            }));
         }
 
         public string GetTokenData(HttpRequest request, RequestJson reqBody) {

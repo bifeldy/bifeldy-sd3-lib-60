@@ -132,7 +132,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
                     else {
                         userSession = new UserApiSession {
-                            name = this._gs.GetIpOriginData(this.HttpContext.Connection, this.HttpContext.Request, true),
+                            name = this._gs.GetIpOriginData(this.HttpContext.Connection, this.HttpContext.Request, true, true),
                             role = UserSessionRole.PROGRAM_SERVICE
                         };
                     }

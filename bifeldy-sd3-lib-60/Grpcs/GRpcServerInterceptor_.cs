@@ -79,7 +79,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             }
 
                             string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
-                                ? gs.GetIpOriginData(connection, request)
+                                ? gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true)
                                 : chiper.DecryptText(request.Query["mask_ip"], hashText);
 
                             token = chiper.EncodeJWT(new UserApiSession() {
@@ -135,7 +135,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             }
 
                             http.Items["api_key"] = apiKey;
-                            string ipOrigin = gs.GetIpOriginData(connection, request);
+                            string ipOrigin = gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true);
                             http.Items["ip_origin"] = ipOrigin;
                         
                             string hashText = chiper.HashText(app.AppName);

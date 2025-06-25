@@ -56,7 +56,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             string ipOrigin = this._gs.GetIpOriginData(
                 this.HttpContext.Connection,
                 this.HttpContext.Request,
-                true
+                true, true
             );
 
             bool isHo = await this._generalRepo.IsHo(this._env.IS_USING_POSTGRES, this._orapg);

@@ -88,7 +88,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             RequestJson reqBody = await this._gs.GetRequestBody(request);
             string apiKey = this._gs.GetApiKeyData(request, reqBody);
             context.Items["api_key"] = apiKey;
-            string ipOrigin = this._gs.GetIpOriginData(connection, request);
+            string ipOrigin = this._gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true);
             context.Items["ip_origin"] = ipOrigin;
 
             this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);

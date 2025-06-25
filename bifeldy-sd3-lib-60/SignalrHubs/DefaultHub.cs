@@ -47,7 +47,7 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
         public override Task OnConnectedAsync() {
             if (!this._gs.SignalrClients.ContainsKey(this.Context.ConnectionId)) {
                 HttpContext http = this.Context.GetHttpContext();
-                string ipOrigin = this._gs.GetIpOriginData(http.Connection, http.Request);
+                string ipOrigin = this._gs.GetIpOriginData(http.Connection, http.Request, removeReverseProxyRoute: true);
 
                 this._gs.SignalrClients.Add(this.Context.ConnectionId, $"NULL ({ipOrigin})");
             }
@@ -71,7 +71,7 @@ namespace bifeldy_sd3_lib_60.SignalrHubs {
             string clientId = this.Context.ConnectionId;
             if (this._gs.SignalrClients.ContainsKey(clientId)) {
                 HttpContext http = this.Context.GetHttpContext();
-                string ipOrigin = this._gs.GetIpOriginData(http.Connection, http.Request);
+                string ipOrigin = this._gs.GetIpOriginData(http.Connection, http.Request, removeReverseProxyRoute: true);
                 this._gs.SignalrClients[clientId] = $"{clientName} ({ipOrigin})";
             }
         }

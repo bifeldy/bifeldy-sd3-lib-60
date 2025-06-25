@@ -273,7 +273,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 queryApiDc.Set("key", hashText);
                 queryApiDc.Set("token", request.HttpContext.Items["token"]?.ToString());
 
-                string ipOrigin = this._gs.GetIpOriginData(request.HttpContext.Connection, request.HttpContext.Request, true);
+                string ipOrigin = this._gs.GetIpOriginData(request.HttpContext.Connection, request.HttpContext.Request, true, true);
                 queryApiDc.Set("mask_ip", this._chiper.EncryptText(ipOrigin));
 
                 var uriBuilder = new UriBuilder(urlApiDc) {
