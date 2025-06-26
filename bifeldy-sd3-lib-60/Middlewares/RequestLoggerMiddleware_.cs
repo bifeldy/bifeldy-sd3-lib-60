@@ -14,10 +14,12 @@
 using System.Diagnostics;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
+using Microsoft.Extensions.Primitives;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
@@ -42,21 +44,30 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            DateTime currentDateTime = DateTime.Now;
-            context.Items["request_start_at"] = currentDateTime;
+            DateTime requestStartAt = DateTime.Now;
+            context.Items["request_start_at"] = requestStartAt;
 
-            string apiPathRequested = request.Path.Value;
-            string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
+            string activityId = Activity.Current?.Id;
+            string traceId = context?.TraceIdentifier;
 
-            bool isGrpc = Bifeldy.GRPC_ROUTH_PATH.Contains(apiPathRequestedForGrpc);
-            bool isSignalr = apiPathRequested.StartsWith(Bifeldy.SIGNALR_PREFIX_HUB);
-            bool isApi = apiPathRequested.StartsWith("/api/");
-            bool isSwagger = apiPathRequested.StartsWith("/api/swagger");
-
-            if ((!isGrpc && !isSignalr && !isApi) || isSwagger) {
-                await this._next(context);
-                return;
+            string requestProxy = string.Empty;
+            if (request.Headers.TryGetValue(Bifeldy.NGINX_PATH_NAME, out StringValues pathBase)) {
+                string proxyPath = pathBase.Last();
+                if (!string.IsNullOrEmpty(proxyPath)) {
+                    requestProxy = proxyPath;
+                }
             }
+
+            string requestPath = request.Path;
+            string requestQuery = request.QueryString.ToString();
+
+            (string contentType, string rbString) = await this._gs.ParseRequestBodyJsonString(request);
+
+            //
+            // TODO :: Log Request Mulai
+            //
+
+            await this._next(context);
 
             string secret = context.Items["secret"]?.ToString();
             string apiKey = context.Items["api_key"]?.ToString();
@@ -68,21 +79,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 user = (UserApiSession)context.Items["user"];
             }
 
-            string activityId = Activity.Current?.Id;
-            string traceId = context?.TraceIdentifier;
-
-            (string contentType, string rbString) = await this._gs.ParseRequestBodyJsonString(request);
-
-            //
-            // TODO :: Log Request Mulai
-            //
-
-            await this._next(context);
+            DateTime requestEndAt = DateTime.Now;
 
             //
             // TODO :: Log Request Selesai
             //
-
         }
 
     }

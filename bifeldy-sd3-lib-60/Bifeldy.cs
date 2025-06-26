@@ -608,7 +608,7 @@ namespace bifeldy_sd3_lib_60 {
                             xRequestTraceId = response.Headers["x-request-trace-id"];
                         }
                         else {
-                            xRequestTraceId = context.TraceIdentifier;
+                            xRequestTraceId = context?.TraceIdentifier;
                             response.Headers.Add("x-request-trace-id", xRequestTraceId);
                         }
 
@@ -624,9 +624,6 @@ namespace bifeldy_sd3_lib_60 {
                         string errDtl = errMsg + Environment.NewLine + ex.StackTrace;
 
                         if (IS_USING_REQUEST_LOGGER) {
-                            string activityId = Activity.Current?.Id;
-                            string traceId = context?.TraceIdentifier;
-
                             // TODO :: Update Log With Error
                         }
 

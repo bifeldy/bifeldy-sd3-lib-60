@@ -100,8 +100,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string GetSecretData(HttpRequest request, RequestJson reqBody) {
             string secret = string.Empty;
-            if (!string.IsNullOrEmpty(request.Headers["x-secret-key"])) {
-                secret = request.Headers["x-secret-key"];
+            if (!string.IsNullOrEmpty(request.Headers["x-secret"])) {
+                secret = request.Headers["x-secret"];
             }
             else if (!string.IsNullOrEmpty(request.Query["secret"])) {
                 secret = request.Query["secret"];

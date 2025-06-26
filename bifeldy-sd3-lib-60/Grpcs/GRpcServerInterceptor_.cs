@@ -89,7 +89,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
                             request.Headers.Authorization = $"Bearer {token}";
                             request.Headers["x-access-token"] = token;
-                            request.Headers["x-secret-key"] = secret;
+                            request.Headers["x-secret"] = secret;
 
                             var queryitems = request.Query.SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value)).ToList();
                             var queryparameters = new List<KeyValuePair<string, string>>();
@@ -97,9 +97,11 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                                 if (item.Key.ToLower() == "token") {
                                     queryparameters.Add(new KeyValuePair<string, string>(item.Key, token));
                                 }
-
-                                if (item.Key.ToLower() != "secret") {
+                                else if (item.Key.ToLower() == "secret") {
                                     queryparameters.Add(new KeyValuePair<string, string>(item.Key, secret));
+                                }
+                                else {
+                                    queryparameters.Add(new KeyValuePair<string, string>(item.Key, item.Value));
                                 }
                             }
 
