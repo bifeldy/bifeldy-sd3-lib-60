@@ -89,7 +89,15 @@ namespace bifeldy_sd3_lib_60 {
 
         private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
 
-        private static readonly string pluginPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), DEFAULT_DATA_FOLDER, "plugins");
+        public static string PLUGIN_PATH {
+            get {
+                return Path.Combine(
+                    Path.GetDirectoryName(Assembly.GetEntryAssembly().Location),
+                    DEFAULT_DATA_FOLDER,
+                    "plugins"
+                );
+            }
+        }
 
         public static void AppContextOverride() {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -108,8 +116,8 @@ namespace bifeldy_sd3_lib_60 {
                 opt.SerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
             });
 
-            if (!Directory.Exists(pluginPath)) {
-                _ = Directory.CreateDirectory(pluginPath);
+            if (!Directory.Exists(PLUGIN_PATH)) {
+                _ = Directory.CreateDirectory(PLUGIN_PATH);
             }
         }
 
@@ -245,8 +253,8 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void UseApiPluginRouteEndpoint() {
             PluginManager pluginManager = App.Services.GetRequiredService<PluginContext>().Manager;
-            PluginLoaderForSwagger.LoadAllPlugins(pluginManager, pluginPath);
-            PluginLoaderForSwagger.WatchAndReload(pluginManager, pluginPath);
+            PluginLoaderForSwagger.LoadAllPlugins(pluginManager, PLUGIN_PATH);
+            PluginLoaderForSwagger.WatchAndReload(pluginManager, PLUGIN_PATH);
         }
 
         public static void UseSwagger(
@@ -317,7 +325,7 @@ namespace bifeldy_sd3_lib_60 {
                 return new SynchronizedConverter(new PdfTools());
             });
 
-            _ = Services.AddSingleton(new PluginContext(pluginPath));
+            _ = Services.AddSingleton(new PluginContext(PLUGIN_PATH));
             _ = Services.AddSingleton<IActionDescriptorChangeProvider>(DynamicActionDescriptorChangeProvider.Instance);
             _ = Services.AddSingleton(DynamicActionDescriptorChangeProvider.Instance);
         }
