@@ -72,7 +72,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 if (string.IsNullOrEmpty(fileName)) {
                     if (user.role > UserSessionRole.USER_SD_SSD_3) {
                         return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            info = $"403 - {this.GetType().Name} :: Hash Files",
                             result = new ResponseJsonMessage() {
                                 message = "Harap input nama file ?fileName=blablabla.ext"
                             }
@@ -144,7 +144,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                         default:
                             if (user.role > UserSessionRole.USER_SD_SSD_3) {
                                 return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
-                                    info = $"404 - {this.GetType().Name} :: Hash Files",
+                                    info = $"403 - {this.GetType().Name} :: Hash Files",
                                     result = new ResponseJsonMessage() {
                                         message = "Harap input tipe file ?fileType=csv / ?fileType=zip"
                                     }
