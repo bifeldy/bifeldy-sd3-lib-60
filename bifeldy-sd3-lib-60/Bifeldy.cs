@@ -92,7 +92,7 @@ namespace bifeldy_sd3_lib_60 {
         public static string PLUGIN_PATH {
             get {
                 return Path.Combine(
-                    Path.GetDirectoryName(Assembly.GetEntryAssembly().Location),
+                    AppDomain.CurrentDomain.BaseDirectory,
                     DEFAULT_DATA_FOLDER,
                     "plugins"
                 );
