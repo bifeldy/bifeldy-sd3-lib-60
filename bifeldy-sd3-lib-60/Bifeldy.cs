@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -60,6 +61,7 @@ using bifeldy_sd3_lib_60.Grpcs;
 using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Plugins;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
@@ -87,6 +89,8 @@ namespace bifeldy_sd3_lib_60 {
 
         private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
 
+        private static readonly string pluginPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), DEFAULT_DATA_FOLDER, "plugins");
+
         public static void AppContextOverride() {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             // AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
@@ -103,6 +107,10 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.Configure<JsonOptions>(opt => {
                 opt.SerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
             });
+
+            if (!Directory.Exists(pluginPath)) {
+                _ = Directory.CreateDirectory(pluginPath);
+            }
         }
 
         public static void InitApp(WebApplication app) => App = app;
@@ -230,8 +238,15 @@ namespace bifeldy_sd3_lib_60 {
 
                     throw new InvalidOperationException("Tidak Ada Tag [ApiExplorerSettings(GroupName = \"...\")]");
                 });
+
                 c.DocInclusionPredicate((name, api) => true);
             });
+        }
+
+        public static void UseApiPluginRouteEndpoint() {
+            PluginManager pluginManager = App.Services.GetRequiredService<PluginContext>().Manager;
+            PluginLoaderForSwagger.LoadAllPlugins(pluginManager, pluginPath);
+            PluginLoaderForSwagger.WatchAndReload(pluginManager, pluginPath);
         }
 
         public static void UseSwagger(
@@ -301,6 +316,10 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton<IConverter>(sp => {
                 return new SynchronizedConverter(new PdfTools());
             });
+
+            _ = Services.AddSingleton(new PluginContext(pluginPath));
+            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(DynamicActionDescriptorChangeProvider.Instance);
+            _ = Services.AddSingleton(DynamicActionDescriptorChangeProvider.Instance);
         }
 
         /* ** */
@@ -511,22 +530,6 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void Handle404ApiNotFound(string apiUrlPrefix = "api") {
-            _ = App.Map("/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}", async context => {
-                HttpResponse response = context.Response;
-                response.Clear();
-                response.StatusCode = StatusCodes.Status404NotFound;
-                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = "404 - Whoops :: API Tidak Ditemukan",
-                    result = new ResponseJsonMessage() {
-                        message = $"Silahkan Periksa Kembali Dokumentasi API"
-                    }
-                });
-            });
-        }
-
-        /* ** */
-
         public static void UseNginxProxyPathSegment() {
             _ = App.Use(async (context, next) => {
                 if (context.Request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
@@ -636,6 +639,38 @@ namespace bifeldy_sd3_lib_60 {
                         });
                     }
                 }
+            });
+        }
+
+        public static void HandleApiPluginRouteEndpoint(string apiUrlPrefix = "api") {
+            _ = App.Use(async (context, next) => {
+                PluginManager pluginManager = context.RequestServices.GetRequiredService<PluginContext>().Manager;
+
+                string path = context.Request.Path.Value?.Trim('/');
+                if (!string.IsNullOrEmpty(path) && path.StartsWith(apiUrlPrefix)) {
+                    string[] segments = path.Split('/');
+
+                    if (segments.Length >= 2) {
+                        string pluginName = segments[1];
+                        pluginManager.LoadPlugin(pluginName);
+                    }
+                }
+
+                await next();
+            });
+        }
+
+        public static void Handle404ApiNotFound(string apiUrlPrefix = "api") {
+            _ = App.Map("/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}", async context => {
+                HttpResponse response = context.Response;
+                response.Clear();
+                response.StatusCode = StatusCodes.Status404NotFound;
+                await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                    info = "404 - Whoops :: API Tidak Ditemukan",
+                    result = new ResponseJsonMessage() {
+                        message = $"Silahkan Periksa Kembali Dokumentasi API"
+                    }
+                });
             });
         }
 
