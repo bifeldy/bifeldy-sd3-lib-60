@@ -31,7 +31,7 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.dotnetRunningInContainer = value;
         }
 
-        private int apiPort = -1;
+        private int apiPort = 80;
         public int API_PORT {
             get {
                 string port = GetEnvVar("API_PORT");
@@ -57,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.grpcPort = value;
         }
 
-        private bool isUsingPostgres = false;
+        private bool isUsingPostgres = true;
         public bool IS_USING_POSTGRES {
             get {
                 string dbPgEnv = GetEnvVar("IS_USING_POSTGRES");
