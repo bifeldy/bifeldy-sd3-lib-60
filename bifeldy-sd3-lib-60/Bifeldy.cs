@@ -195,12 +195,24 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static IMvcBuilder ConfigureApplicationPartManagerDynamicApiPluginRouteEndpoint<T>(IMvcBuilder mvcBuilder) where T : CPluginWatcherCoordinator {
-            return mvcBuilder.ConfigureApplicationPartManager(apm => {
-                _ = Services.PostConfigure<T>(pwc => {
-                    pwc.Context.PartManager = apm;
+        public static IMvcBuilder AddControllerApplicationPartsDynamicApiPluginRouteEndpoint(string apiUrlPrefix = "api") {
+            IMvcBuilder mvcBuilder = Services.AddControllers(x => {
+                x.UseRoutePrefix(apiUrlPrefix);
+                x.UseHideControllerEndPointDc(Services);
+            }).AddJsonOptions(x => {
+                x.JsonSerializerOptions.PropertyNamingPolicy = null;
+                x.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+            }).AddXmlSerializerFormatters(); // .PartManager.ApplicationParts.Add(new AssemblyPart(typeof(Bifeldy).Assembly));
+
+            if (IS_USING_PLUGINS) {
+                mvcBuilder = mvcBuilder.ConfigureApplicationPartManager(apm => {
+                    _ = Services.PostConfigure<CPluginWatcherCoordinator>(pwc => {
+                        pwc.Context.PartManager = apm;
+                    });
                 });
-            });
+            }
+
+            return mvcBuilder;
         }
 
         public static void AddSwagger(
