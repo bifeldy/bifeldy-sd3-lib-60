@@ -10,48 +10,54 @@
 * 
 */
 
+using System.Reflection;
+
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Writers;
+
+using Swashbuckle.AspNetCore.Swagger;
+
 namespace bifeldy_sd3_lib_60.Plugins {
 
     public static class PluginLoaderForSwagger {
 
-        private static readonly Dictionary<string, DateTime> debounceMap = new();
-        private static readonly object debounceLock = new();
-
-        public static void LoadAllPlugins(PluginManager pluginManager, string pluginDir) {
-            foreach (string dll in Directory.GetFiles(pluginDir, "*.dll", SearchOption.AllDirectories)) {
-                string pluginName = Path.GetFileNameWithoutExtension(dll);
-                pluginManager.LoadPlugin(pluginName);
+        public static void LoadAllPlugins(PluginContext pluginContext, string pluginDir) {
+            foreach (string dllAsFolderName in Directory.GetDirectories(pluginDir, "*", SearchOption.TopDirectoryOnly)) {
+                string pluginName = Path.GetFileName(dllAsFolderName);
+                pluginContext.Manager.LoadPlugin(pluginName);
             }
         }
 
-        public static void WatchAndReload(PluginManager pluginManager, string pluginDir) {
-            var watcher = new FileSystemWatcher(pluginDir, "*.dll") {
-                IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName
-            };
+        public static void RegisterSwaggerReload(PluginContext pluginContext) {
+            pluginContext.Manager.PluginReloaded += pluginName => {
+                pluginContext.Logger.LogInformation("[SWAGGER] Reloading Plugin 💉 {pluginName}", pluginName);
 
-            void handler(object _, FileSystemEventArgs e) {
-                lock (debounceLock) {
-                    string key = e.FullPath;
-                    DateTime now = DateTime.UtcNow;
-                    if (!debounceMap.ContainsKey(key) || (now - debounceMap[key]).TotalMilliseconds > 300) {
-                        debounceMap[key] = now;
-                        TriggerReload(pluginManager, pluginDir);
+                try {
+                    IWebHostEnvironment environment = Bifeldy.App.Services.GetRequiredService<IWebHostEnvironment>();
+                    ISwaggerProvider provider = Bifeldy.App.Services.GetRequiredService<ISwaggerProvider>();
+
+                    if (!Directory.Exists(environment.WebRootPath)) {
+                        _ = Directory.CreateDirectory(environment.WebRootPath);
                     }
+
+                    string appVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
+                    OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
+
+                    string jsonPath = Path.Combine(environment.WebRootPath, "swagger.json");
+                    using (var streamWriter = new StreamWriter(jsonPath)) {
+                        var writer = new OpenApiJsonWriter(streamWriter);
+                        swaggerDoc.SerializeAsV3(writer);
+                    }
+
+                    pluginContext.Logger.LogInformation("[SWAGGER] JSON Updated Successfully.");
                 }
-            }
-
-            watcher.Changed += handler;
-            watcher.Created += handler;
-            watcher.Renamed += (_, e) => handler(_, new FileSystemEventArgs(WatcherChangeTypes.Changed, Path.GetDirectoryName(e.FullPath)!, Path.GetFileName(e.FullPath)));
-            watcher.Deleted += handler;
-
-            watcher.EnableRaisingEvents = true;
-        }
-
-        private static void TriggerReload(PluginManager pluginManager, string pluginDir) {
-            Console.WriteLine("[PluginWatcher] Change detected, reloading for Swagger...");
-            LoadAllPlugins(pluginManager, pluginDir);
+                catch (Exception ex) {
+                    pluginContext.Logger.LogError(ex, "[SWAGGER] Failed To Reload Plugin 💉 {pluginName}", pluginName);
+                }
+            };
         }
 
     }

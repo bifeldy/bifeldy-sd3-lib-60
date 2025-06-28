@@ -12,8 +12,9 @@
 
 using System.Diagnostics;
 using System.Globalization;
-using System.Reflection;
 using System.Net;
+using System.Reflection;
+using System.Text.Json;
 
 using Helmet;
 
@@ -53,6 +54,8 @@ using Serilog.Events;
 
 using StackExchange.Redis;
 
+using Swashbuckle.AspNetCore.Swagger;
+
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
@@ -89,16 +92,6 @@ namespace bifeldy_sd3_lib_60 {
 
         private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public static string PLUGIN_PATH {
-            get {
-                return Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory,
-                    DEFAULT_DATA_FOLDER,
-                    "plugins"
-                );
-            }
-        }
-
         public static void AppContextOverride() {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             // AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
@@ -115,10 +108,6 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.Configure<JsonOptions>(opt => {
                 opt.SerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
             });
-
-            if (!Directory.Exists(PLUGIN_PATH)) {
-                _ = Directory.CreateDirectory(PLUGIN_PATH);
-            }
         }
 
         public static void InitApp(WebApplication app) => App = app;
@@ -184,8 +173,22 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
+        public static void AddDynamicApiPluginRouteEndpoint(string dataFolderName = "plugins") {
+            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
+            if (!Directory.Exists(pluginFolderPath)) {
+                _ = Directory.CreateDirectory(pluginFolderPath);
+            }
+
+            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(DynamicActionDescriptorChangeProvider.Instance);
+            _ = Services.AddSingleton(DynamicActionDescriptorChangeProvider.Instance);
+
+            _ = Services.AddSingleton(sp => {
+                ILogger<PluginContext> logger = sp.GetRequiredService<ILogger<PluginContext>>();
+                return new PluginWatcherCoordinator(dataFolderName, new PluginContext(pluginFolderPath, Services, logger));
+            });
+        }
+
         public static void AddSwagger(
-            string apiUrlPrefix = "api",
             string docsTitle = null,
             string docsDescription = null,
             bool enableApiKey = true,
@@ -193,10 +196,13 @@ namespace bifeldy_sd3_lib_60 {
         ) {
             _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
-                c.SwaggerDoc(apiUrlPrefix, new OpenApiInfo() {
+
+                string appVersion = string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
+                c.SwaggerDoc(appVersion, new OpenApiInfo() {
                     Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
                     Description = docsDescription ?? "API Documentation ~"
                 });
+
                 if (enableApiKey) {
                     var apiKey = new OpenApiSecurityScheme() {
                         Description = @"API-Key Origin. Example: 'http://.../...?key=000...'",
@@ -235,6 +241,7 @@ namespace bifeldy_sd3_lib_60 {
 
                 c.OperationFilter<SwaggerMediaTypesOperationFilter>();
                 c.SchemaFilter<SwaggerHideJsonPropertyFilter>();
+
                 c.TagActionsBy(api => {
                     if (api.GroupName != null) {
                         return new[] { api.GroupName };
@@ -251,10 +258,26 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void UseApiPluginRouteEndpoint() {
-            PluginManager pluginManager = App.Services.GetRequiredService<PluginContext>().Manager;
-            PluginLoaderForSwagger.LoadAllPlugins(pluginManager, PLUGIN_PATH);
-            PluginLoaderForSwagger.WatchAndReload(pluginManager, PLUGIN_PATH);
+        public static void UseDynamicApiPluginRouteEndpoint(string dataFolderName = "plugins") {
+            PluginWatcherCoordinator pwc = App.Services.GetRequiredService<PluginWatcherCoordinator>();
+
+            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
+            PluginLoaderForSwagger.LoadAllPlugins(pwc.Context, pluginFolderPath);
+
+            string appVersion = string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
+
+            ISwaggerProvider provider = App.Services.GetRequiredService<ISwaggerProvider>();
+            OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
+            string json = JsonSerializer.Serialize(
+                swaggerDoc,
+                new JsonSerializerOptions {
+                    WriteIndented = true
+                }
+            );
+
+            File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot/swagger.json"), json);
+
+            PluginLoaderForSwagger.RegisterSwaggerReload(pwc.Context);
         }
 
         public static void UseSwagger(
@@ -286,7 +309,10 @@ namespace bifeldy_sd3_lib_60 {
             });
             _ = App.UseSwaggerUI(c => {
                 c.RoutePrefix = apiUrlPrefix;
-                c.SwaggerEndpoint("swagger.json", apiUrlPrefix);
+
+                string appVersion = string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
+                c.SwaggerEndpoint($"/swagger.json?v={DateTime.UtcNow.Ticks}", appVersion);
+
                 c.DefaultModelsExpandDepth(-1);
             });
         }
@@ -324,10 +350,6 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton<IConverter>(sp => {
                 return new SynchronizedConverter(new PdfTools());
             });
-
-            _ = Services.AddSingleton(new PluginContext(PLUGIN_PATH));
-            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(DynamicActionDescriptorChangeProvider.Instance);
-            _ = Services.AddSingleton(DynamicActionDescriptorChangeProvider.Instance);
         }
 
         /* ** */
@@ -652,15 +674,34 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void HandleApiPluginRouteEndpoint(string apiUrlPrefix = "api") {
             _ = App.Use(async (context, next) => {
-                PluginManager pluginManager = context.RequestServices.GetRequiredService<PluginContext>().Manager;
-
+                PluginWatcherCoordinator pwc = context.RequestServices.GetRequiredService<PluginWatcherCoordinator>();
                 string path = context.Request.Path.Value?.Trim('/');
-                if (!string.IsNullOrEmpty(path) && path.StartsWith(apiUrlPrefix)) {
+
+                if (!string.IsNullOrEmpty(path) && path.StartsWith(apiUrlPrefix) && !path.StartsWith($"{apiUrlPrefix}/swagger")) {
                     string[] segments = path.Split('/');
 
                     if (segments.Length >= 2) {
                         string pluginName = segments[1];
-                        pluginManager.LoadPlugin(pluginName);
+
+                        try {
+                            if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
+                                pwc.Context.Manager.LoadPlugin(pluginName);
+                            }
+
+                            context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName);
+                        }
+                        catch (Exception ex) {
+                            context.Response.Clear();
+                            context.Response.StatusCode = StatusCodes.Status404NotFound;
+                            await context.Response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                                info = "404 - Whoops :: Plugin Tidak Ditemukan",
+                                result = new ResponseJsonMessage() {
+                                    message = ex.Message
+                                }
+                            });
+
+                            return;
+                        }
                     }
                 }
 

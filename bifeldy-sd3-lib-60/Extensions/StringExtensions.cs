@@ -43,6 +43,15 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return urlText;
         }
 
+        public static string RemoveIllegalFileName(this string fileName) {
+            IEnumerable<char> invalid = Path.GetInvalidFileNameChars().Union(Path.GetInvalidPathChars());
+            foreach (char c in invalid) {
+                fileName = fileName.Replace(c.ToString(), "_");
+            }
+
+            return fileName;
+        }
+
     }
 
 }

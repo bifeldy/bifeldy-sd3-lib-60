@@ -23,7 +23,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             this._resolver = new AssemblyDependencyResolver(path);
         }
 
-        protected override Assembly? Load(AssemblyName name) {
+        protected override Assembly Load(AssemblyName name) {
             string path = this._resolver.ResolveAssemblyToPath(name);
             return path != null ? this.LoadFromAssemblyPath(path) : null;
         }
