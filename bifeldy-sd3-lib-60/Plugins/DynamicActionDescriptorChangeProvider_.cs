@@ -15,9 +15,9 @@ using Microsoft.Extensions.Primitives;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public sealed class DynamicActionDescriptorChangeProvider : IActionDescriptorChangeProvider {
+    public sealed class CDynamicActionDescriptorChangeProvider : IActionDescriptorChangeProvider {
 
-        public static readonly DynamicActionDescriptorChangeProvider Instance = new();
+        public static readonly CDynamicActionDescriptorChangeProvider Instance = new();
         private CancellationTokenSource _cts = new();
 
         public IChangeToken GetChangeToken() => new CancellationChangeToken(_cts.Token);

@@ -182,16 +182,20 @@ namespace bifeldy_sd3_lib_60 {
                 _ = Directory.CreateDirectory(pluginFolderPath);
             }
 
-            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(DynamicActionDescriptorChangeProvider.Instance);
-            _ = Services.AddSingleton(DynamicActionDescriptorChangeProvider.Instance);
+            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(CDynamicActionDescriptorChangeProvider.Instance);
+            _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
 
+            _ = Services.AddSingleton<IPluginContext>(sp => {
+                ILogger<IPluginContext> logger = sp.GetRequiredService<ILogger<IPluginContext>>();
+                return new CPluginContext(pluginFolderPath, Services, logger);
+            });
             _ = Services.AddSingleton(sp => {
-                ILogger<PluginContext> logger = sp.GetRequiredService<ILogger<PluginContext>>();
-                return new PluginWatcherCoordinator(dataFolderName, new PluginContext(pluginFolderPath, Services, logger));
+                IPluginContext pluginContext = sp.GetRequiredService<IPluginContext>();
+                return new CPluginWatcherCoordinator(dataFolderName, pluginContext);
             });
         }
 
-        public static IMvcBuilder ConfigureApplicationPartManagerDynamicApiPluginRouteEndpoint<T>(IMvcBuilder mvcBuilder) where T : PluginWatcherCoordinator {
+        public static IMvcBuilder ConfigureApplicationPartManagerDynamicApiPluginRouteEndpoint<T>(IMvcBuilder mvcBuilder) where T : CPluginWatcherCoordinator {
             return mvcBuilder.ConfigureApplicationPartManager(apm => {
                 _ = Services.PostConfigure<T>(pwc => {
                     pwc.Context.PartManager = apm;
@@ -206,6 +210,8 @@ namespace bifeldy_sd3_lib_60 {
             bool enableApiKey = true,
             bool enableJwt = false
         ) {
+            _ = Services.AddEndpointsApiExplorer();
+
             _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
 
@@ -274,10 +280,10 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void UseDynamicApiPluginRouteEndpoint(string dataFolderName = "plugins") {
-            PluginWatcherCoordinator pwc = App.Services.GetRequiredService<PluginWatcherCoordinator>();
+            CPluginWatcherCoordinator pwc = App.Services.GetRequiredService<CPluginWatcherCoordinator>();
 
             string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
-            PluginLoaderForSwagger.LoadAllPlugins(pwc.Context, pluginFolderPath);
+            CPluginLoaderForSwagger.LoadAllPlugins(pwc.Context, pluginFolderPath);
 
             IWebHostEnvironment environment = App.Services.GetRequiredService<IWebHostEnvironment>();
             ISwaggerProvider provider = App.Services.GetRequiredService<ISwaggerProvider>();
@@ -295,7 +301,7 @@ namespace bifeldy_sd3_lib_60 {
                 swaggerDoc.SerializeAsV3(writer);
             }
 
-            PluginLoaderForSwagger.RegisterSwaggerReload(pwc.Context);
+            CPluginLoaderForSwagger.RegisterSwaggerReload(pwc.Context);
         }
 
         public static void UseSwagger(
@@ -713,7 +719,7 @@ namespace bifeldy_sd3_lib_60 {
 
                         if (File.Exists(pluginPath)) {
                             try {
-                                PluginWatcherCoordinator pwc = context.RequestServices.GetRequiredService<PluginWatcherCoordinator>();
+                                CPluginWatcherCoordinator pwc = context.RequestServices.GetRequiredService<CPluginWatcherCoordinator>();
 
                                 if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
                                     pwc.Context.Manager.LoadPlugin(pluginName);

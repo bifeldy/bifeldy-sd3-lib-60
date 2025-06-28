@@ -15,11 +15,11 @@ using System.Runtime.Loader;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public sealed class PluginLoadContext : AssemblyLoadContext {
+    public sealed class CPluginLoadContext : AssemblyLoadContext {
 
         private readonly AssemblyDependencyResolver _resolver;
 
-        public PluginLoadContext(string path) : base(isCollectible: true) {
+        public CPluginLoadContext(string path) : base(isCollectible: true) {
             this._resolver = new AssemblyDependencyResolver(path);
         }
 

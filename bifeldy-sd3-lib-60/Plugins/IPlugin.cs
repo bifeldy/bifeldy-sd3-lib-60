@@ -19,13 +19,13 @@ namespace bifeldy_sd3_lib_60.Plugins {
     }
 
     [AttributeUsage(AttributeTargets.Class)]
-    public sealed class PluginInfoAttribute : Attribute {
+    public sealed class CPluginInfoAttribute : Attribute {
 
         public string Name { get; }
         public string Version { get; }
         public string Author { get; }
 
-        public PluginInfoAttribute(string name, string version, string author) {
+        public CPluginInfoAttribute(string name, string version, string author) {
             this.Name = name;
             this.Version = version;
             this.Author = author;
@@ -33,7 +33,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
     }
 
-    public sealed class PluginInfoDto {
+    public sealed class CPluginInfo {
         public string Name { get; set; }
         public string Version { get; set; }
         public string Author { get; set; }

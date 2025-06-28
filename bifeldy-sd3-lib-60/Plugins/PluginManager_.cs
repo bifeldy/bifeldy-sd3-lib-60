@@ -25,7 +25,7 @@ using bifeldy_sd3_lib_60.Extensions;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public sealed class PluginManager {
+    public sealed class CPluginManager {
 
         private readonly string _pluginDir;
         private readonly IServiceCollection _services;
@@ -37,9 +37,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         private readonly ConcurrentDictionary<string, IPlugin> _pluginInstances = new();
         private readonly ConcurrentDictionary<string, ServiceProvider> _pluginServiceProviders = new();
-        private readonly ConcurrentDictionary<string, (PluginLoadContext, Assembly)> _loaded = new();
+        private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly)> _loaded = new();
 
-        public PluginManager(string pluginDir, IServiceCollection services, ILogger logger) {
+        public CPluginManager(string pluginDir, IServiceCollection services, ILogger logger) {
             this._pluginDir = pluginDir;
             this._services = services;
             this._logger = logger;
@@ -63,7 +63,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 }
 
                 DateTime lastWrite = File.GetLastWriteTimeUtc(mainDllPath);
-                if (this._loaded.TryGetValue(name, out (PluginLoadContext context, Assembly asm) oldEntry)) {
+                if (this._loaded.TryGetValue(name, out (CPluginLoadContext context, Assembly asm) oldEntry)) {
                     DateTime oldWrite = File.GetLastWriteTimeUtc(oldEntry.asm.Location);
                     if (lastWrite == oldWrite) {
                         return;
@@ -83,7 +83,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                 lock (this._loaded) {
                     // Butuh Yang Asli Karena Barang Kali Ada External Lib.dll Yang 1 Folder Dengannya ~
-                    var plc = new PluginLoadContext(mainDllPath);
+                    var plc = new CPluginLoadContext(mainDllPath);
                     Assembly asm = plc.LoadFromAssemblyPath(tempPath);
 
                     this._loaded[name] = (plc, asm);
@@ -133,7 +133,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         throw new Exception($"[PLUGIN] No Valid IPlugin Implementation Found 💉 {name}");
                     }
 
-                    PluginInfoAttribute info = type.GetCustomAttribute<PluginInfoAttribute>();
+                    CPluginInfoAttribute info = type.GetCustomAttribute<CPluginInfoAttribute>();
                     if (info == null) {
                         throw new Exception($"[PLUGIN] No Metadata Attribute Found To Read 💉 {name}");
                     }
@@ -176,7 +176,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         this._logger.LogInformation("[PLUGIN] Application Ready 💉 {name}", name);
                     }
 
-                    DynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
+                    CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
                     PluginReloaded?.Invoke(name);
                 }
             }
@@ -225,7 +225,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                 this._logger.LogInformation("[PLUGIN] Instance Removed 💉 {name}", name);
 
-                if (this._loaded.TryRemove(name, out (PluginLoadContext context, Assembly asm) entry)) {
+                if (this._loaded.TryRemove(name, out (CPluginLoadContext context, Assembly asm) entry)) {
                     entry.context.Unload();
 
                     this._logger.LogInformation("[PLUGIN] All Dependencies Removed 💉 {name}", name);
@@ -244,7 +244,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     GC.Collect();
                 }
 
-                DynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
+                CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
                 PluginReloaded?.Invoke(name);
 
                 this._logger.LogInformation("[PLUGIN] Application Removed 💉 {name}", name);
@@ -301,18 +301,18 @@ namespace bifeldy_sd3_lib_60.Plugins {
             }
         }
 
-        public List<PluginInfoDto> GetLoadedPluginInfos() {
+        public List<CPluginInfo> GetLoadedPluginInfos() {
             lock (this._loaded) {
                 return this._loaded.Select(kvp => {
                     Assembly asm = kvp.Value.Item2;
                     Type pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
-                    PluginInfoAttribute attr = pluginType?.GetCustomAttribute<PluginInfoAttribute>();
+                    CPluginInfoAttribute attr = pluginType?.GetCustomAttribute<CPluginInfoAttribute>();
 
                     if (pluginType == null) {
                         return null;
                     }
 
-                    return new PluginInfoDto {
+                    return new CPluginInfo {
                         Name = attr.Name,
                         Version = attr.Version,
                         Author = attr.Author

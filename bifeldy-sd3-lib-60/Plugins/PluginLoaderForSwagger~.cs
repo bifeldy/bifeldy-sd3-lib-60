@@ -22,16 +22,16 @@ using Swashbuckle.AspNetCore.Swagger;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public static class PluginLoaderForSwagger {
+    public static class CPluginLoaderForSwagger {
 
-        public static void LoadAllPlugins(PluginContext pluginContext, string pluginDir) {
+        public static void LoadAllPlugins(IPluginContext pluginContext, string pluginDir) {
             foreach (string dllAsFolderName in Directory.GetDirectories(pluginDir, "*", SearchOption.TopDirectoryOnly)) {
                 string pluginName = Path.GetFileName(dllAsFolderName);
                 pluginContext.Manager.LoadPlugin(pluginName);
             }
         }
 
-        public static void RegisterSwaggerReload(PluginContext pluginContext) {
+        public static void RegisterSwaggerReload(IPluginContext pluginContext) {
             pluginContext.Manager.PluginReloaded += pluginName => {
                 pluginContext.Logger.LogInformation("[SWAGGER] Reloading Plugin 💉 {pluginName}", pluginName);
 

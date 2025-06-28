@@ -16,18 +16,18 @@ using Microsoft.Extensions.Logging;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public class PluginWatcherCoordinator : IDisposable {
+    public class CPluginWatcherCoordinator : IDisposable {
 
         private string _dataFolderName { get; }
 
-        public PluginContext Context { get; }
+        public IPluginContext Context { get; }
 
         private readonly BlockingCollection<string> _pluginQueue = new();
         private readonly CancellationTokenSource _cts = new();
         private readonly HashSet<string> _pendingSet = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _lock = new();
 
-        public PluginWatcherCoordinator(string dataFolderName, PluginContext pluginContext) {
+        public CPluginWatcherCoordinator(string dataFolderName, IPluginContext pluginContext) {
             this._dataFolderName = dataFolderName;
             this.Context = pluginContext;
             //

@@ -14,14 +14,14 @@ using System.Collections.Concurrent;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public sealed class PluginFileWatcher {
+    public sealed class CPluginFileWatcher {
 
         private readonly string _pluginDir;
         private readonly FileSystemWatcher _watcher;
         private readonly object _lock = new();
         private readonly ConcurrentDictionary<string, Action<string>> _namedCallbacks = new();
 
-        public PluginFileWatcher(string pluginDir) {
+        public CPluginFileWatcher(string pluginDir) {
             this._pluginDir = pluginDir;
 
             this._watcher = new FileSystemWatcher(this._pluginDir, "*") {

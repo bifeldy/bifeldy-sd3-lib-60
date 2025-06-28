@@ -21,7 +21,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     [ApiController]
     [Route("echo")]
     [ApiExplorerSettings(IgnoreApi = true)]
-    public class EchoController : ControllerBase {
+    public sealed class EchoController : ControllerBase {
 
         public IActionResult ReturnData(dynamic json = null) {
             var query = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
