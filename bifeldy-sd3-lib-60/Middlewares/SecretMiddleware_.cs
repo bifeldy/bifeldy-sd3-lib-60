@@ -65,7 +65,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             bool isApi = apiPathRequested.StartsWith("/api/");
             bool isSwagger = apiPathRequested.StartsWith("/api/swagger");
 
-            if ((!isGrpc && !isSignalr && !isApi) || isSwagger) {
+            if ((!isGrpc && !isSignalr && !isApi) || (isSwagger && !Bifeldy.IS_USING_PLUGINS)) {
                 await this._next(context);
                 return;
             }

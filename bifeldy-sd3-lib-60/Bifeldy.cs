@@ -14,7 +14,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
-using System.Text.Json;
 
 using Helmet;
 
@@ -38,6 +37,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Writers;
 
 using DinkToPdf;
 using DinkToPdf.Contracts;
@@ -77,6 +77,7 @@ namespace bifeldy_sd3_lib_60 {
         public static List<string> GRPC_ROUTH_PATH = new();
         public static List<string> SIGNALR_ROUTH_PATH = new();
 
+        public static bool IS_USING_PLUGINS = false;
         public static bool IS_USING_REQUEST_LOGGER = false;
         public static bool IS_USING_SECRET = false;
         public static bool IS_USING_API_KEY = false;
@@ -174,6 +175,8 @@ namespace bifeldy_sd3_lib_60 {
         /* ** */
 
         public static void AddDynamicApiPluginRouteEndpoint(string dataFolderName = "plugins") {
+            IS_USING_PLUGINS = true;
+
             string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
             if (!Directory.Exists(pluginFolderPath)) {
                 _ = Directory.CreateDirectory(pluginFolderPath);
@@ -188,7 +191,16 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
+        public static IMvcBuilder ConfigureApplicationPartManagerDynamicApiPluginRouteEndpoint<T>(IMvcBuilder mvcBuilder) where T : PluginWatcherCoordinator {
+            return mvcBuilder.ConfigureApplicationPartManager(apm => {
+                _ = Services.PostConfigure<T>(pwc => {
+                    pwc.Context.PartManager = apm;
+                });
+            });
+        }
+
         public static void AddSwagger(
+            string swaggerPrefix = "api",
             string docsTitle = null,
             string docsDescription = null,
             bool enableApiKey = true,
@@ -197,8 +209,11 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
 
-                string appVersion = string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
-                c.SwaggerDoc(appVersion, new OpenApiInfo() {
+                if (IS_USING_PLUGINS) {
+                    swaggerPrefix = Assembly.GetEntryAssembly().GetName().Version.ToString();
+                }
+
+                c.SwaggerDoc(swaggerPrefix, new OpenApiInfo() {
                     Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
                     Description = docsDescription ?? "API Documentation ~"
                 });
@@ -264,18 +279,21 @@ namespace bifeldy_sd3_lib_60 {
             string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
             PluginLoaderForSwagger.LoadAllPlugins(pwc.Context, pluginFolderPath);
 
-            string appVersion = string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
-
+            IWebHostEnvironment environment = App.Services.GetRequiredService<IWebHostEnvironment>();
             ISwaggerProvider provider = App.Services.GetRequiredService<ISwaggerProvider>();
-            OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
-            string json = JsonSerializer.Serialize(
-                swaggerDoc,
-                new JsonSerializerOptions {
-                    WriteIndented = true
-                }
-            );
 
-            File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot/swagger.json"), json);
+            if (!Directory.Exists(environment.WebRootPath)) {
+                _ = Directory.CreateDirectory(environment.WebRootPath);
+            }
+
+            string appVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
+            OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
+
+            string jsonPath = Path.Combine(environment.WebRootPath, "swagger.json");
+            using (var streamWriter = new StreamWriter(jsonPath)) {
+                var writer = new OpenApiJsonWriter(streamWriter);
+                swaggerDoc.SerializeAsV3(writer);
+            }
 
             PluginLoaderForSwagger.RegisterSwaggerReload(pwc.Context);
         }
@@ -285,6 +303,7 @@ namespace bifeldy_sd3_lib_60 {
             string proxyHeaderName = "x-forwarded-prefix"
         ) {
             NGINX_PATH_NAME = proxyHeaderName;
+
             _ = App.UseSwagger(c => {
                 c.RouteTemplate = "{documentName}/swagger.json";
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
@@ -304,14 +323,23 @@ namespace bifeldy_sd3_lib_60 {
                         Description = "Direct IP Server",
                         Url = "/"
                     });
+
                     swaggerDoc.Servers = openApiServers;
                 });
             });
+
             _ = App.UseSwaggerUI(c => {
                 c.RoutePrefix = apiUrlPrefix;
 
-                string appVersion = string.Join("", Assembly.GetEntryAssembly().GetName().Version.ToString().Split('.'));
-                c.SwaggerEndpoint($"/swagger.json?v={DateTime.UtcNow.Ticks}", appVersion);
+                string swaggerUrl = "swagger.json";
+                string swaggerName = apiUrlPrefix;
+
+                if (IS_USING_PLUGINS) {
+                    swaggerUrl = $"/swagger.json?v={DateTime.UtcNow.Ticks}";
+                    swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
+                }
+
+                c.SwaggerEndpoint(swaggerUrl, swaggerName);
 
                 c.DefaultModelsExpandDepth(-1);
             });
@@ -672,36 +700,44 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void HandleApiPluginRouteEndpoint(string apiUrlPrefix = "api") {
+        public static void HandleApiPluginRouteEndpoint(string apiUrlPrefix = "api", string pluginFolderName = "plugins") {
             _ = App.Use(async (context, next) => {
-                PluginWatcherCoordinator pwc = context.RequestServices.GetRequiredService<PluginWatcherCoordinator>();
                 string path = context.Request.Path.Value?.Trim('/');
 
-                if (!string.IsNullOrEmpty(path) && path.StartsWith(apiUrlPrefix) && !path.StartsWith($"{apiUrlPrefix}/swagger")) {
+                if (!string.IsNullOrEmpty(path) && path.StartsWith(apiUrlPrefix)) {
                     string[] segments = path.Split('/');
 
                     if (segments.Length >= 2) {
                         string pluginName = segments[1];
+                        string pluginPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, pluginFolderName, pluginName, $"{pluginName}.dll");
 
-                        try {
-                            if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
-                                pwc.Context.Manager.LoadPlugin(pluginName);
-                            }
+                        if (File.Exists(pluginPath)) {
+                            try {
+                                PluginWatcherCoordinator pwc = context.RequestServices.GetRequiredService<PluginWatcherCoordinator>();
 
-                            context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName);
-                        }
-                        catch (Exception ex) {
-                            context.Response.Clear();
-                            context.Response.StatusCode = StatusCodes.Status404NotFound;
-                            await context.Response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
-                                info = "404 - Whoops :: Plugin Tidak Ditemukan",
-                                result = new ResponseJsonMessage() {
-                                    message = ex.Message
+                                if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
+                                    pwc.Context.Manager.LoadPlugin(pluginName);
                                 }
-                            });
 
-                            return;
+                                context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName);
+                                await next();
+
+                                return;
+                            }
+                            catch (Exception ex) {
+                                context.Response.Clear();
+                                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                                await context.Response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                                    info = "503 - Whoops :: API Plugin Bermasalah",
+                                    result = new ResponseJsonMessage() {
+                                        message = ex.Message
+                                    }
+                                });
+
+                                return;
+                            }
                         }
+
                     }
                 }
 
@@ -710,7 +746,13 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void Handle404ApiNotFound(string apiUrlPrefix = "api") {
-            _ = App.Map("/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}", async context => {
+            string urlPattern = "/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}";
+
+            if (IS_USING_PLUGINS) {
+                urlPattern = "/" + apiUrlPrefix + "/{*url:regex(.*$)}";
+            }
+
+            _ = App.Map(urlPattern, async context => {
                 HttpResponse response = context.Response;
                 response.Clear();
                 response.StatusCode = StatusCodes.Status404NotFound;

@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public sealed class PluginWatcherCoordinator : IDisposable {
+    public class PluginWatcherCoordinator : IDisposable {
 
         private string _dataFolderName { get; }
 
