@@ -147,7 +147,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     this._logger.LogInformation("[PLUGIN] Metadata 💉 Name: {Name}, Version: {Version}, Author: {Author}", info.Name, info.Version, info.Author);
 
                     var plugin = (IPlugin)Activator.CreateInstance(type)!;
-                    _pluginInstances[name] = plugin;
+                    this._pluginInstances[name] = plugin;
 
                     this._logger.LogInformation("[PLUGIN] Instance Created 💉 {name}", name);
 
@@ -159,7 +159,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     }
 
                     ServiceProvider pluginServiceProvider = pluginServices.BuildServiceProvider();
-                    _pluginServiceProviders[name] = pluginServiceProvider;
+                    this._pluginServiceProviders[name] = pluginServiceProvider;
 
                     this._logger.LogInformation("[PLUGIN] Dependency Injection Service Registered 💉 {name}", name);
 
@@ -205,11 +205,11 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         _ = this._partManager.ApplicationParts.Remove(part);
                     }
 
-                    string applicationParts = string.Join(", ", _partManager.ApplicationParts.Select(p => p.Name));
+                    string applicationParts = string.Join(", ", this._partManager.ApplicationParts.Select(p => p.Name));
                     this._logger.LogInformation("[PLUGIN] Remaining ApplicationParts 💉 {applicationParts}", applicationParts);
                 }
 
-                if (_pluginServiceProviders.TryRemove(name, out ServiceProvider provider)) {
+                if (this._pluginServiceProviders.TryRemove(name, out ServiceProvider provider)) {
                     if (provider is IDisposable disposable) {
                         disposable.Dispose();
                     }
@@ -217,7 +217,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                 this._logger.LogInformation("[PLUGIN] Dependency Injection Service Removed 💉 {name}", name);
 
-                if (_pluginInstances.TryRemove(name, out IPlugin plugin)) {
+                if (this._pluginInstances.TryRemove(name, out IPlugin plugin)) {
                     if (plugin is IDisposable d) {
                         d.Dispose();
                     }
@@ -264,7 +264,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         public ServiceProvider GetServiceProvider(string name) {
             name = name.RemoveIllegalFileName();
-            return _pluginServiceProviders[name];
+            return this._pluginServiceProviders[name];
         }
 
         private IEnumerable<Type> SafeGetTypes(Assembly asm) {
@@ -296,29 +296,26 @@ namespace bifeldy_sd3_lib_60.Plugins {
         }
 
         public bool IsPluginLoaded(string name) {
-            lock (this._loaded) {
-                return this._loaded.ContainsKey(name);
-            }
+            name = name.RemoveIllegalFileName();
+            return this._loaded.ContainsKey(name);
         }
 
         public List<CPluginInfo> GetLoadedPluginInfos() {
-            lock (this._loaded) {
-                return this._loaded.Select(kvp => {
-                    Assembly asm = kvp.Value.Item2;
-                    Type pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
-                    CPluginInfoAttribute attr = pluginType?.GetCustomAttribute<CPluginInfoAttribute>();
+            return this._loaded.Select(kvp => {
+                Assembly asm = kvp.Value.Item2;
+                Type pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
+                CPluginInfoAttribute attr = pluginType?.GetCustomAttribute<CPluginInfoAttribute>();
 
-                    if (pluginType == null) {
-                        return null;
-                    }
+                if (pluginType == null) {
+                    return null;
+                }
 
-                    return new CPluginInfo {
-                        Name = attr.Name,
-                        Version = attr.Version,
-                        Author = attr.Author
-                    };
-                }).Where(x => x != null).ToList();
-            }
+                return new CPluginInfo {
+                    Name = attr.Name,
+                    Version = attr.Version,
+                    Author = attr.Author
+                };
+            }).Where(x => x != null).ToList();
         }
 
     }

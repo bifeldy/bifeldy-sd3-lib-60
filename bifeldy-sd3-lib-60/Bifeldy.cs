@@ -727,8 +727,6 @@ namespace bifeldy_sd3_lib_60 {
 
                                 context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName);
                                 await next();
-
-                                return;
                             }
                             catch (Exception ex) {
                                 context.Response.Clear();
@@ -739,9 +737,9 @@ namespace bifeldy_sd3_lib_60 {
                                         message = ex.Message
                                     }
                                 });
-
-                                return;
                             }
+
+                            return;
                         }
 
                     }
