@@ -195,7 +195,7 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static IMvcBuilder AddControllerApplicationPartsDynamicApiPluginRouteEndpoint(string apiUrlPrefix = "api") {
+        public static IMvcBuilder AddControllers(string apiUrlPrefix = "api") {
             IMvcBuilder mvcBuilder = Services.AddControllers(x => {
                 x.UseRoutePrefix(apiUrlPrefix);
                 x.UseHideControllerEndPointDc(Services);
@@ -718,7 +718,7 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void HandleApiPluginRouteEndpoint(string apiUrlPrefix = "api", string pluginFolderName = "plugins") {
+        public static void HandleDynamicApiPluginRouteEndpoint(string apiUrlPrefix = "api", string pluginFolderName = "plugins") {
             _ = App.Use(async (context, next) => {
                 string path = context.Request.Path.Value?.Trim('/');
 
