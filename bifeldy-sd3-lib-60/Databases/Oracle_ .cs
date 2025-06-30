@@ -66,7 +66,13 @@ namespace bifeldy_sd3_lib_60.Databases {
             this.DbTnsOdp = _dbTnsOdp;
             string _dbName = null;
             if (!string.IsNullOrEmpty(this.DbTnsOdp)) {
-                _dbName = this.DbTnsOdp.Split(new string[] { "SERVICE_NAME=" }, StringSplitOptions.None)[1].Split(new string[] { ")" }, StringSplitOptions.None)[0];
+                string[] serviceNames = this.DbTnsOdp.Split(new string[] { "SERVICE_NAME=" }, StringSplitOptions.None);
+                if (serviceNames.Length > 1) {
+                    serviceNames = serviceNames[1].Split(new string[] { ")" }, StringSplitOptions.None);
+                    if (serviceNames.Length > 0) {
+                        _dbName = serviceNames[0];
+                    }
+                }
             }
 
             this.DbName = _dbName;
