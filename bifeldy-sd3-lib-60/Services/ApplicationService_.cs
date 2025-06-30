@@ -74,19 +74,27 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
                 result = this._SettingLibb.GetVariabel(key, kunci);
+                result = result?.Trim();
+
+                string errorEmpty = $"Terjadi Kesalahan Saat Mendapatkan Kunci {key} @ {kunci} ::";
+                if (string.IsNullOrEmpty(result)) {
+                    throw new Exception($"{errorEmpty} [#1] Kosong / Tidak Tersedia");
+                }
+
                 if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL")) {
-                    throw new Exception($"Gagal Mengambil Kunci {key} @ {kunci} :: {result}");
+                    throw new Exception($"{errorEmpty} {result}");
                 }
 
-                if (!string.IsNullOrEmpty(result)) {
-                    result = result.Split(';').FirstOrDefault();
+                result = result.Split(';').FirstOrDefault();
+                result = result?.Trim();
 
-                    if (!string.IsNullOrEmpty(result)) {
-                        this._cache.SetString($"{this.GetType().Name}_{key}", result, new DistributedCacheEntryOptions() {
-                            SlidingExpiration = TimeSpan.FromMinutes(15)
-                        });
-                    }
+                if (string.IsNullOrEmpty(result)) {
+                    throw new Exception($"{errorEmpty} [#2] Kosong / Tidak Tersedia");
                 }
+
+                this._cache.SetString($"{this.GetType().Name}_{key}", result, new DistributedCacheEntryOptions() {
+                    SlidingExpiration = TimeSpan.FromMinutes(15)
+                });
 
                 return result;
             }
