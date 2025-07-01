@@ -33,10 +33,4 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
     }
 
-    public sealed class CPluginInfo {
-        public string Name { get; set; }
-        public string Version { get; set; }
-        public string Author { get; set; }
-    }
-
 }

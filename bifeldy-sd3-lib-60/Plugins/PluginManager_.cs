@@ -300,7 +300,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             return this._loaded.ContainsKey(name);
         }
 
-        public List<CPluginInfo> GetLoadedPluginInfos() {
+        public List<CPluginInfoAttribute> GetLoadedPluginInfos() {
             return this._loaded.Select(kvp => {
                 Assembly asm = kvp.Value.Item2;
                 Type pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
@@ -310,11 +310,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     return null;
                 }
 
-                return new CPluginInfo {
-                    Name = attr.Name,
-                    Version = attr.Version,
-                    Author = attr.Author
-                };
+                return attr;
             }).Where(x => x != null).ToList();
         }
 
