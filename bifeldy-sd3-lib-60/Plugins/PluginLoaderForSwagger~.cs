@@ -29,33 +29,50 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 string pluginName = Path.GetFileName(dllAsFolderName);
                 pluginContext.Manager.LoadPlugin(pluginName);
             }
+
+            pluginContext.Manager.ReloadAllDynamicApiPluginRouteEndpoint();
+        }
+
+        private static void ReloadSwagger(IPluginContext pluginContext) {
+            IWebHostEnvironment environment = Bifeldy.App.Services.GetRequiredService<IWebHostEnvironment>();
+            ISwaggerProvider provider = Bifeldy.App.Services.GetRequiredService<ISwaggerProvider>();
+
+            if (!Directory.Exists(environment.WebRootPath)) {
+                _ = Directory.CreateDirectory(environment.WebRootPath);
+            }
+
+            string appVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
+            OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
+
+            string jsonPath = Path.Combine(environment.WebRootPath, "swagger.json");
+            using (var streamWriter = new StreamWriter(jsonPath)) {
+                var writer = new OpenApiJsonWriter(streamWriter);
+                swaggerDoc.SerializeAsV3(writer);
+            }
+
+            pluginContext.Logger.LogInformation("[SWAGGER] JSON Updated Successfully.");
         }
 
         public static void RegisterSwaggerReload(IPluginContext pluginContext) {
-            pluginContext.Manager.PluginReloaded += pluginName => {
+            pluginContext.Manager.PluginReloadedSingle += pluginName => {
                 pluginContext.Logger.LogInformation("[SWAGGER] Reloading Plugin 💉 {pluginName}", pluginName);
 
                 try {
-                    IWebHostEnvironment environment = Bifeldy.App.Services.GetRequiredService<IWebHostEnvironment>();
-                    ISwaggerProvider provider = Bifeldy.App.Services.GetRequiredService<ISwaggerProvider>();
-
-                    if (!Directory.Exists(environment.WebRootPath)) {
-                        _ = Directory.CreateDirectory(environment.WebRootPath);
-                    }
-
-                    string appVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
-                    OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
-
-                    string jsonPath = Path.Combine(environment.WebRootPath, "swagger.json");
-                    using (var streamWriter = new StreamWriter(jsonPath)) {
-                        var writer = new OpenApiJsonWriter(streamWriter);
-                        swaggerDoc.SerializeAsV3(writer);
-                    }
-
-                    pluginContext.Logger.LogInformation("[SWAGGER] JSON Updated Successfully.");
+                    ReloadSwagger(pluginContext);
                 }
                 catch (Exception ex) {
-                    pluginContext.Logger.LogError(ex, "[SWAGGER] Failed To Reload Plugin 💉 {pluginName}", pluginName);
+                    pluginContext.Logger.LogError("[SWAGGER] Failed To Reload Plugin '{pluginName}' 💉 {ex}", pluginName, ex.Message);
+                }
+            };
+
+            pluginContext.Manager.PluginReloadedAll += () => {
+                pluginContext.Logger.LogInformation("[SWAGGER] Reloading All Plugin");
+
+                try {
+                    ReloadSwagger(pluginContext);
+                }
+                catch (Exception ex) {
+                    pluginContext.Logger.LogError("[SWAGGER] Failed To Reload All Plugin 💉 {ex}", ex.Message);
                 }
             };
         }

@@ -46,10 +46,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
         }
 
         private void OnChanged(object sender, FileSystemEventArgs e) {
-            string pluginName = Path.GetFileNameWithoutExtension(e.Name!);
             lock (this._lock) {
                 foreach (Action<string> callback in _namedCallbacks.Values) {
-                    callback(pluginName);
+                    callback(e.FullPath);
                 }
             }
         }

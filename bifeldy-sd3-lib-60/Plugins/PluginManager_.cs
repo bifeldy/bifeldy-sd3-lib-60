@@ -20,12 +20,16 @@ using Microsoft.AspNetCore.Razor.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
     public sealed class CPluginManager {
+
+        private readonly EnvVar _envVar;
 
         private readonly string _pluginDir;
         private readonly IServiceCollection _services;
@@ -33,23 +37,35 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         private ApplicationPartManager _partManager;
 
-        public event Action<string> PluginReloaded;
+        public event Action<string> PluginReloadedSingle;
+        public event Action PluginReloadedAll;
 
         private readonly ConcurrentDictionary<string, IPlugin> _pluginInstances = new();
         private readonly ConcurrentDictionary<string, ServiceProvider> _pluginServiceProviders = new();
-        private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly)> _loaded = new();
+        private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly, FileStream, string)> _loaded = new();
 
-        public CPluginManager(string pluginDir, IServiceCollection services, ILogger logger) {
+        public CPluginManager(string pluginDir, IServiceCollection services, ILogger logger, IOptions<EnvVar> envVar) {
             this._pluginDir = pluginDir;
             this._services = services;
             this._logger = logger;
+            this._envVar = envVar.Value;
         }
 
         public void SetPartManager(ApplicationPartManager partManager) {
             this._partManager = partManager;
         }
 
-        public void LoadPlugin(string name) {
+        public void ReloadSingleDynamicApiPluginRouteEndpoint(string name) {
+            CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
+            PluginReloadedSingle?.Invoke(name);
+        }
+
+        public void ReloadAllDynamicApiPluginRouteEndpoint() {
+            CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
+            PluginReloadedAll?.Invoke();
+        }
+
+        public void LoadPlugin(string name, bool reloadDynamicApiPluginRouteEndpoint = false) {
             name = name.RemoveIllegalFileName();
 
             this._logger.LogInformation("[PLUGIN] Loading 💉 {name}", name);
@@ -59,12 +75,13 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 string mainDllPath = Path.Combine(dllAsFolderName, $"{name}.dll");
 
                 if (!Directory.Exists(dllAsFolderName) || !File.Exists(mainDllPath) || this._partManager == null) {
-                    throw new Exception($"[PLUGIN] DLL Not Found 💉 {mainDllPath}");
+                    this._logger.LogError($"[PLUGIN] DLL Not Found 💉 {mainDllPath}");
+                    return;
                 }
 
                 DateTime lastWrite = File.GetLastWriteTimeUtc(mainDllPath);
-                if (this._loaded.TryGetValue(name, out (CPluginLoadContext context, Assembly asm) oldEntry)) {
-                    DateTime oldWrite = File.GetLastWriteTimeUtc(oldEntry.asm.Location);
+                if (this._loaded.TryGetValue(name, out (CPluginLoadContext context, Assembly asm, FileStream fs, string tempPath) oldEntry)) {
+                    DateTime oldWrite = File.GetLastWriteTimeUtc(oldEntry.tempPath);
                     if (lastWrite == oldWrite) {
                         return;
                     }
@@ -73,7 +90,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 this.UnloadPlugin(name);
 
                 string tempPath = Path.Combine(
-                    Path.GetTempPath(),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.TEMP_FOLDER_PATH),
                     $"{Bifeldy.App.Environment.ApplicationName}_{name}_{Guid.NewGuid()}.dll"
                 );
 
@@ -84,11 +101,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 lock (this._loaded) {
                     // Butuh Yang Asli Karena Barang Kali Ada External Lib.dll Yang 1 Folder Dengannya ~
                     var plc = new CPluginLoadContext(mainDllPath);
-                    Assembly asm = plc.LoadFromAssemblyPath(tempPath);
 
-                    this._loaded[name] = (plc, asm);
-
-                    this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
+                    var fs = new FileStream(tempPath, FileMode.Open, FileAccess.Read);
+                    Assembly asm = plc.LoadFromStream(fs);
 
                     var newTypes = this.SafeGetTypes(asm)
                         .Where(t => !string.IsNullOrWhiteSpace(t.FullName))
@@ -138,13 +153,24 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         throw new Exception($"[PLUGIN] No Metadata Attribute Found To Read 💉 {name}");
                     }
 
-                    var asmFileInfo = FileVersionInfo.GetVersionInfo(asm.Location);
-                    string asmFileVersion = string.Join("", asmFileInfo.ProductVersion.Split('.'));
-                    if (info.Name != asmFileInfo.ProductName || info.Version != asmFileVersion || string.IsNullOrEmpty(info.Author)) {
-                        throw new Exception($"[PLUGIN] Wrong / Invalid Assembly Metadata 💉 {name}");
+                    var asmFileInfo = FileVersionInfo.GetVersionInfo(tempPath);
+                    if (info.Name != asmFileInfo.ProductName || info.Version != asmFileInfo.ProductVersion || string.IsNullOrEmpty(info.Author)) {
+                        plc.Unload();
+                        fs.Dispose();
+
+                        if (File.Exists(tempPath)) {
+                            File.Delete(tempPath);
+                        }
+
+                        this._logger.LogError($"[PLUGIN] Wrong / Invalid Assembly Metadata 💉 {name}");
+                        return;
                     }
 
                     this._logger.LogInformation("[PLUGIN] Metadata 💉 Name: {Name}, Version: {Version}, Author: {Author}", info.Name, info.Version, info.Author);
+
+                    this._loaded[name] = (plc, asm, fs, tempPath);
+
+                    this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
 
                     var plugin = (IPlugin)Activator.CreateInstance(type)!;
                     this._pluginInstances[name] = plugin;
@@ -176,30 +202,31 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         this._logger.LogInformation("[PLUGIN] Application Ready 💉 {name}", name);
                     }
 
-                    CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
-                    PluginReloaded?.Invoke(name);
+                    if (reloadDynamicApiPluginRouteEndpoint) {
+                        this.ReloadSingleDynamicApiPluginRouteEndpoint(name);
+                    }
                 }
             }
             catch (Exception ex) {
-                this._logger.LogError(ex,"[PLUGIN] Error 💉 {name}", name);
+                this._logger.LogError("[PLUGIN] Error '{pluginName}' 💉 {name}", name, ex.Message);
                 this.UnloadPlugin(name);
                 throw;
             }
         }
 
-        public void UnloadPlugin(string name, bool skipGC = false) {
+        public void UnloadPlugin(string name, bool skipGC = false, bool reloadDynamicApiPluginRouteEndpoint = false) {
             name = name.RemoveIllegalFileName();
 
             this._logger.LogInformation("[PLUGIN] Removing 💉 {name}", name);
 
             lock (this._loaded) {
                 if (this._partManager != null) {
-                    // ApplicationPart part = this._partManager.ApplicationParts
-                    //     .FirstOrDefault(p => string.Equals(p.Name, entry.asm.GetName().Name, StringComparison.OrdinalIgnoreCase));   
+                    ApplicationPart part = this._partManager.ApplicationParts
+                        .FirstOrDefault(p => p.Name.ToUpper() == name.ToUpper());
 
-                    AssemblyPart part = this._partManager.ApplicationParts
-                    .OfType<AssemblyPart>()
-                    .FirstOrDefault(p => p.Assembly == this._loaded[name].Item2);
+                    // AssemblyPart part = this._partManager.ApplicationParts
+                    //     .OfType<AssemblyPart>()
+                    //     .FirstOrDefault(p => p.Assembly == this._loaded[name].Item2);
 
                     if (part != null) {
                         _ = this._partManager.ApplicationParts.Remove(part);
@@ -225,17 +252,15 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                 this._logger.LogInformation("[PLUGIN] Instance Removed 💉 {name}", name);
 
-                if (this._loaded.TryRemove(name, out (CPluginLoadContext context, Assembly asm) entry)) {
+                if (this._loaded.TryRemove(name, out (CPluginLoadContext context, Assembly asm, FileStream fs, string tempPath) entry)) {
                     entry.context.Unload();
+                    entry.fs.Dispose();
 
-                    this._logger.LogInformation("[PLUGIN] All Dependencies Removed 💉 {name}", name);
-
-                    string tempFile = entry.asm.Location;
-                    if (File.Exists(tempFile)) {
-                        File.Delete(tempFile);
-
-                        this._logger.LogInformation("[PLUGIN] Temporary File Removed 💉 {name}", name);
+                    if (File.Exists(entry.tempPath)) {
+                        File.Delete(entry.tempPath);
                     }
+
+                    this._logger.LogInformation("[PLUGIN] All Dependencies & Temporary File Removed 💉 {name}", name);
                 }
 
                 if (!skipGC) {
@@ -244,8 +269,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     GC.Collect();
                 }
 
-                CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
-                PluginReloaded?.Invoke(name);
+                if (reloadDynamicApiPluginRouteEndpoint) {
+                    this.ReloadSingleDynamicApiPluginRouteEndpoint(name);
+                }
 
                 this._logger.LogInformation("[PLUGIN] Application Removed 💉 {name}", name);
             }
@@ -260,11 +286,18 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     this._logger.LogError("[PLUGIN] Failed to Unload 💉 {key}", key);
                 }
             }
+
+            this.ReloadAllDynamicApiPluginRouteEndpoint();
         }
 
         public ServiceProvider GetServiceProvider(string name) {
             name = name.RemoveIllegalFileName();
-            return this._pluginServiceProviders[name];
+
+            if (this._pluginServiceProviders.ContainsKey(name)) {
+                return this._pluginServiceProviders[name];
+            }
+
+            return null;
         }
 
         private IEnumerable<Type> SafeGetTypes(Assembly asm) {

@@ -35,26 +35,32 @@ namespace bifeldy_sd3_lib_60.Plugins {
             _ = Task.Factory.StartNew(this.ProcessQueue, this._cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
-        private void QueuePluginForReload(string pluginName) {
+        private void QueuePluginForReload(string pluginFilePath) {
             lock (this._lock) {
-                if (this._pendingSet.Add(pluginName)) {
-                    this._pluginQueue.Add(pluginName);
+                if (this._pendingSet.Add(pluginFilePath)) {
+                    this._pluginQueue.Add(pluginFilePath);
                 }
             }
         }
 
         private void ProcessQueue() {
-            foreach (string pluginName in this._pluginQueue.GetConsumingEnumerable(this._cts.Token)) {
+            foreach (string pluginFilePath in this._pluginQueue.GetConsumingEnumerable(this._cts.Token)) {
+                if (!pluginFilePath.ToLower().EndsWith(".dll")) {
+                    continue;
+                }
+
+                string pluginName = Path.GetFileNameWithoutExtension(pluginFilePath);
+
                 try {
-                    this.Context.Manager.UnloadPlugin(pluginName);
                     this.Context.Manager.LoadPlugin(pluginName);
                 }
                 catch (Exception ex) {
-                    this.Context.Logger.LogError(ex, $"[PluginWatcher] Failed To Reload 💉 {pluginName}");
+                    this.Context.Logger.LogError("[PluginWatcher] Failed To Reload '{pluginName}' 💉 {name}", pluginName, ex.Message);
                 }
                 finally {
                     lock (this._lock) {
-                        _ = this._pendingSet.Remove(pluginName);
+                        _ = this._pendingSet.Remove(pluginFilePath);
+                        this.Context.Manager.ReloadAllDynamicApiPluginRouteEndpoint();
                     }
 
                     Thread.Sleep(1500);

@@ -13,6 +13,9 @@
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
@@ -39,10 +42,10 @@ namespace bifeldy_sd3_lib_60.Plugins {
             }
         }
 
-        public CPluginContext(string pluginPath, IServiceCollection services, ILogger logger) {
+        public CPluginContext(string pluginPath, IServiceCollection services, ILogger logger, IOptions<EnvVar> envVar) {
             this.Logger = logger;
 
-            this.Manager = new CPluginManager(pluginPath, services, logger);
+            this.Manager = new CPluginManager(pluginPath, services, logger, envVar);
             this.FileWatcher = new CPluginFileWatcher(pluginPath);
 
             AppDomain.CurrentDomain.DomainUnload += (_, __) => this.Manager.UnloadAll();

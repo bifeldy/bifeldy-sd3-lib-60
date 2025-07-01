@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -90,6 +91,7 @@ namespace bifeldy_sd3_lib_60 {
         public static IServiceCollection Services = null;
         public static IConfiguration Config = null;
         public static WebApplication App = null;
+        public static ApplicationPartManager Apm = null;
 
         private static readonly Dictionary<string, Dictionary<string, Type>> jobList = new(StringComparer.InvariantCultureIgnoreCase);
 
@@ -187,8 +189,12 @@ namespace bifeldy_sd3_lib_60 {
 
             _ = Services.AddSingleton<IPluginContext>(sp => {
                 ILogger<IPluginContext> logger = sp.GetRequiredService<ILogger<IPluginContext>>();
-                return new CPluginContext(pluginFolderPath, Services, logger);
+                IOptions<EnvVar> envVar = sp.GetRequiredService<IOptions<EnvVar>>();
+                return new CPluginContext(pluginFolderPath, Services, logger, envVar) {
+                    PartManager = Apm
+                };
             });
+
             _ = Services.AddSingleton(sp => {
                 IPluginContext pluginContext = sp.GetRequiredService<IPluginContext>();
                 return new CPluginWatcherCoordinator(dataFolderName, pluginContext);
@@ -206,9 +212,7 @@ namespace bifeldy_sd3_lib_60 {
 
             if (IS_USING_PLUGINS) {
                 mvcBuilder = mvcBuilder.ConfigureApplicationPartManager(apm => {
-                    _ = Services.PostConfigure<CPluginWatcherCoordinator>(pwc => {
-                        pwc.Context.PartManager = apm;
-                    });
+                    Apm = apm;
                 });
             }
 
@@ -735,6 +739,11 @@ namespace bifeldy_sd3_lib_60 {
 
                                 if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
                                     pwc.Context.Manager.LoadPlugin(pluginName);
+                                    pwc.Context.Manager.ReloadSingleDynamicApiPluginRouteEndpoint(pluginName);
+                                }
+
+                                if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
+                                    throw new Exception($"Tidak Dapat Memuat Plugin '{pluginName}'");
                                 }
 
                                 context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName);
