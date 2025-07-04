@@ -188,9 +188,9 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
 
             _ = Services.AddSingleton<IPluginContext>(sp => {
-                ILogger<IPluginContext> logger = sp.GetRequiredService<ILogger<IPluginContext>>();
+                ILogger<CPluginContext> logger = sp.GetRequiredService<ILogger<CPluginContext>>();
                 IOptions<EnvVar> envVar = sp.GetRequiredService<IOptions<EnvVar>>();
-                return new CPluginContext(pluginFolderPath, Services, logger, envVar) {
+                return new CPluginContext(pluginFolderPath, logger, envVar) {
                     PartManager = Apm
                 };
             });
@@ -746,7 +746,8 @@ namespace bifeldy_sd3_lib_60 {
                                     throw new Exception($"Tidak Dapat Memuat Plugin '{pluginName}'");
                                 }
 
-                                context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName);
+                                context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName, context.RequestServices);
+
                                 await next();
                             }
                             catch (Exception ex) {
@@ -777,7 +778,7 @@ namespace bifeldy_sd3_lib_60 {
                 urlPattern = "/" + apiUrlPrefix + "/{*url:regex(.*$)}";
             }
 
-            _ = App.Map(urlPattern, async context => {
+            _ = App.MapFallback(urlPattern, async context => {
                 HttpResponse response = context.Response;
                 response.Clear();
                 response.StatusCode = StatusCodes.Status404NotFound;

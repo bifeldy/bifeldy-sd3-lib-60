@@ -32,7 +32,6 @@ namespace bifeldy_sd3_lib_60.Plugins {
         private readonly EnvVar _envVar;
 
         private readonly string _pluginDir;
-        private readonly IServiceCollection _services;
         private readonly ILogger _logger;
 
         private ApplicationPartManager _partManager;
@@ -41,12 +40,11 @@ namespace bifeldy_sd3_lib_60.Plugins {
         public event Action PluginReloadedAll;
 
         private readonly ConcurrentDictionary<string, IPlugin> _pluginInstances = new();
-        private readonly ConcurrentDictionary<string, ServiceProvider> _pluginServiceProviders = new();
+        private readonly ConcurrentDictionary<string, IServiceProvider> _pluginServiceProviders = new();
         private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly, FileStream, string)> _loaded = new();
 
-        public CPluginManager(string pluginDir, IServiceCollection services, ILogger logger, IOptions<EnvVar> envVar) {
+        public CPluginManager(string pluginDir, ILogger logger, IOptions<EnvVar> envVar) {
             this._pluginDir = pluginDir;
-            this._services = services;
             this._logger = logger;
             this._envVar = envVar.Value;
         }
@@ -127,12 +125,12 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         }
                     }
 
-                    var allowedDuplicatePatterns = new HashSet<string> {
+                    var allowedNamespacePattern = new HashSet<string> {
                         "bifeldy_sd3_lib_60.*",
                         "bifeldy_sd3_mbz_60.*"
                     };
 
-                    IEnumerable<Regex> allowedRegexes = allowedDuplicatePatterns.Select(pattern => {
+                    IEnumerable<Regex> allowedRegexes = allowedNamespacePattern.Select(pattern => {
                         return new Regex(
                             "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$",
                             RegexOptions.IgnoreCase
@@ -177,14 +175,11 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     this._logger.LogInformation("[PLUGIN] Instance Created 💉 {name}", name);
 
-                    var pluginServices = new ServiceCollection();
-                    plugin.RegisterServices(pluginServices);
+                    var isolatedServiceCollection = new ServiceCollection();
+                    plugin.RegisterServices(isolatedServiceCollection);
 
-                    foreach (ServiceDescriptor descriptor in this._services) {
-                        _ = pluginServices.Add(descriptor);
-                    }
+                    IServiceProvider pluginServiceProvider = isolatedServiceCollection.BuildServiceProvider();
 
-                    ServiceProvider pluginServiceProvider = pluginServices.BuildServiceProvider();
                     this._pluginServiceProviders[name] = pluginServiceProvider;
 
                     this._logger.LogInformation("[PLUGIN] Dependency Injection Service Registered 💉 {name}", name);
@@ -236,7 +231,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     this._logger.LogInformation("[PLUGIN] Remaining ApplicationParts 💉 {applicationParts}", applicationParts);
                 }
 
-                if (this._pluginServiceProviders.TryRemove(name, out ServiceProvider provider)) {
+                if (this._pluginServiceProviders.TryRemove(name, out IServiceProvider provider)) {
                     if (provider is IDisposable disposable) {
                         disposable.Dispose();
                     }
@@ -290,14 +285,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
             this.ReloadAllDynamicApiPluginRouteEndpoint();
         }
 
-        public ServiceProvider GetServiceProvider(string name) {
+        public PluginServiceProvider GetServiceProvider(string name, IServiceProvider defaultFallback) {
             name = name.RemoveIllegalFileName();
-
-            if (this._pluginServiceProviders.ContainsKey(name)) {
-                return this._pluginServiceProviders[name];
-            }
-
-            return null;
+            return new PluginServiceProvider(this._pluginServiceProviders[name], defaultFallback);
         }
 
         private IEnumerable<Type> SafeGetTypes(Assembly asm) {

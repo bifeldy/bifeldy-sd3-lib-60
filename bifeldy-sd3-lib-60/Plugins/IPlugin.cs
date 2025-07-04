@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace bifeldy_sd3_lib_60.Plugins {
 
     public interface IPlugin {
-        void RegisterServices(IServiceCollection serviceProvider);
+        void RegisterServices(IServiceCollection isolatedServiceCollection);
     }
 
     [AttributeUsage(AttributeTargets.Class)]
