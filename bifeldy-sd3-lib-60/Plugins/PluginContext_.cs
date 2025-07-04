@@ -11,7 +11,6 @@
 */
 
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -19,14 +18,7 @@ using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public interface IPluginContext {
-        ILogger Logger { get; }
-        CPluginManager Manager { get; }
-        CPluginFileWatcher FileWatcher { get; }
-        ApplicationPartManager PartManager { get; set; }
-    }
-
-    public sealed class CPluginContext : IPluginContext {
+    public sealed class CPluginContext {
 
         public ILogger Logger { get; }
 

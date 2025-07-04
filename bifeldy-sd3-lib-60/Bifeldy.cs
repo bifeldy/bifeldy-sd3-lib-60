@@ -187,7 +187,7 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton<IActionDescriptorChangeProvider>(CDynamicActionDescriptorChangeProvider.Instance);
             _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
 
-            _ = Services.AddSingleton<IPluginContext>(sp => {
+            _ = Services.AddSingleton(sp => {
                 ILogger<CPluginContext> logger = sp.GetRequiredService<ILogger<CPluginContext>>();
                 IOptions<EnvVar> envVar = sp.GetRequiredService<IOptions<EnvVar>>();
                 return new CPluginContext(pluginFolderPath, logger, envVar) {
@@ -196,7 +196,7 @@ namespace bifeldy_sd3_lib_60 {
             });
 
             _ = Services.AddSingleton(sp => {
-                IPluginContext pluginContext = sp.GetRequiredService<IPluginContext>();
+                CPluginContext pluginContext = sp.GetRequiredService<CPluginContext>();
                 return new CPluginWatcherCoordinator(dataFolderName, pluginContext);
             });
         }

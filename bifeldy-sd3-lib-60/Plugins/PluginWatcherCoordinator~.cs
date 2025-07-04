@@ -20,14 +20,14 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         private string _dataFolderName { get; }
 
-        public IPluginContext Context { get; }
+        public CPluginContext Context { get; }
 
         private readonly BlockingCollection<string> _pluginQueue = new();
         private readonly CancellationTokenSource _cts = new();
         private readonly HashSet<string> _pendingSet = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _lock = new();
 
-        public CPluginWatcherCoordinator(string dataFolderName, IPluginContext pluginContext) {
+        public CPluginWatcherCoordinator(string dataFolderName, CPluginContext pluginContext) {
             this._dataFolderName = dataFolderName;
             this.Context = pluginContext;
             //
