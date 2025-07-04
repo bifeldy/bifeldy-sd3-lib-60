@@ -178,7 +178,6 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     plugin.RegisterServices(isolatedServiceCollection);
 
                     IServiceProvider pluginServiceProvider = isolatedServiceCollection.BuildServiceProvider();
-
                     this._pluginServiceProviders[name] = pluginServiceProvider;
 
                     this._logger.LogInformation("[PLUGIN] Dependency Injection Service Registered 💉 {name}", name);

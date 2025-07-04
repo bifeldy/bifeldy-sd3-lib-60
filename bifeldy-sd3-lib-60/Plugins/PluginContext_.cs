@@ -18,7 +18,14 @@ using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Plugins {
 
-    public sealed class CPluginContext {
+    public interface IPluginContext {
+        ILogger Logger { get; }
+        CPluginManager Manager { get; }
+        CPluginFileWatcher FileWatcher { get; }
+        ApplicationPartManager PartManager { get; set; }
+    }
+
+    public sealed class CPluginContext : IPluginContext {
 
         public ILogger Logger { get; }
 

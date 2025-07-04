@@ -24,7 +24,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
     public static class CPluginLoaderForSwagger {
 
-        public static void LoadAllPlugins(CPluginContext pluginContext, string pluginDir) {
+        public static void LoadAllPlugins(IPluginContext pluginContext, string pluginDir) {
             foreach (string dllAsFolderName in Directory.GetDirectories(pluginDir, "*", SearchOption.TopDirectoryOnly)) {
                 string pluginName = Path.GetFileName(dllAsFolderName);
                 pluginContext.Manager.LoadPlugin(pluginName);
@@ -33,7 +33,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             pluginContext.Manager.ReloadAllDynamicApiPluginRouteEndpoint();
         }
 
-        private static void ReloadSwagger(CPluginContext pluginContext) {
+        private static void ReloadSwagger(IPluginContext pluginContext) {
             IWebHostEnvironment environment = Bifeldy.App.Services.GetRequiredService<IWebHostEnvironment>();
             ISwaggerProvider provider = Bifeldy.App.Services.GetRequiredService<ISwaggerProvider>();
 
@@ -53,7 +53,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             pluginContext.Logger.LogInformation("[SWAGGER] JSON Updated Successfully.");
         }
 
-        public static void RegisterSwaggerReload(CPluginContext pluginContext) {
+        public static void RegisterSwaggerReload(IPluginContext pluginContext) {
             pluginContext.Manager.PluginReloadedSingle += pluginName => {
                 pluginContext.Logger.LogInformation("[SWAGGER] Reloading Plugin 💉 {pluginName}", pluginName);
 

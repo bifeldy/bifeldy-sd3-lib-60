@@ -23,13 +23,18 @@ namespace bifeldy_sd3_lib_60.Plugins {
         }
 
         public object GetService(Type serviceType) {
-            var service = this._pluginProvider.GetService(serviceType);
+            try {
+                object service = this._pluginProvider.GetService(serviceType);
 
-            if (service == null) {
-                service = this._hostProvider.GetService(serviceType);
+                if (service == null) {
+                    service = this._hostProvider.GetService(serviceType);
+                }
+
+                return service;
             }
-
-            return service;
+            catch {
+                return this._hostProvider.GetService(serviceType);
+            }
         }
 
     }

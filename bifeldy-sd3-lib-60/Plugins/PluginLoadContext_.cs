@@ -25,14 +25,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         protected override Assembly Load(AssemblyName name) {
             string path = this._resolver.ResolveAssemblyToPath(name);
-
-            if (path != null) {
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read)) {
-                    return this.LoadFromStream(fs);
-                }
-            }
-
-            return null;
+            return path != null ? this.LoadFromAssemblyPath(path) : null;
         }
 
     }
