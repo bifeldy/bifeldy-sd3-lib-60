@@ -14,6 +14,7 @@
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -38,10 +39,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
     [ScopedServiceRegistration]
     public sealed class CUserRepository : CRepository, IUserRepository {
 
-        private readonly AuthenticationStateProvider _asp;
+        private readonly IServiceProvider _sp;
 
-        public CUserRepository(AuthenticationStateProvider asp) {
-            this._asp = asp;
+        public CUserRepository(IServiceProvider sp) {
+            this._sp = sp;
         }
 
         public async Task<bool> Create(bool isPg, IDatabase db, DC_USER_T user) {
@@ -104,7 +105,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         public async Task<string> LoginUser(bool isPg, IDatabase db, string userNameNik, string password) {
             DC_USER_T dcUserT = await this.GetByUserNameNikPassword(isPg, db, userNameNik, password);
             if (dcUserT != null) {
-                var basp = (BlazorAuthenticationStateProvider)this._asp;
+                var basp = (BlazorAuthenticationStateProvider)this._sp.GetRequiredService<AuthenticationStateProvider>();
                 await basp.UpdateAuthenticationState(new UserWebSession() {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
@@ -118,7 +119,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task LogoutUser() {
-            var _basp = (BlazorAuthenticationStateProvider) this._asp;
+            var _basp = (BlazorAuthenticationStateProvider) this._sp.GetRequiredService<AuthenticationStateProvider>();
             await _basp.UpdateAuthenticationState(null);
         }
 

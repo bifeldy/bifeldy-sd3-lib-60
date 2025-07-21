@@ -377,6 +377,8 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddHttpContextAccessor();
 
             // --
+            // Transient Selalu Dapat Object Baru ~
+            // --
             _ = Services.AddDbContext<IOracle, COracle>(ServiceLifetime.Transient);
             _ = Services.AddDbContext<IPostgres, CPostgres>(ServiceLifetime.Transient);
             _ = Services.AddDbContext<IMsSQL, CMsSQL>(ServiceLifetime.Transient);
@@ -399,6 +401,11 @@ namespace bifeldy_sd3_lib_60 {
             // --
             _ = Services.AddSingleton<IConverter>(sp => {
                 return new SynchronizedConverter(new PdfTools());
+            });
+            // --
+            _ = Services.AddSingleton<IScheduler>(sp => {
+                ISchedulerFactory scheduler = sp.GetRequiredService<ISchedulerFactory>();
+                return scheduler.GetScheduler().Result;
             });
         }
 
@@ -565,10 +572,6 @@ namespace bifeldy_sd3_lib_60 {
         /* ** */
 
         public static void StartJobScheduler() {
-            _ = Services.AddSingleton<IScheduler>(sp => {
-                ISchedulerFactory scheduler = sp.GetRequiredService<ISchedulerFactory>();
-                return scheduler.GetScheduler().Result;
-            });
             _ = Services.AddQuartz(opt => {
                 // opt.UseMicrosoftDependencyInjectionJobFactory();
                 foreach (KeyValuePair<string, Dictionary<string, Type>> jl in jobList) {
