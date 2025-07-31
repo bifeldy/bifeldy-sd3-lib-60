@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Razor.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -158,6 +159,25 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     CPluginInfoAttribute info = type.GetCustomAttribute<CPluginInfoAttribute>();
                     if (info == null) {
                         throw new Exception($"[PLUGIN] No Metadata Attribute Found To Read 💉 {name}");
+                    }
+
+                    var controllers = this.GetPluginControllers(asm).ToList();
+                    if (controllers.Count != 1) {
+                        throw new Exception($"[PLUGIN] Maximum Allowed Only 1 Controller 💉 {name}");
+                    }
+                    else {
+                        Type ctrl = controllers.First();
+                        var attribs = ctrl.CustomAttributes.Where(attrib => attrib.AttributeType.Name == "RouteAttribute").ToList();
+                        if (attribs.Count != 1) {
+                            throw new Exception($"[PLUGIN] Maximum Allowed Only 1 Unique Route URL 💉 {name}");
+                        }
+                        else {
+                            CustomAttributeData routeAttrib = attribs.First();
+                            CustomAttributeTypedArgument urlPath = routeAttrib.ConstructorArguments.First();
+                            if (urlPath.Value?.ToString() != name) {
+                                throw new Exception($"[PLUGIN] Route URL Must Be Same With *.DLL File And Folder Name 💉 {name}");
+                            }
+                        }
                     }
 
                     var asmFileInfo = FileVersionInfo.GetVersionInfo(tempPath);
@@ -322,6 +342,10 @@ namespace bifeldy_sd3_lib_60.Plugins {
         private bool TryGetPluginType(Assembly asm, out Type type) {
             type = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
             return type != null;
+        }
+
+        private IEnumerable<Type> GetPluginControllers(Assembly asm) {
+            return asm.GetTypes().Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract);
         }
 
         private static bool TryCopyWithRetry(string sourcePath, string destinationPath, int maxRetries = 5, int delayMs = 200) {
