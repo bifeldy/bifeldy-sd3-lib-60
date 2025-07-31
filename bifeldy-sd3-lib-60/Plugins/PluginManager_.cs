@@ -125,9 +125,12 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     }
 
                     var allowedNamespacePattern = new HashSet<string> {
-                        "bifeldy_sd3_lib_60.*",
-                        "bifeldy_sd3_mbz_60.*"
+                        "bifeldy_sd3_lib_60.*"
                     };
+
+                    if (!string.IsNullOrEmpty(Bifeldy.PLUGINS_PROJECT_NAMESPACE)) {
+                        _ = allowedNamespacePattern.Add($"{Bifeldy.PLUGINS_PROJECT_NAMESPACE}.*");
+                    }
 
                     IEnumerable<Regex> allowedRegexes = allowedNamespacePattern.Select(pattern => {
                         return new Regex(

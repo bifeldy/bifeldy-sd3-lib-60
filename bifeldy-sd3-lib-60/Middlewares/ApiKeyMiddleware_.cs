@@ -63,7 +63,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
             string secret = context.Items["secret"]?.ToString();
             bool haveSecret = !string.IsNullOrEmpty(secret);
-            if ((!isGrpc && !isSignalr && !isApi) || (isSwagger && !Bifeldy.IS_USING_PLUGINS) || haveSecret) {
+            if ((!isGrpc && !isSignalr && !isApi) || (isSwagger && string.IsNullOrEmpty(Bifeldy.PLUGINS_PROJECT_NAMESPACE)) || haveSecret) {
                 await this._next(context);
                 return;
             }

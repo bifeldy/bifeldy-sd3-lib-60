@@ -66,7 +66,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
             };
         }
 
-        private static void AddInheritedMembers(Type? type, MetaType metaType) {
+        private static void AddInheritedMembers(Type type, MetaType metaType) {
             if ((type == null) || (type == typeof(object))) {
                 return;
             }

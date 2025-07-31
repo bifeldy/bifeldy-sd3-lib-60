@@ -78,7 +78,8 @@ namespace bifeldy_sd3_lib_60 {
         public static List<string> GRPC_ROUTH_PATH = new();
         public static List<string> SIGNALR_ROUTH_PATH = new();
 
-        public static bool IS_USING_PLUGINS = false;
+        public static string PLUGINS_PROJECT_NAMESPACE = null;
+
         public static bool IS_USING_REQUEST_LOGGER = false;
         public static bool IS_USING_SECRET = false;
         public static bool IS_USING_API_KEY = false;
@@ -176,8 +177,8 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddDynamicApiPluginRouteEndpoint(string dataFolderName = "plugins") {
-            IS_USING_PLUGINS = true;
+        public static void AddDynamicApiPluginRouteEndpoint(string projectNamespace, string dataFolderName = "plugins") {
+            PLUGINS_PROJECT_NAMESPACE = projectNamespace;
 
             string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
             if (!Directory.Exists(pluginFolderPath)) {
@@ -210,7 +211,7 @@ namespace bifeldy_sd3_lib_60 {
                 x.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
             }).AddXmlSerializerFormatters(); // .PartManager.ApplicationParts.Add(new AssemblyPart(typeof(Bifeldy).Assembly));
 
-            if (IS_USING_PLUGINS) {
+            if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
                 mvcBuilder = mvcBuilder.ConfigureApplicationPartManager(apm => {
                     Apm = apm;
                 });
@@ -231,7 +232,7 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
 
-                if (IS_USING_PLUGINS) {
+                if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
                     swaggerPrefix = Assembly.GetEntryAssembly().GetName().Version.ToString();
                 }
 
@@ -356,7 +357,7 @@ namespace bifeldy_sd3_lib_60 {
                 string swaggerUrl = "swagger.json";
                 string swaggerName = apiUrlPrefix;
 
-                if (IS_USING_PLUGINS) {
+                if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
                     swaggerUrl = $"/swagger.json?v={DateTime.UtcNow.Ticks}";
                     swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
                 }
@@ -777,7 +778,7 @@ namespace bifeldy_sd3_lib_60 {
         public static void Handle404ApiNotFound(string apiUrlPrefix = "api") {
             string urlPattern = "/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}";
 
-            if (IS_USING_PLUGINS) {
+            if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
                 urlPattern = "/" + apiUrlPrefix + "/{*url:regex(.*$)}";
             }
 
