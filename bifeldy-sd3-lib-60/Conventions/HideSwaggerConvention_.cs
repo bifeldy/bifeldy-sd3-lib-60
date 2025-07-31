@@ -79,25 +79,37 @@ namespace bifeldy_sd3_lib_60.Conventions {
             };
 
             foreach (ControllerModel controller in application.Controllers) {
-                var typeToHide = new List<Type>();
+                var typeToHideController = new List<Type>();
 
                 foreach (object ctrlAttrib in controller.Attributes) {
                     Type type = ctrlAttrib.GetType();
                     if (typesToCheck.Contains(type)) {
-                        typeToHide.Add(type);
+                        typeToHideController.Add(type);
                     }
                 }
 
                 foreach (ActionModel action in controller.Actions) {
                     foreach (object actAttrib in action.Attributes) {
-                        Type type = actAttrib.GetType();
-                        if (typesToCheck.Contains(type)) {
-                            this.SwaggerHide(type, action, kodeDc, jenisDc);
+                        Type typeToHideAction = actAttrib.GetType();
+                        if (typesToCheck.Contains(typeToHideAction)) {
+                            this.SwaggerHide(typeToHideAction, action, kodeDc, jenisDc);
+                        }
+                        else if (this._application.DebugMode) {
+                            action.ApiExplorer.IsVisible = true;
                         }
                     }
                     
-                    foreach (Type type in typeToHide) {
+                    foreach (Type type in typeToHideController) {
                         this.SwaggerHide(type, action, kodeDc, jenisDc);
+                    }
+
+                    if (
+                        !this._application.DebugMode &&
+                        controller.DisplayName.ToLower().Contains("bifeldy_sd3_lib_60") &&
+                        action.ActionName.ToUpper().Contains("GRPC") &&
+                        this._env.GRPC_PORT <= 0
+                    ) {
+                        action.ApiExplorer.IsVisible = false;
                     }
                 }
             }
