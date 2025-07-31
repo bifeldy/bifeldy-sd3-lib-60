@@ -105,6 +105,10 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     var fs = new FileStream(tempPath, FileMode.Open, FileAccess.Read);
                     Assembly asm = plc.LoadFromStream(fs);
 
+                    this._loaded[name] = (plc, asm, fs, tempPath);
+
+                    this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
+
                     var newTypes = this.SafeGetTypes(asm)
                         .Where(t => !string.IsNullOrWhiteSpace(t.FullName))
                         .Select(t => t.FullName!)
@@ -158,25 +162,13 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     var asmFileInfo = FileVersionInfo.GetVersionInfo(tempPath);
                     if (info.Name != asmFileInfo.ProductName || !asmFileInfo.ProductVersion.StartsWith(info.Version) || string.IsNullOrEmpty(info.Author)) {
-                        plc.Unload();
-                        fs.Dispose();
-
-                        if (File.Exists(tempPath)) {
-                            File.Delete(tempPath);
-                        }
-
-                        this._logger.LogError($"[PLUGIN] Wrong / Invalid Assembly Metadata 💉 {name}");
-                        return;
+                        throw new Exception($"[PLUGIN] Wrong / Invalid Assembly Metadata 💉 {name}");
                     }
 
                     this._logger.LogInformation(
                         "[PLUGIN] Metadata 💉 Name: {Name}, Version: {Version}, Author: {Author}",
                         info.Name, info.Version, info.Author
                     );
-
-                    this._loaded[name] = (plc, asm, fs, tempPath);
-
-                    this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
 
                     var plugin = (IPlugin)Activator.CreateInstance(type);
                     this._pluginInstances[name] = plugin;
