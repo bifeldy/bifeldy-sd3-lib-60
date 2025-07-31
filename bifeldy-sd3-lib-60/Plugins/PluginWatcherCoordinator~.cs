@@ -44,27 +44,32 @@ namespace bifeldy_sd3_lib_60.Plugins {
         }
 
         private void ProcessQueue() {
-            foreach (string pluginFilePath in this._pluginQueue.GetConsumingEnumerable(this._cts.Token)) {
-                if (!pluginFilePath.ToLower().EndsWith(".dll")) {
-                    continue;
-                }
-
-                string pluginName = Path.GetFileNameWithoutExtension(pluginFilePath);
-
-                try {
-                    this.Context.Manager.LoadPlugin(pluginName);
-                }
-                catch (Exception ex) {
-                    this.Context.Logger.LogError("[PluginWatcher] Failed To Reload '{pluginName}' 💉 {name}", pluginName, ex.Message);
-                }
-                finally {
-                    lock (this._lock) {
-                        _ = this._pendingSet.Remove(pluginFilePath);
-                        this.Context.Manager.ReloadAllDynamicApiPluginRouteEndpoint();
+            try {
+                foreach (string pluginFilePath in this._pluginQueue.GetConsumingEnumerable(this._cts.Token)) {
+                    if (!pluginFilePath.ToLower().EndsWith(".dll")) {
+                        continue;
                     }
 
-                    Thread.Sleep(1500);
+                    string pluginName = Path.GetFileNameWithoutExtension(pluginFilePath);
+
+                    try {
+                        this.Context.Manager.LoadPlugin(pluginName);
+                    }
+                    catch (Exception ex) {
+                        this.Context.Logger.LogError("[PluginWatcher] Failed To Reload '{pluginName}' 💉 {name}", pluginName, ex.Message);
+                    }
+                    finally {
+                        lock (this._lock) {
+                            _ = this._pendingSet.Remove(pluginFilePath);
+                            this.Context.Manager.ReloadAllDynamicApiPluginRouteEndpoint();
+                        }
+
+                        Thread.Sleep(1500);
+                    }
                 }
+            }
+            catch (Exception ex) {
+                this.Context.Logger.LogError("[PluginWatcher] Error Processing Plugin Queue 💉 {message}", ex.Message);
             }
         }
 
