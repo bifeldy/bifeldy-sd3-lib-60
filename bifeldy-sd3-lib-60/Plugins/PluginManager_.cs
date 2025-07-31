@@ -18,6 +18,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Razor.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +33,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         private readonly string _pluginDir;
         private readonly ILogger _logger;
+        private readonly IServiceProvider _serviceProvider;
 
         private ApplicationPartManager _partManager;
 
@@ -42,10 +44,11 @@ namespace bifeldy_sd3_lib_60.Plugins {
         private readonly ConcurrentDictionary<string, IServiceProvider> _pluginServiceProviders = new();
         private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly, FileStream, string)> _loaded = new();
 
-        public CPluginManager(string pluginDir, ILogger logger, IOptions<EnvVar> envVar) {
+        public CPluginManager(string pluginDir, ILogger logger, IOptions<EnvVar> envVar, IServiceProvider serviceProvider) {
             this._pluginDir = pluginDir;
             this._logger = logger;
             this._envVar = envVar.Value;
+            this._serviceProvider = serviceProvider;
         }
 
         public void SetPartManager(ApplicationPartManager partManager) {
@@ -124,22 +127,22 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         }
                     }
 
-                    var allowedNamespacePattern = new HashSet<string> {
-                        "bifeldy_sd3_lib_60.*"
+                    var notAllowedDuplicateNamespacePatterns = new HashSet<string> {
+                        $"{this.GetType().Namespace.Split('.').First()}.*"
                     };
 
                     if (!string.IsNullOrEmpty(Bifeldy.PLUGINS_PROJECT_NAMESPACE)) {
-                        _ = allowedNamespacePattern.Add($"{Bifeldy.PLUGINS_PROJECT_NAMESPACE}.*");
+                        _ = notAllowedDuplicateNamespacePatterns.Add($"{Bifeldy.PLUGINS_PROJECT_NAMESPACE}.*");
                     }
 
-                    IEnumerable<Regex> allowedRegexes = allowedNamespacePattern.Select(pattern => {
+                    IEnumerable<Regex> notAllowedDuplicateRegexes = notAllowedDuplicateNamespacePatterns.Select(pattern => {
                         return new Regex(
                             "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$",
                             RegexOptions.IgnoreCase
                         );
                     });
 
-                    IEnumerable<string> filteredDuplicates = duplicates.Where(typeName => !allowedRegexes.Any(rx => rx.IsMatch(typeName)));
+                    IEnumerable<string> filteredDuplicates = duplicates.Where(typeName => notAllowedDuplicateRegexes.Any(rx => rx.IsMatch(typeName)));
                     if (filteredDuplicates.Count() > 0) {
                         throw new Exception($"[PLUGIN] Duplicate Type Names Found 💉 {string.Join(", ", filteredDuplicates)}");
                     }
@@ -166,22 +169,46 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         return;
                     }
 
-                    this._logger.LogInformation("[PLUGIN] Metadata 💉 Name: {Name}, Version: {Version}, Author: {Author}", info.Name, info.Version, info.Author);
+                    this._logger.LogInformation(
+                        "[PLUGIN] Metadata 💉 Name: {Name}, Version: {Version}, Author: {Author}",
+                        info.Name, info.Version, info.Author
+                    );
 
                     this._loaded[name] = (plc, asm, fs, tempPath);
 
                     this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
 
-                    var plugin = (IPlugin)Activator.CreateInstance(type)!;
+                    var plugin = (IPlugin)Activator.CreateInstance(type);
                     this._pluginInstances[name] = plugin;
 
                     this._logger.LogInformation("[PLUGIN] Instance Created 💉 {name}", name);
 
                     var isolatedServiceCollection = new ServiceCollection();
-                    plugin.RegisterServices(isolatedServiceCollection);
+                    foreach (ServiceDescriptor descriptor in Bifeldy.Services.Where(s => !s.ServiceType.IsGenericType)) {
+                        Type descriptorType = descriptor.ImplementationType ?? descriptor.ServiceType;
 
-                    IServiceProvider pluginServiceProvider = isolatedServiceCollection.BuildServiceProvider();
-                    this._pluginServiceProviders[name] = pluginServiceProvider;
+                        if (descriptor.Lifetime == ServiceLifetime.Singleton) {
+                            _ = isolatedServiceCollection.AddSingleton(descriptor.ServiceType, sp => {
+                                return this._serviceProvider.GetRequiredService(descriptorType);
+                            });
+                        }
+                        else if (descriptor.Lifetime == ServiceLifetime.Scoped) {
+                            _ = isolatedServiceCollection.AddScoped(descriptor.ServiceType, sp => {
+                                return this._serviceProvider.GetRequiredService(descriptorType);
+                            });
+                        }
+                        else if (descriptor.Lifetime == ServiceLifetime.Transient) {
+                            _ = isolatedServiceCollection.AddTransient(descriptor.ServiceType, sp => {
+                                return this._serviceProvider.GetRequiredService(descriptorType);
+                            });
+                        }
+                        else {
+                            _ = isolatedServiceCollection.Add(descriptor);
+                        }
+                    }
+
+                    plugin.RegisterServices(isolatedServiceCollection);
+                    this._pluginServiceProviders[name] = isolatedServiceCollection.BuildServiceProvider();
 
                     this._logger.LogInformation("[PLUGIN] Dependency Injection Service Registered 💉 {name}", name);
 

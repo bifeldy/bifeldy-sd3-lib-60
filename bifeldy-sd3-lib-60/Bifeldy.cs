@@ -191,7 +191,7 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.AddSingleton<IPluginContext>(sp => {
                 ILogger<CPluginContext> logger = sp.GetRequiredService<ILogger<CPluginContext>>();
                 IOptions<EnvVar> envVar = sp.GetRequiredService<IOptions<EnvVar>>();
-                return new CPluginContext(pluginFolderPath, logger, envVar) {
+                return new CPluginContext(pluginFolderPath, logger, envVar, sp) {
                     PartManager = Apm
                 };
             });

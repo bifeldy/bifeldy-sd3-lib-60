@@ -41,10 +41,10 @@ namespace bifeldy_sd3_lib_60.Plugins {
             }
         }
 
-        public CPluginContext(string pluginPath, ILogger logger, IOptions<EnvVar> envVar) {
+        public CPluginContext(string pluginPath, ILogger logger, IOptions<EnvVar> envVar, IServiceProvider serviceProvider) {
             this.Logger = logger;
 
-            this.Manager = new CPluginManager(pluginPath, logger, envVar);
+            this.Manager = new CPluginManager(pluginPath, logger, envVar, serviceProvider);
             this.FileWatcher = new CPluginFileWatcher(pluginPath);
 
             AppDomain.CurrentDomain.DomainUnload += (_, __) => this.Manager.UnloadAll();
