@@ -157,7 +157,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     }
 
                     var asmFileInfo = FileVersionInfo.GetVersionInfo(tempPath);
-                    if (info.Name != asmFileInfo.ProductName || info.Version != asmFileInfo.ProductVersion || string.IsNullOrEmpty(info.Author)) {
+                    if (info.Name != asmFileInfo.ProductName || !asmFileInfo.ProductVersion.StartsWith(info.Version) || string.IsNullOrEmpty(info.Author)) {
                         plc.Unload();
                         fs.Dispose();
 
