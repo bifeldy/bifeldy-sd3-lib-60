@@ -43,7 +43,6 @@ namespace bifeldy_sd3_lib_60.Conventions {
                 action.ApiExplorer.IsVisible = true;
             }
             else if (
-                (hideType == typeof(RouteExcludeKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
                 (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
                 (hideType == typeof(RouteExcludeKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
                 (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
