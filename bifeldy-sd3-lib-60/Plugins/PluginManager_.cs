@@ -13,13 +13,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Razor.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -49,7 +47,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             this._pluginDir = pluginDir;
             this._logger = logger;
             this._envVar = envVar.Value;
-            this._serviceProvider = serviceProvider;
+            this._serviceProvider = serviceProvider.CreateScope().ServiceProvider;
         }
 
         public void SetPartManager(ApplicationPartManager partManager) {
@@ -106,14 +104,10 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     var fs = new FileStream(tempPath, FileMode.Open, FileAccess.Read);
                     Assembly asm = plc.LoadFromStream(fs);
 
-                    this._loaded[name] = (plc, asm, fs, tempPath);
-
-                    this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
-
-                    var newTypes = this.SafeGetTypes(asm)
+                    string[] newTypes = this.SafeGetTypes(asm)
                         .Where(t => !string.IsNullOrWhiteSpace(t.FullName))
-                        .Select(t => t.FullName!)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                        .Select(t => t.FullName)
+                        .ToArray();
 
                     var duplicates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var existingAssemblies = new List<Assembly> {
@@ -125,29 +119,31 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     foreach (Assembly existingAsm in existingAssemblies) {
                         foreach (Type existingType in this.SafeGetTypes(existingAsm)) {
-                            if (!string.IsNullOrWhiteSpace(existingType.FullName) && newTypes.Contains(existingType.FullName)) {
+                            if (!string.IsNullOrWhiteSpace(existingType.FullName) && newTypes.Any(nt => nt.Equals(existingType.FullName, StringComparison.OrdinalIgnoreCase))) {
                                 _ = duplicates.Add(existingType.FullName);
                                 this._logger.LogError("Duplicate '{type}' Found 💉 '{pluginName}'", existingType.FullName, name);
                             }
                         }
                     }
 
-                    var notAllowedDuplicateNamespacePatterns = new HashSet<string> {
-                        $"{this.GetType().Namespace.Split('.').First()}.*"
+                    this._loaded[name] = (plc, asm, fs, tempPath);
+
+                    this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
+
+                    var notAllowedDuplicateNamespace = new List<string> {
+                        this.GetType().Namespace
                     };
 
                     if (!string.IsNullOrEmpty(Bifeldy.PLUGINS_PROJECT_NAMESPACE)) {
-                        _ = notAllowedDuplicateNamespacePatterns.Add($"{Bifeldy.PLUGINS_PROJECT_NAMESPACE}.*");
+                        notAllowedDuplicateNamespace.Add(Bifeldy.PLUGINS_PROJECT_NAMESPACE);
                     }
 
-                    IEnumerable<Regex> notAllowedDuplicateRegexes = notAllowedDuplicateNamespacePatterns.Select(pattern => {
-                        return new Regex(
-                            "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$",
-                            RegexOptions.IgnoreCase
-                        );
+                    IEnumerable<string> filteredDuplicates = duplicates.Where(typeName => {
+                        return notAllowedDuplicateNamespace.Any(prefix => {
+                            return typeName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+                        });
                     });
 
-                    IEnumerable<string> filteredDuplicates = duplicates.Where(typeName => notAllowedDuplicateRegexes.Any(rx => rx.IsMatch(typeName)));
                     if (filteredDuplicates.Count() > 0) {
                         throw new Exception($"[PLUGIN] Duplicate Type Names Found 💉 {string.Join(", ", filteredDuplicates)}");
                     }
@@ -195,32 +191,14 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     this._logger.LogInformation("[PLUGIN] Instance Created 💉 {name}", name);
 
-                    var isolatedServiceCollection = new ServiceCollection();
-                    foreach (ServiceDescriptor descriptor in Bifeldy.Services.Where(s => !s.ServiceType.IsGenericType)) {
-                        Type descriptorType = descriptor.ImplementationType ?? descriptor.ServiceType;
+                    var isolatedPluginServiceCollection = new ServiceCollection();
 
-                        if (descriptor.Lifetime == ServiceLifetime.Singleton) {
-                            _ = isolatedServiceCollection.AddSingleton(descriptor.ServiceType, sp => {
-                                return this._serviceProvider.GetRequiredService(descriptorType);
-                            });
-                        }
-                        else if (descriptor.Lifetime == ServiceLifetime.Scoped) {
-                            _ = isolatedServiceCollection.AddScoped(descriptor.ServiceType, sp => {
-                                return this._serviceProvider.GetRequiredService(descriptorType);
-                            });
-                        }
-                        else if (descriptor.Lifetime == ServiceLifetime.Transient) {
-                            _ = isolatedServiceCollection.AddTransient(descriptor.ServiceType, sp => {
-                                return this._serviceProvider.GetRequiredService(descriptorType);
-                            });
-                        }
-                        else {
-                            _ = isolatedServiceCollection.Add(descriptor);
-                        }
-                    }
+                    plugin.RegisterServices(isolatedPluginServiceCollection);
 
-                    plugin.RegisterServices(isolatedServiceCollection);
-                    this._pluginServiceProviders[name] = isolatedServiceCollection.BuildServiceProvider();
+                    _ = isolatedPluginServiceCollection.SetupConfigOptions(this._serviceProvider);
+                    _ = isolatedPluginServiceCollection.AddForwardAllService(Bifeldy.Services, this._serviceProvider);
+
+                    this._pluginServiceProviders[name] = isolatedPluginServiceCollection.BuildServiceProvider(new ServiceProviderOptions());
 
                     this._logger.LogInformation("[PLUGIN] Dependency Injection Service Registered 💉 {name}", name);
 
@@ -271,8 +249,8 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     this._logger.LogInformation("[PLUGIN] Remaining ApplicationParts 💉 {applicationParts}", applicationParts);
                 }
 
-                if (this._pluginServiceProviders.TryRemove(name, out IServiceProvider provider)) {
-                    if (provider is IDisposable disposable) {
+                if (this._pluginServiceProviders.TryRemove(name, out IServiceProvider serviceProvider)) {
+                    if (serviceProvider is IDisposable disposable) {
                         disposable.Dispose();
                     }
                 }
@@ -325,9 +303,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
             this.ReloadAllDynamicApiPluginRouteEndpoint();
         }
 
-        public PluginServiceProvider GetServiceProvider(string name, IServiceProvider defaultFallback) {
+        public IServiceProvider GetServiceProvider(string name) {
             name = name.RemoveIllegalFileName();
-            return new PluginServiceProvider(this._pluginServiceProviders[name], defaultFallback);
+            return this._pluginServiceProviders[name];
         }
 
         private IEnumerable<Type> SafeGetTypes(Assembly asm) {

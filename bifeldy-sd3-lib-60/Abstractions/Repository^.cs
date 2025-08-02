@@ -26,6 +26,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<string> GetKodeDc(bool isPg, IDatabase db);
         Task<string> GetNamaDc(bool isPg, IDatabase db);
         Task<bool> IsDcHo(bool isPg, IDatabase db);
+        Task<bool> IsKonsolidasiCbn(bool isPg, IDatabase db);
         Task<bool> IsWhHo(bool isPg, IDatabase db);
         Task<bool> IsHo(bool isPg, IDatabase db);
         Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay);
@@ -71,6 +72,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 if (_dbUser.Contains("DCHO") || _dbUser.Contains("WHHO")) {
                     this.JenisDc = EJenisDc.HO;
                 }
+                else if (_dbUser.Contains("PGCBN")) {
+                    this.JenisDc = EJenisDc.KONSOLIDASI_CBN;
+                }
                 else {
                     string jenisDc = await this.GetJenisDc(isPg, db, null);
 
@@ -98,6 +102,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 if (_dbUser.Contains("DCHO")) {
                     this.KodeDc = "DCHO";
                 }
+                else if (_dbUser.Contains("PGCBN")) {
+                    this.KodeDc = "KCBN";
+                }
                 else if (_dbUser.Contains("WHHO")) {
                     this.KodeDc = "WHHO";
                 }
@@ -121,6 +128,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 if (_dbUser.Contains("DCHO")) {
                     this.NamaDc = "DC HEAD OFFICE";
                 }
+                else if (_dbUser.Contains("PGCBN")) {
+                    this.KodeDc = "KONSOLIDASI CBN";
+                }
                 else if (_dbUser.Contains("WHHO")) {
                     this.NamaDc = "WH HEAD OFFICE";
                 }
@@ -132,9 +142,14 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return this.NamaDc;
         }
 
+        public async Task<bool> IsKonsolidasiCbn(bool isPg, IDatabase db) {
+            string kodeDc = await this.GetKodeDc(isPg, db);
+            return kodeDc == "KCBN";
+        }
+
         public async Task<bool> IsDcHo(bool isPg, IDatabase db) {
             string kodeDc = await this.GetKodeDc(isPg, db);
-            return kodeDc == "DCHO";
+            return kodeDc == "DCHO" || kodeDc == "KCBN";
         }
 
         public async Task<bool> IsWhHo(bool isPg, IDatabase db) {

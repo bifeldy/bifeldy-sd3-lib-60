@@ -70,6 +70,12 @@ namespace bifeldy_sd3_lib_60.Models {
     }
 
     [ProtoContract]
+    public class InputJsonKonsolidasiCbnDataSingle<T> : InputJsonHoDataSingle<T> { }
+
+    [ProtoContract]
+    public class InputJsonKonsolidasiCbnDataMulti<T> : InputJsonHoDataMulti<T> { }
+
+    [ProtoContract]
     public class InputJsonDc : InputJson {
         [ProtoMember(4)][InheritedProtoMember(4)] public string kode_dc { get; set; }
     }

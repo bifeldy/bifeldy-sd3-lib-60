@@ -43,6 +43,7 @@ namespace bifeldy_sd3_lib_60.Conventions {
                 action.ApiExplorer.IsVisible = true;
             }
             else if (
+                (hideType == typeof(RouteExcludeKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
                 (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
                 (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
                 (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "WHHO") ||
@@ -65,6 +66,7 @@ namespace bifeldy_sd3_lib_60.Conventions {
             EJenisDc jenisDc = this._generalRepository.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg).Result;
 
             Type[] typesToCheck = new[] {
+                typeof(RouteExcludeKonsolidasiCbnAttribute),
                 typeof(RouteExcludeDcHoAttribute),
                 typeof(RouteExcludeWhHoAttribute),
                 typeof(RouteExcludeAllDcAttribute),

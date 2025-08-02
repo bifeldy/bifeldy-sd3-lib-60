@@ -15,6 +15,7 @@ namespace bifeldy_sd3_lib_60.Models {
     public enum EJenisDc {
         UNKNOWN = 0,
         HO,
+        KONSOLIDASI_CBN,
         INDUK,
         DEPO,
         KONVINIENCE,

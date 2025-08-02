@@ -185,8 +185,8 @@ namespace bifeldy_sd3_lib_60 {
                 _ = Directory.CreateDirectory(pluginFolderPath);
             }
 
-            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(CDynamicActionDescriptorChangeProvider.Instance);
             _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
+            _ = Services.AddSingleton<IActionDescriptorChangeProvider>(CDynamicActionDescriptorChangeProvider.Instance);
 
             _ = Services.AddSingleton<IPluginContext>(sp => {
                 ILogger<CPluginContext> logger = sp.GetRequiredService<ILogger<CPluginContext>>();
@@ -750,8 +750,16 @@ namespace bifeldy_sd3_lib_60 {
                                     throw new Exception($"Tidak Dapat Memuat Plugin '{pluginName}'");
                                 }
 
-                                context.RequestServices = pwc.Context.Manager.GetServiceProvider(pluginName, context.RequestServices);
+                                IServiceProvider hostServiceProvider = App.Services;
+                                IServiceProvider pluginServiceProvider = pwc.Context.Manager.GetServiceProvider(pluginName);
 
+                                var pluginServiceScopeFactory = new PluginServiceScopeFactory(
+                                    pluginServiceProvider,
+                                    hostServiceProvider
+                                );
+
+                                IServiceScope scopedPluginServiceProvider = pluginServiceScopeFactory.CreateScope();
+                                context.RequestServices = scopedPluginServiceProvider.ServiceProvider;
                                 await next();
                             }
                             catch (Exception ex) {
