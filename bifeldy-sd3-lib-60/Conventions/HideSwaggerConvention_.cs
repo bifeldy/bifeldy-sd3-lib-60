@@ -45,8 +45,9 @@ namespace bifeldy_sd3_lib_60.Conventions {
             else if (
                 (hideType == typeof(RouteExcludeKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
                 (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
+                (hideType == typeof(RouteExcludeKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
                 (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
-                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "WHHO") ||
+                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "KCBN" && kodeDc != "WHHO") ||
                 (hideType == typeof(RouteExcludeIndukAttribute) && jenisDc == EJenisDc.INDUK) ||
                 (hideType == typeof(RouteExcludeDepoAttribute) && jenisDc == EJenisDc.DEPO) ||
                 (hideType == typeof(RouteExcludeKonvinienceAttribute) && jenisDc == EJenisDc.KONVINIENCE) ||
@@ -66,8 +67,8 @@ namespace bifeldy_sd3_lib_60.Conventions {
             EJenisDc jenisDc = this._generalRepository.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg).Result;
 
             Type[] typesToCheck = new[] {
-                typeof(RouteExcludeKonsolidasiCbnAttribute),
                 typeof(RouteExcludeDcHoAttribute),
+                typeof(RouteExcludeKonsolidasiCbnAttribute),
                 typeof(RouteExcludeWhHoAttribute),
                 typeof(RouteExcludeAllDcAttribute),
                 typeof(RouteExcludeIndukAttribute),
