@@ -79,7 +79,6 @@ namespace bifeldy_sd3_lib_60 {
         public static List<string> SIGNALR_ROUTH_PATH = new();
 
         public static string PLUGINS_PROJECT_NAMESPACE = null;
-        public static string NGINX_PROXY_PATH_VALUE = null;
 
         public static bool IS_USING_REQUEST_LOGGER = false;
         public static bool IS_USING_SECRET = false;
@@ -297,47 +296,6 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void UseDynamicApiPluginRouteEndpoint(string dataFolderName = "plugins") {
-            CPluginWatcherCoordinator pwc = App.Services.GetRequiredService<CPluginWatcherCoordinator>();
-
-            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
-            CPluginLoaderForSwagger.LoadAllPlugins(pwc.Context, pluginFolderPath);
-
-            IWebHostEnvironment environment = App.Services.GetRequiredService<IWebHostEnvironment>();
-            ISwaggerProvider provider = App.Services.GetRequiredService<ISwaggerProvider>();
-
-            if (!Directory.Exists(environment.WebRootPath)) {
-                _ = Directory.CreateDirectory(environment.WebRootPath);
-            }
-
-            string appVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
-            OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
-
-            var openApiServers = new List<OpenApiServer>();
-
-            if (!string.IsNullOrEmpty(NGINX_PROXY_PATH_VALUE)) {
-                openApiServers.Add(new OpenApiServer() {
-                    Description = "Reverse Proxy Path",
-                    Url = NGINX_PROXY_PATH_VALUE.StartsWith("/") || NGINX_PROXY_PATH_VALUE.StartsWith("http") ? NGINX_PROXY_PATH_VALUE : $"/{NGINX_PROXY_PATH_VALUE}"
-                });
-            }
-
-            openApiServers.Add(new OpenApiServer() {
-                Description = "Direct IP Server",
-                Url = "/"
-            });
-
-            swaggerDoc.Servers = openApiServers;
-
-            string jsonPath = Path.Combine(environment.WebRootPath, "swagger.json");
-            using (var streamWriter = new StreamWriter(jsonPath)) {
-                var writer = new OpenApiJsonWriter(streamWriter);
-                swaggerDoc.SerializeAsV3(writer);
-            }
-
-            CPluginLoaderForSwagger.RegisterSwaggerReload(pwc.Context);
-        }
-
         public static void UseSwagger(
             string apiUrlPrefix = "api",
             string proxyHeaderName = "x-forwarded-prefix"
@@ -350,11 +308,11 @@ namespace bifeldy_sd3_lib_60 {
                     var openApiServers = new List<OpenApiServer>();
 
                     if (request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
-                        NGINX_PROXY_PATH_VALUE = pathBase.Last();
-                        if (!string.IsNullOrEmpty(NGINX_PROXY_PATH_VALUE)) {
+                        string proxyPath = pathBase.Last();
+                        if (!string.IsNullOrEmpty(proxyPath)) {
                             openApiServers.Add(new OpenApiServer() {
                                 Description = "Reverse Proxy Path",
-                                Url = NGINX_PROXY_PATH_VALUE.StartsWith("/") || NGINX_PROXY_PATH_VALUE.StartsWith("http") ? NGINX_PROXY_PATH_VALUE : $"/{NGINX_PROXY_PATH_VALUE}"
+                                Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
                             });
                         }
                     }
@@ -375,7 +333,7 @@ namespace bifeldy_sd3_lib_60 {
                 string swaggerName = apiUrlPrefix;
 
                 if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
-                    swaggerUrl = $"../swagger.json?v={DateTime.UtcNow.Ticks}";
+                    swaggerUrl = $"open-api.json?v={DateTime.UtcNow.Ticks}";
                     swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
                 }
 
@@ -634,8 +592,8 @@ namespace bifeldy_sd3_lib_60 {
         public static void UseNginxProxyPathSegment() {
             _ = App.Use(async (context, next) => {
                 if (context.Request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
-                    NGINX_PROXY_PATH_VALUE = pathBase.Last();
-                    if (context.Request.Path.StartsWithSegments(NGINX_PROXY_PATH_VALUE, out PathString path)) {
+                    string proxyPath = pathBase.Last();
+                    if (context.Request.Path.StartsWithSegments(proxyPath, out PathString path)) {
                         context.Request.Path = path;
                     }
                 }
@@ -760,7 +718,6 @@ namespace bifeldy_sd3_lib_60 {
 
                                 if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
                                     pwc.Context.Manager.LoadPlugin(pluginName);
-                                    pwc.Context.Manager.ReloadSingleDynamicApiPluginRouteEndpoint(pluginName);
                                 }
 
                                 if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {

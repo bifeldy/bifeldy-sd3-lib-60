@@ -36,9 +36,6 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         private ApplicationPartManager _partManager;
 
-        public event Action<string> PluginReloadedSingle;
-        public event Action PluginReloadedAll;
-
         private readonly ConcurrentDictionary<string, IPlugin> _pluginInstances = new();
         private readonly ConcurrentDictionary<string, IServiceProvider> _pluginServiceProviders = new();
         private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly, FileStream, string)> _loaded = new();
@@ -52,16 +49,6 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         public void SetPartManager(ApplicationPartManager partManager) {
             this._partManager = partManager;
-        }
-
-        public void ReloadSingleDynamicApiPluginRouteEndpoint(string name) {
-            CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
-            PluginReloadedSingle?.Invoke(name);
-        }
-
-        public void ReloadAllDynamicApiPluginRouteEndpoint() {
-            CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
-            PluginReloadedAll?.Invoke();
         }
 
         public void LoadPlugin(string name, bool reloadDynamicApiPluginRouteEndpoint = false) {
@@ -216,7 +203,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     }
 
                     if (reloadDynamicApiPluginRouteEndpoint) {
-                        this.ReloadSingleDynamicApiPluginRouteEndpoint(name);
+                        CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
                     }
                 }
             }
@@ -283,7 +270,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 }
 
                 if (reloadDynamicApiPluginRouteEndpoint) {
-                    this.ReloadSingleDynamicApiPluginRouteEndpoint(name);
+                    CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
                 }
 
                 this._logger.LogInformation("[PLUGIN] Application Removed 💉 {name}", name);
@@ -300,7 +287,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 }
             }
 
-            this.ReloadAllDynamicApiPluginRouteEndpoint();
+            CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
         }
 
         public IServiceProvider GetServiceProvider(string name) {

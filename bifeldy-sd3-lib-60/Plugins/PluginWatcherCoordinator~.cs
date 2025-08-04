@@ -61,7 +61,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     finally {
                         lock (this._lock) {
                             _ = this._pendingSet.Remove(pluginFilePath);
-                            this.Context.Manager.ReloadAllDynamicApiPluginRouteEndpoint();
+                            CDynamicActionDescriptorChangeProvider.Instance.NotifyChanges();
                         }
 
                         Thread.Sleep(1500);
