@@ -44,6 +44,22 @@ namespace bifeldy_sd3_lib_60.Plugins {
             string appVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
             OpenApiDocument swaggerDoc = provider.GetSwagger(appVersion);
 
+            var openApiServers = new List<OpenApiServer>();
+
+            if (!string.IsNullOrEmpty(Bifeldy.NGINX_PROXY_PATH_VALUE)) {
+                openApiServers.Add(new OpenApiServer() {
+                    Description = "Reverse Proxy Path",
+                    Url = Bifeldy.NGINX_PROXY_PATH_VALUE.StartsWith("/") || Bifeldy.NGINX_PROXY_PATH_VALUE.StartsWith("http") ? Bifeldy.NGINX_PROXY_PATH_VALUE : $"/{Bifeldy.NGINX_PROXY_PATH_VALUE}"
+                });
+            }
+
+            openApiServers.Add(new OpenApiServer() {
+                Description = "Direct IP Server",
+                Url = "/"
+            });
+
+            swaggerDoc.Servers = openApiServers;
+
             string jsonPath = Path.Combine(environment.WebRootPath, "swagger.json");
             using (var streamWriter = new StreamWriter(jsonPath)) {
                 var writer = new OpenApiJsonWriter(streamWriter);
