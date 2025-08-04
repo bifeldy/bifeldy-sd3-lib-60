@@ -129,7 +129,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     this.NamaDc = "DC HEAD OFFICE";
                 }
                 else if (_dbUser.Contains("PGCBN")) {
-                    this.KodeDc = "KONSOLIDASI CBN";
+                    this.NamaDc = "KONSOLIDASI CBN";
                 }
                 else if (_dbUser.Contains("WHHO")) {
                     this.NamaDc = "WH HEAD OFFICE";
