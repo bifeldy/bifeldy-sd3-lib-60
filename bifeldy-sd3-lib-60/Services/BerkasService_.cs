@@ -71,24 +71,24 @@ namespace bifeldy_sd3_lib_60.Services {
                 this.BackupAllFilesInFolder(this._gs.TempFolderPath);
             }
 
-            try {
-                if (Directory.Exists(path)) {
-                    var di = new DirectoryInfo(path);
-                    FileSystemInfo[] fsis = di.GetFileSystemInfos();
-                    foreach (FileSystemInfo fsi in fsis) {
-                        if (fsi.Attributes == FileAttributes.Directory) {
-                            this.DeleteOldFilesInFolder(fsi.FullName, maxOldHours, true);
-                        }
+            if (Directory.Exists(path)) {
+                var di = new DirectoryInfo(path);
+                FileSystemInfo[] fsis = di.GetFileSystemInfos();
+                foreach (FileSystemInfo fsi in fsis) {
+                    if (fsi.Attributes == FileAttributes.Directory) {
+                        this.DeleteOldFilesInFolder(fsi.FullName, maxOldHours, true);
+                    }
 
-                        if (fsi.LastWriteTime <= DateTime.Now.AddHours(-maxOldHours)) {
-                            this._logger.LogInformation("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {FullName}", fsi.FullName);
+                    if (fsi.LastWriteTime <= DateTime.Now.AddHours(-maxOldHours)) {
+                        try {
                             fsi.Delete();
+                            this._logger.LogInformation("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {FullName}", fsi.FullName);
+                        }
+                        catch (Exception ex) {
+                            this._logger.LogError("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {ex}", ex.Message);
                         }
                     }
                 }
-            }
-            catch (Exception ex) {
-                this._logger.LogError("[BERKAS_DELETE_OLD_FILE_IN_FOLDER] {ex}", ex.Message);
             }
         }
 
