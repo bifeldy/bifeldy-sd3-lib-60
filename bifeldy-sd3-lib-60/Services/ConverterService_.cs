@@ -12,6 +12,7 @@
  */
 
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 using System.Net.Mime;
 using System.Reflection;
@@ -141,10 +142,19 @@ namespace bifeldy_sd3_lib_60.Services {
 
             foreach (PropertyInfo propertyInfo in typeof(T).GetProperties()) {
                 Type type = Nullable.GetUnderlyingType(propertyInfo.PropertyType);
+
+                Type dataType = type ?? propertyInfo.PropertyType;
+                bool isNullable = type != null;
+
+                if (type == null && dataType == typeof(string)) {
+                    KeyAttribute primaryKey = propertyInfo.GetCustomAttribute<KeyAttribute>();
+                    isNullable = primaryKey == null;
+                }
+
                 ls.Add(new CDynamicClassProperty() {
                     ColumnName = propertyInfo.Name,
-                    DataType = type?.FullName ?? propertyInfo.PropertyType.FullName,
-                    IsNullable = type != null
+                    DataType = dataType.FullName,
+                    IsNullable = isNullable
                 });
             }
 
