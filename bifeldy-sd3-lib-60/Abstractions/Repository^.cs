@@ -149,7 +149,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<bool> IsDcHo(bool isPg, IDatabase db) {
             string kodeDc = await this.GetKodeDc(isPg, db);
-            return kodeDc == "DCHO" || kodeDc == "KCBN";
+            return kodeDc == "DCHO";
         }
 
         public async Task<bool> IsWhHo(bool isPg, IDatabase db) {
@@ -158,9 +158,10 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         public async Task<bool> IsHo(bool isPg, IDatabase db) {
+            bool isKonsolidasiCbn = await this.IsKonsolidasiCbn(isPg, db);
             bool isDcHo = await this.IsDcHo(isPg, db);
             bool isWhHo = await this.IsWhHo(isPg, db);
-            return isDcHo || isWhHo;
+            return isKonsolidasiCbn || isDcHo || isWhHo;
         }
 
         public async Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay) {
