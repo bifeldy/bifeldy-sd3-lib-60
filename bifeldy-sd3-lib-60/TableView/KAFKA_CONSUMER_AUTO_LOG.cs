@@ -19,7 +19,7 @@ namespace bifeldy_sd3_lib_60.TableView {
 
     public sealed class KAFKA_CONSUMER_AUTO_LOG : EntityTableView {
         [Key] public string TPC { set; get; }
-        [Key] public decimal? OFFS { set; get; }
+        [Key] public decimal OFFS { set; get; }
         public decimal? PARTT { set; get; }
         public string KEY { set; get; }
         public string VAL { set; get; }

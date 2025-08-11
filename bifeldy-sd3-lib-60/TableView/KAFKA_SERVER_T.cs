@@ -19,7 +19,7 @@ namespace bifeldy_sd3_lib_60.TableView {
 
     public sealed class KAFKA_SERVER_T : EntityTableView {
         [Key] public string HOST { get; set; }
-        [Key] public decimal? PORT { get; set; }
+        [Key] public decimal PORT { get; set; }
         [Key] public string TOPIC { get; set; }
         public string GROUP_ID { get; set; }
         public decimal? REPLI { get; set; }

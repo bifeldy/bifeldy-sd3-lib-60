@@ -18,7 +18,7 @@ using bifeldy_sd3_lib_60.Abstractions;
 namespace bifeldy_sd3_lib_60.TableView {
 
     public sealed class DC_TABEL_DC_T : EntityTableView {
-        [Key] public decimal? TBL_DCID { get; set; }
+        [Key] public decimal TBL_DCID { get; set; }
         public string TBL_DC_KODE { get; set; }
         public string TBL_DC_NAMA { get; set; }
         public string TBL_UPDREC_ID { get; set; }
