@@ -41,6 +41,7 @@ namespace bifeldy_sd3_lib_60.Services {
     public sealed class CHttpService : IHttpService {
 
         private readonly ILogger<CHttpService> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConverterService _cs;
 
         private string[] ProhibitedHeaders { get; } = new string[] {
@@ -59,8 +60,9 @@ namespace bifeldy_sd3_lib_60.Services {
             "content-encoding", "set-cookie"
         };
 
-        public CHttpService(ILogger<CHttpService> logger, IConverterService cs) {
+        public CHttpService(ILogger<CHttpService> logger, IHttpClientFactory httpClientFactory, IConverterService cs) {
             this._logger = logger;
+            this._httpClientFactory = httpClientFactory;
             this._cs = cs;
         }
 
@@ -197,9 +199,9 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public HttpClient CreateHttpClient(uint timeoutSeconds = 60) {
-            return new HttpClient() {
-                Timeout = TimeSpan.FromSeconds(timeoutSeconds)
-            };
+            HttpClient httpClient = this._httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            return httpClient;
         }
 
         public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300) {
