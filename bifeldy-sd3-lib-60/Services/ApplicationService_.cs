@@ -81,7 +81,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     throw new Exception($"{errorEmpty} [#1] Kosong / Tidak Tersedia");
                 }
 
-                if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL")) {
+                if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
                     throw new Exception($"{errorEmpty} {result}");
                 }
 
