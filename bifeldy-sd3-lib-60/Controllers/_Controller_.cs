@@ -77,85 +77,73 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [HttpPost("login")]
         [SwaggerOperation(Summary = "Login untuk generate token pengguna di luar / selain IT S/SD 03 (ex. BOT / Departemen lain)")]
         public async Task<IActionResult> Login([FromBody] LoginInfo formData) {
-            try {
-                string userName = formData?.user_name;
-                string password = formData?.password;
-                string secret = formData?.secret;
+            string userName = formData?.user_name;
+            string password = formData?.password;
+            string secret = formData?.secret;
 
-                if (string.IsNullOrEmpty(secret) && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))) {
-                    return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                        info = $"400 - {this.GetType().Name} :: Login Gagal",
-                        result = new ResponseJsonMessage() {
-                            message = "Data Tidak Lengkap!"
-                        }
-                    });
-                }
-
-                UserApiSession userSession = null;
-
-                if (string.IsNullOrEmpty(secret)) {
-                    UserSessionRole userRole = default;
-
-                    API_TOKEN_T apiTokenT = await this._apiTokenRepo.LoginBot(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
-                    if (apiTokenT == null) {
-                        DC_USER_T dcUserT = await this._userRepo.GetByUserNameNikPassword(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
-                        if (dcUserT == null) {
-                            return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                                info = $"400 - {this.GetType().Name} :: Login Gagal",
-                                result = new ResponseJsonMessage() {
-                                    message = "User name / password salah!"
-                                }
-                            });
-                        }
-                        else {
-                            userRole = UserSessionRole.USER_SD_SSD_3;
-                        }
+            if (string.IsNullOrEmpty(secret) && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))) {
+                return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
+                    info = $"400 - {this.GetType().Name} :: Login Gagal",
+                    result = new ResponseJsonMessage() {
+                        message = "Data Tidak Lengkap!"
                     }
-                    else {
-                        userRole = UserSessionRole.EXTERNAL_BOT;
-                    }
+                });
+            }
 
-                    userSession = new UserApiSession {
-                        name = userName.ToUpper(),
-                        role = userRole
-                    };
-                }
-                else {
-                    API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(this._envVar.IS_USING_POSTGRES, this._orapg, secret);
-                    if (apiKeyT == null) {
+            UserApiSession userSession = null;
+
+            if (string.IsNullOrEmpty(secret)) {
+                UserSessionRole userRole = default;
+
+                API_TOKEN_T apiTokenT = await this._apiTokenRepo.LoginBot(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
+                if (apiTokenT == null) {
+                    DC_USER_T dcUserT = await this._userRepo.GetByUserNameNikPassword(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
+                    if (dcUserT == null) {
                         return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = $"400 - {this.GetType().Name} :: Login Gagal",
                             result = new ResponseJsonMessage() {
-                                message = "Secret salah / tidak dikenali!"
+                                message = "User name / password salah!"
                             }
                         });
                     }
                     else {
-                        userSession = new UserApiSession {
-                            name = this._gs.GetIpOriginData(this.HttpContext.Connection, this.HttpContext.Request, true, true),
-                            role = UserSessionRole.PROGRAM_SERVICE
-                        };
+                        userRole = UserSessionRole.USER_SD_SSD_3;
                     }
                 }
+                else {
+                    userRole = UserSessionRole.EXTERNAL_BOT;
+                }
 
-                string token = this._chiper.EncodeJWT(userSession);
+                userSession = new UserApiSession {
+                    name = userName.ToUpper(),
+                    role = userRole
+                };
+            }
+            else {
+                API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(this._envVar.IS_USING_POSTGRES, this._orapg, secret);
+                if (apiKeyT == null) {
+                    return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
+                        info = $"400 - {this.GetType().Name} :: Login Gagal",
+                        result = new ResponseJsonMessage() {
+                            message = "Secret salah / tidak dikenali!"
+                        }
+                    });
+                }
+                else {
+                    userSession = new UserApiSession {
+                        name = this._gs.GetIpOriginData(this.HttpContext.Connection, this.HttpContext.Request, true, true),
+                        role = UserSessionRole.PROGRAM_SERVICE
+                    };
+                }
+            }
 
-                return this.StatusCode(StatusCodes.Status201Created, new {
-                    info = $"201 - {this.GetType().Name} :: Login Berhasil",
-                    result = userSession,
-                    token
-                });
-            }
-            catch (Exception ex) {
-                return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"400 - {this.GetType().Name} :: Login Gagal",
-                    result = new ResponseJsonMessage() {
-                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
-                            ? ex.Message
-                            : "Terjadi kesalahan saat proses data!"
-                    }
-                });
-            }
+            string token = this._chiper.EncodeJWT(userSession);
+
+            return this.StatusCode(StatusCodes.Status201Created, new {
+                info = $"201 - {this.GetType().Name} :: Login Berhasil",
+                result = userSession,
+                token
+            });
         }
 
         [HttpDelete("logout")]
@@ -193,107 +181,71 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [HttpGet("protobuf-net")]
         [SwaggerOperation(Summary = "Informasi Protobuf-NET.Grpc")]
         public IActionResult GrpcInfo() {
-            try {
-                IServerAddressesFeature saf = this._server.Features.Get<IServerAddressesFeature>();
+            IServerAddressesFeature saf = this._server.Features.Get<IServerAddressesFeature>();
 
-                int apiPort = this._envVar.API_PORT;
-                int grpcPort = this._envVar.GRPC_PORT;
+            int apiPort = this._envVar.API_PORT;
+            int grpcPort = this._envVar.GRPC_PORT;
 
-                foreach (string address in saf.Addresses) {
-                    var uri = new Uri(address);
-                    int port = uri.Port;
-                    if (port == 80 || port == 8145 || port == apiPort) {
-                        apiPort = port;
-                    }
-                    else if (port == grpcPort) {
-                        grpcPort = port;
-                    }
-                    else {
-                        throw new Exception("Gagal Mendapatkan Konfigurasi Port");
-                    }
+            foreach (string address in saf.Addresses) {
+                var uri = new Uri(address);
+                int port = uri.Port;
+                if (port == 80 || port == 8145 || port == apiPort) {
+                    apiPort = port;
                 }
-
-                string folderPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net");
-                IEnumerable<string> fileNames = Directory.GetFiles(folderPath).Select(p => Path.GetFileName(p)).Where(p => !p.Contains("Services.TarikData.DbLink") && !p.Contains("Services.ProsesData.DbLink"));
-
-                return this.Ok(new {
-                    info = $"200 - {this.GetType().Name} :: Informasi GRPC",
-                    grpc_port = grpcPort,
-                    grpc_services = fileNames
-                });
+                else if (port == grpcPort) {
+                    grpcPort = port;
+                }
+                else {
+                    throw new Exception("Gagal Mendapatkan Konfigurasi Port");
+                }
             }
-            catch (Exception ex) {
-                return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"404 - {this.GetType().Name} :: Informasi GRPC",
-                    result = new ResponseJsonMessage() {
-                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
-                            ? ex.Message
-                            : "Terjadi kesalahan saat proses data!"
-                    }
-                });
-            }
+
+            string folderPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net");
+            IEnumerable<string> fileNames = Directory.GetFiles(folderPath).Select(p => Path.GetFileName(p)).Where(p => !p.Contains("Services.TarikData.DbLink") && !p.Contains("Services.ProsesData.DbLink"));
+
+            return this.Ok(new {
+                info = $"200 - {this.GetType().Name} :: Informasi GRPC",
+                grpc_port = grpcPort,
+                grpc_services = fileNames
+            });
         }
 
         [HttpGet("protobuf-net/{fileName}")]
         [SwaggerOperation(Summary = "Informasi Service Class Data Type Protobuf-NET.Grpc")]
         public IActionResult GrpcProtoFile(string fileName) {
-            try {
-                string filePath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net", fileName);
-                if (!filePath.EndsWith(".proto")) {
-                    filePath += ".proto";
-                }
-
-                if (!System.IO.File.Exists(filePath)) {
-                    throw new Exception("File Tidak Ditemukan!");
-                }
-
-                return this.PhysicalFile(filePath, "text/plain");
+            string filePath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "protobuf-net", fileName);
+            if (!filePath.EndsWith(".proto")) {
+                filePath += ".proto";
             }
-            catch (Exception ex) {
-                return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"404 - {this.GetType().Name} :: File Tidak Ditemukan",
-                    result = new ResponseJsonMessage() {
-                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
-                            ? ex.Message
-                            : "Terjadi kesalahan saat proses data!"
-                    }
-                });
+
+            if (!System.IO.File.Exists(filePath)) {
+                throw new Exception("File Tidak Ditemukan!");
             }
+
+            return this.PhysicalFile(filePath, "text/plain");
         }
 
         [HttpGet("all-dc")]
         [SwaggerOperation(Summary = "Informasi Daftar Kode & Nama DC")]
         [RouteExcludeAllDc]
         public async Task<IActionResult> GetAllDc() {
-            try {
-                List<DC_TABEL_DC_T> ls = await this._orapg.GetListAsync<DC_TABEL_DC_T>($@"
-                    SELECT
-                        tbl_dc_kode,
-                        tbl_dc_nama
-                    FROM
-                        dc_tabel_dc_t
-                    ORDER BY
-                        tbl_dc_kode ASC
-                ");
+            List<DC_TABEL_DC_T> ls = await this._orapg.GetListAsync<DC_TABEL_DC_T>($@"
+                SELECT
+                    tbl_dc_kode,
+                    tbl_dc_nama
+                FROM
+                    dc_tabel_dc_t
+                ORDER BY
+                    tbl_dc_kode ASC
+            ");
 
-                return this.Ok(new  {
-                    info = $"200 - {this.GetType().Name} :: All DC",
-                    results = ls.Select(l => new {
-                        kode_dc = l.TBL_DC_KODE,
-                        nama_dc = l.TBL_DC_NAMA
-                    })
-                });
-            }
-            catch (Exception ex) {
-                return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"404 - {this.GetType().Name} :: Data DC Tidak Ditemukan",
-                    result = new ResponseJsonMessage() {
-                        message = (this._app.DebugMode || this.UserTokenData?.role <= UserSessionRole.USER_SD_SSD_3)
-                            ? ex.Message
-                            : "Terjadi kesalahan saat proses data!"
-                    }
-                });
-            }
+            return this.Ok(new {
+                info = $"200 - {this.GetType().Name} :: All DC",
+                results = ls.Select(l => new {
+                    kode_dc = l.TBL_DC_KODE,
+                    nama_dc = l.TBL_DC_NAMA
+                })
+            });
         }
 
     }

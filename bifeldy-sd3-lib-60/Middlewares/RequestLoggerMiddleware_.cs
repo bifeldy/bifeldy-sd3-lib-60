@@ -14,28 +14,23 @@
 using System.Diagnostics;
 
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
-using Microsoft.Extensions.Primitives;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
     public sealed class RequestLoggerMiddleware {
 
         private readonly RequestDelegate _next;
-        private readonly ILogger<RequestLoggerMiddleware> _logger;
         private readonly IGlobalService _gs;
 
         public RequestLoggerMiddleware(
             RequestDelegate next,
-            ILogger<RequestLoggerMiddleware> logger,
             IGlobalService gs
         ) {
             this._next = next;
-            this._logger = logger;
             this._gs = gs;
         }
 
@@ -71,8 +66,12 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
             string secret = context.Items["secret"]?.ToString();
             string apiKey = context.Items["api_key"]?.ToString();
-            string ipOrigin = context.Items["ip_origin"]?.ToString();
             string token = context.Items["token"]?.ToString();
+
+            string ipOrigin = context.Items["ip_origin"]?.ToString();
+            if (string.IsNullOrEmpty(ipOrigin)) {
+                ipOrigin = this._gs.GetIpOriginData(connection, request, true);
+            }
 
             UserApiSession user = null;
             if (context.Items["user"] != null) {

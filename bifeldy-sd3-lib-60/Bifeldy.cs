@@ -675,16 +675,22 @@ namespace bifeldy_sd3_lib_60 {
                             response.Headers.Add("x-request-trace-id", xRequestTraceId);
                         }
 
-                        _logger.LogError(
-                            "[GLOBAL_ERROR_HANDLER] {TraceId} {xRequestTraceProxy} 💣 {Message}",
-                            xRequestTraceActivity, xRequestTraceProxy,
-                            ex.Message + Environment.NewLine + ex.StackTrace
-                        );
-
                         response.StatusCode = StatusCodes.Status500InternalServerError;
 
                         string errMsg = ex.Message;
-                        string errDtl = errMsg + Environment.NewLine + ex.StackTrace;
+
+                        Exception ie = ex.InnerException;
+                        while (ie != null) {
+                            errMsg += " ~ " + ie.Message;
+                            ie = ie.InnerException;
+                        }
+
+                        string errDtl = errMsg + Environment.NewLine + Environment.NewLine + ex.StackTrace;
+
+                        _logger.LogError(
+                            "[GLOBAL_ERROR_HANDLER] {TraceId} {xRequestTraceProxy} 💣 {Message}",
+                            xRequestTraceActivity, xRequestTraceProxy, errDtl
+                        );
 
                         if (IS_USING_REQUEST_LOGGER) {
                             // TODO :: Update Log With Error
@@ -694,7 +700,7 @@ namespace bifeldy_sd3_lib_60 {
                         await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                             info = "500 - Whoops :: Terjadi Kesalahan",
                             result = new ResponseJsonMessage() {
-                                message = showErrorDetail ? errDtl : "Gagal Memproses Data"
+                                message = showErrorDetail ? errDtl : "Gagal Melanjutkan Permintaan"
                             }
                         });
                     }

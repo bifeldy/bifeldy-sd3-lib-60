@@ -27,17 +27,20 @@ namespace bifeldy_sd3_lib_60.Services {
 
     public interface IRdlcService {
         IDictionary<string, RdlcInfo> FileType { get; }
-        LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null);
+        LocalReport CreateLocalReport(string rdlcName, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null);
         ReportDataSource CreateReportDataSource(string name, DataTable dt);
+        ReportDataSource CreateReportDataSource<T>(string name, List<T> dt);
         HtmlToPdfDocument GenerateHtmlReport(RdlcReport reportModel);
         ReportParameter[] CreateReportParameter(IDictionary<string, string> dict);
-        RdlcReport GeneratePdfWordExcelReport(string rdlcPath, DataTable dt, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
+        RdlcReport GeneratePdfWordExcelHtmlReport(string rdlcName, DataTable dt, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
+        RdlcReport GeneratePdfWordExcelHtmlReport<T>(string rdlcName, List<T> ls, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
     }
 
     [SingletonServiceRegistration]
     public sealed class CRdlcService : IRdlcService {
 
         private readonly IWebHostEnvironment _he;
+        private readonly IApplicationService _app;
         private readonly IConverterService _converter;
 
         public IDictionary<string, RdlcInfo> FileType { get; } = new Dictionary<string, RdlcInfo>(StringComparer.InvariantCultureIgnoreCase) {
@@ -67,12 +70,23 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         };
 
-        public CRdlcService(IWebHostEnvironment he, IConverterService converter) {
+        public CRdlcService(IWebHostEnvironment he, IApplicationService app, IConverterService converter) {
             this._he = he;
+            this._app = app;
             this._converter = converter;
         }
 
-        public LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null) {
+        public LocalReport CreateLocalReport(string rdlcName, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null) {
+            string rdlcPath = Path.Combine(this._app.AppLocation, "Rdlcs", rdlcName);
+
+            if (!File.Exists(rdlcPath)) {
+                rdlcPath = Path.Combine(this._he.ContentRootPath, "rdlcs", rdlcName);
+
+                if (!File.Exists(rdlcPath)) {
+                    throw new FileNotFoundException($"File RDLC {rdlcName} Tidak Ditemukan!", rdlcPath);
+                }
+            }
+
             var report = new LocalReport() {
                 ReportPath = rdlcPath
             };
@@ -90,6 +104,8 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public ReportDataSource CreateReportDataSource(string name, DataTable dt) => new(name, dt);
+
+        public ReportDataSource CreateReportDataSource<T>(string name, List<T> ls) => new(name, ls);
 
         public HtmlToPdfDocument GenerateHtmlReport(RdlcReport reportModel) {
             return new HtmlToPdfDocument() {
@@ -119,26 +135,26 @@ namespace bifeldy_sd3_lib_60.Services {
             return ls.ToArray();
         }
 
-        public RdlcReport GeneratePdfWordExcelReport(
-            string rdlcPath,
-            DataTable dt,
-            string dsName,
-            IEnumerable<ReportParameter> param = null,
-            string saveAs = "HTML5",
-            MarginSettings margin = null,
-            Orientation pageOrientation = Orientation.Portrait,
-            PaperKind paperType = PaperKind.Custom
-        ) {
-            margin ??= new MarginSettings() {
+        private MarginSettings SetupPage() {
+            return new MarginSettings() {
                 Top = 1,
                 Bottom = 1,
                 Left = 1,
                 Right = 1,
                 Unit = Unit.Centimeters
             };
+        }
 
-            ReportDataSource ds = this.CreateReportDataSource(dsName, dt);
-            LocalReport report = this.CreateLocalReport(rdlcPath, ds, param);
+        private RdlcReport GenerateReport(
+            string rdlcName,
+            ReportDataSource rds,
+            IEnumerable<ReportParameter> param = null,
+            string saveAs = "HTML5",
+            MarginSettings margin = null,
+            Orientation pageOrientation = Orientation.Portrait,
+            PaperKind paperType = PaperKind.Custom
+        ) {
+            LocalReport report = this.CreateLocalReport(rdlcName, rds, param);
 
             var model = new RdlcReport() {
                 DisplayName = report.DisplayName,
@@ -158,6 +174,36 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return model;
+        }
+
+        public RdlcReport GeneratePdfWordExcelHtmlReport(
+            string rdlcName,
+            DataTable dt,
+            string dsName,
+            IEnumerable<ReportParameter> param = null,
+            string saveAs = "HTML5",
+            MarginSettings margin = null,
+            Orientation pageOrientation = Orientation.Portrait,
+            PaperKind paperType = PaperKind.Custom
+        ) {
+            margin ??= this.SetupPage();
+            ReportDataSource rds = this.CreateReportDataSource(dsName, dt);
+            return this.GenerateReport(rdlcName, rds, param, saveAs, margin, pageOrientation, paperType);
+        }
+
+        public RdlcReport GeneratePdfWordExcelHtmlReport<T>(
+            string rdlcName,
+            List<T> ls,
+            string dsName,
+            IEnumerable<ReportParameter> param = null,
+            string saveAs = "HTML5",
+            MarginSettings margin = null,
+            Orientation pageOrientation = Orientation.Portrait,
+            PaperKind paperType = PaperKind.Custom
+        ) {
+            margin ??= this.SetupPage();
+            ReportDataSource rds = this.CreateReportDataSource(dsName, ls);
+            return this.GenerateReport(rdlcName, rds, param, saveAs, margin, pageOrientation, paperType);
         }
 
     }
