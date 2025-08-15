@@ -26,11 +26,11 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IRdlcService {
-        IDictionary<string, dynamic> FileType { get; }
+        IDictionary<string, RdlcInfo> FileType { get; }
         LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null);
         ReportDataSource CreateReportDataSource(string name, DataTable dt);
-        ReportParameter[] CreateReportParameter(IDictionary<string, string> dict);
         HtmlToPdfDocument GenerateHtmlReport(RdlcReport reportModel);
+        ReportParameter[] CreateReportParameter(IDictionary<string, string> dict);
         RdlcReport GeneratePdfWordExcelReport(string rdlcPath, DataTable dt, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
     }
 
@@ -40,29 +40,29 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly IWebHostEnvironment _he;
         private readonly IConverterService _converter;
 
-        public IDictionary<string, dynamic> FileType { get; } = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase) {
+        public IDictionary<string, RdlcInfo> FileType { get; } = new Dictionary<string, RdlcInfo>(StringComparer.InvariantCultureIgnoreCase) {
             {
-                "PDF", new {
+                "PDF", new() {
                     contentType = "application/pdf",
-                    extension = "pdf"
+                    extFile = "pdf"
                 }
             },
             {
-                "WORDOPENXML", new {
+                "WORDOPENXML", new() {
                     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    extension = "docx"
+                    extFile = "docx"
                 }
             },
             {
-                "EXCELOPENXML", new {
+                "EXCELOPENXML", new() {
                     contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    extension = "xlsx"
+                    extFile = "xlsx"
                 }
             },
             {
-                "HTML5", new {
-                    contentType = "application/pdf",
-                    extension = "pdf"
+                "HTML5", new() {
+                    contentType = "text/html",
+                    extFile = "html"
                 }
             }
         };
@@ -74,8 +74,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public LocalReport CreateLocalReport(string rdlcPath, ReportDataSource ds = null, IEnumerable<ReportParameter> param = null) {
             var report = new LocalReport() {
-                ReportPath = $"{this._he.ContentRootPath}/wwwroot/rdlcs/{rdlcPath}"
+                ReportPath = rdlcPath
             };
+
             if (ds != null) {
                 report.DisplayName = ds.Name;
                 report.DataSources.Add(ds);
@@ -90,15 +91,6 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public ReportDataSource CreateReportDataSource(string name, DataTable dt) => new(name, dt);
 
-        public ReportParameter[] CreateReportParameter(IDictionary<string, string> dict) {
-            var ls = new List<ReportParameter>();
-            foreach (KeyValuePair<string, string> kvp in dict) {
-                ls.Add(new ReportParameter(kvp.Key, kvp.Value));
-            }
-
-            return ls.ToArray();
-        }
-
         public HtmlToPdfDocument GenerateHtmlReport(RdlcReport reportModel) {
             return new HtmlToPdfDocument() {
                 GlobalSettings = {
@@ -109,13 +101,22 @@ namespace bifeldy_sd3_lib_60.Services {
                 },
                 Objects = {
                     new ObjectSettings() {
-                        HtmlContent = Encoding.UTF8.GetString(reportModel.Report),
+                        HtmlContent = reportModel.HtmlContent,
                         WebSettings = {
                             DefaultEncoding = "utf-8"
                         }
                     }
                 }
             };
+        }
+
+        public ReportParameter[] CreateReportParameter(IDictionary<string, string> dict) {
+            var ls = new List<ReportParameter>();
+            foreach (KeyValuePair<string, string> kvp in dict) {
+                ls.Add(new ReportParameter(kvp.Key, kvp.Value));
+            }
+
+            return ls.ToArray();
         }
 
         public RdlcReport GeneratePdfWordExcelReport(
@@ -128,10 +129,6 @@ namespace bifeldy_sd3_lib_60.Services {
             Orientation pageOrientation = Orientation.Portrait,
             PaperKind paperType = PaperKind.Custom
         ) {
-            if (saveAs == "PDF" && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                throw new Exception("PDF Asli Hanya Dapat Dijalankan Pada OS Windows");
-            }
-
             margin ??= new MarginSettings() {
                 Top = 1,
                 Bottom = 1,
@@ -142,17 +139,22 @@ namespace bifeldy_sd3_lib_60.Services {
 
             ReportDataSource ds = this.CreateReportDataSource(dsName, dt);
             LocalReport report = this.CreateLocalReport(rdlcPath, ds, param);
+
             var model = new RdlcReport() {
                 DisplayName = report.DisplayName,
                 Margins = margin,
                 PageOrientation = pageOrientation,
                 PaperType = paperType,
-                RenderType = saveAs,
-                Report = report.Render(saveAs)
+                RenderType = saveAs
             };
-            if (model.RenderType == "HTML5") {
-                model.HtmlContent = Encoding.UTF8.GetString(model.Report);
+
+            if (saveAs == "PDF" && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                model.RenderType = "HTML5";
+                model.HtmlContent = Encoding.UTF8.GetString(report.Render(model.RenderType));
                 model.Report = this._converter.HtmlToPdf(this.GenerateHtmlReport(model));
+            }
+            else {
+                model.Report = report.Render(saveAs);
             }
 
             return model;
