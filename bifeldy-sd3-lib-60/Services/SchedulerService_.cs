@@ -28,9 +28,9 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<int> JumlahJobYangSedangBerjalan(string jobName);
         Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, Func<Task<bool>> forceCreateNew = null);
         Task<bool> CheckJobIsCompleted(string jobName, IDatabase db, Func<Task<bool>> additionalAndCheck = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, Func<Task<bool>> forceCreateNew = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
         Task CancelAndDeleteJob(JobKey[] jobKeys, IDatabase db, string reason = "Job Dibatalkan");
     }
 
@@ -83,8 +83,10 @@ namespace bifeldy_sd3_lib_60.Services {
 
             decimal recordCount = await db.ExecScalarAsync<decimal>(
                 $@"
-                    SELECT COUNT(*)
-                    FROM api_quartz_job_queue
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        api_quartz_job_queue
                     WHERE
                         app_name = :app_name
                         AND job_name = :job_name
@@ -116,8 +118,10 @@ namespace bifeldy_sd3_lib_60.Services {
             else if (jd == null && recordCount > 0) {
                 DateTime? completedAt = await db.ExecScalarAsync<DateTime?>(
                     $@"
-                        SELECT completed_at
-                        FROM api_quartz_job_queue
+                        SELECT
+                            completed_at
+                        FROM
+                            api_quartz_job_queue
                         WHERE
                             app_name = :app_name
                             AND job_name = :job_name
@@ -206,15 +210,15 @@ namespace bifeldy_sd3_lib_60.Services {
             return isJobCompleted;
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, Func<Task<bool>> forceCreateNew = null) {
+        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null) {
             return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNow(jobName, action) : null;
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
             return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelay(jobName, action, initialDelay) : null;
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, bool, IDatabase, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
             return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelayInterval(jobName, action, initialDelay, interval) : null;
         }
 
