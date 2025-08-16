@@ -39,6 +39,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
         private readonly IOraPg _orapg;
+        private readonly IRdlcService _rdlc;
 
         public UpdaterController(
             IDistributedCache cache,
@@ -47,7 +48,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IGlobalService gs,
             IChiperService chiper,
             IConverterService converter,
-            IOraPg orapg
+            IOraPg orapg,
+            IRdlcService rdlc
         ) {
             this._cache = cache;
             this._scheduler = scheduler;
@@ -56,6 +58,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._chiper = chiper;
             this._converter = converter;
             this._orapg = orapg;
+            this._rdlc = rdlc;
         }
 
         [HttpGet]
@@ -142,16 +145,31 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             mimeType = "application/zip";
                             break;
                         default:
-                            if (user.role > UserSessionRole.USER_SD_SSD_3) {
-                                return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
-                                    info = $"403 - {this.GetType().Name} :: Hash Files",
-                                    result = new ResponseJsonMessage() {
-                                        message = "Harap input tipe file ?fileType=csv / ?fileType=zip"
-                                    }
-                                });
+                            bool isFound = false;
+
+                            foreach (KeyValuePair<string, RdlcInfo> ft in this._rdlc.FileType) {
+                                if (ft.Value.extFile?.ToUpper() == fileType) {
+                                    isFound = true;
+                                    dirPath = this._gs.TempFolderPath;
+                                    mimeType = ft.Value.contentType;
+                                    break;
+                                }
                             }
 
-                            dirPath = this._as.AppLocation;
+                            if (!isFound) {
+                                if (user.role > UserSessionRole.USER_SD_SSD_3) {
+                                    return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
+                                        info = $"403 - {this.GetType().Name} :: Hash Files",
+                                        result = new ResponseJsonMessage() {
+                                            message = "Harap input tipe file ?fileType=csv / ?fileType=zip"
+                                        }
+                                    });
+                                }
+
+                                dirPath = this._as.AppLocation;
+                                mimeType = null;
+                            }
+
                             break;
                     }
 

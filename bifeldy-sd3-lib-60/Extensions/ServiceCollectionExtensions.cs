@@ -202,7 +202,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
         //         "Microsoft.Extensions.Options"
         //     };
         // 
-        //     if (notAllowedNamespace.Any(prefix => ns.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))) {
+        //     if (notAllowedNamespace.Any(prefix => ns.ToUpper().StartsWith(prefix.ToUpper()))) {
         //         return false;
         //     }
         // 

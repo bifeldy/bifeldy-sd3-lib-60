@@ -29,7 +29,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
             IEnumerable<PropertyInfo> skipProperties = context.Type.GetProperties().Where(t => t.GetCustomAttribute<SwaggerHideJsonPropertyAttribute>() != null);
 
             foreach (PropertyInfo skipProperty in skipProperties) {
-                string propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
+                string propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => x.ToUpper() == skipProperty.Name.ToUpper());
 
                 if (propertyToSkip != null) {
                     _ = schema.Properties.Remove(propertyToSkip);

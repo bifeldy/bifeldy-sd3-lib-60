@@ -106,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     foreach (Assembly existingAsm in existingAssemblies) {
                         foreach (Type existingType in this.SafeGetTypes(existingAsm)) {
-                            if (!string.IsNullOrWhiteSpace(existingType.FullName) && newTypes.Any(nt => nt.Equals(existingType.FullName, StringComparison.OrdinalIgnoreCase))) {
+                            if (!string.IsNullOrWhiteSpace(existingType.FullName) && newTypes.Any(nt => nt.ToUpper() == existingType.FullName.ToUpper())) {
                                 _ = duplicates.Add(existingType.FullName);
                                 this._logger.LogError("Duplicate '{type}' Found 💉 '{pluginName}'", existingType.FullName, name);
                             }
@@ -127,7 +127,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     IEnumerable<string> filteredDuplicates = duplicates.Where(typeName => {
                         return notAllowedDuplicateNamespace.Any(prefix => {
-                            return typeName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+                            return typeName.ToUpper().StartsWith(prefix.ToUpper());
                         });
                     });
 
@@ -190,7 +190,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     this._logger.LogInformation("[PLUGIN] Dependency Injection Service Registered 💉 {name}", name);
 
                     if (this._partManager != null) {
-                        if (!this._partManager.ApplicationParts.Any(p => string.Equals(p.Name, asm.GetName().Name, StringComparison.OrdinalIgnoreCase))) {
+                        if (!this._partManager.ApplicationParts.Any(p => p.Name.ToUpper() == asm.GetName().Name.ToUpper())) {
                             if (asm.GetCustomAttributes(typeof(RazorCompiledItemAttribute), inherit: false).Any()) {
                                 this._partManager.ApplicationParts.Add(new CompiledRazorAssemblyPart(asm));
                             }
