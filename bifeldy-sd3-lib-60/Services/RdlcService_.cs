@@ -32,8 +32,8 @@ namespace bifeldy_sd3_lib_60.Services {
         ReportDataSource CreateReportDataSource<T>(string name, List<T> dt);
         HtmlToPdfDocument GenerateHtmlReport(RdlcReport reportModel);
         ReportParameter[] CreateReportParameter(IDictionary<string, string> dict);
-        RdlcReport GeneratePdfWordExcelHtmlReport(string rdlcName, DataTable dt, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
-        RdlcReport GeneratePdfWordExcelHtmlReport<T>(string rdlcName, List<T> ls, string dsName, IEnumerable<ReportParameter> param = null, string saveAs = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
+        RdlcReport GeneratePdfWordExcelHtmlReport(string rdlcName, DataTable dt, string dsName, IEnumerable<ReportParameter> param = null, string fileType = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
+        RdlcReport GeneratePdfWordExcelHtmlReport<T>(string rdlcName, List<T> ls, string dsName, IEnumerable<ReportParameter> param = null, string fileType = "HTML5", MarginSettings margin = null, Orientation pageOrientation = Orientation.Portrait, PaperKind paperType = PaperKind.Custom);
     }
 
     [SingletonServiceRegistration]
@@ -47,25 +47,25 @@ namespace bifeldy_sd3_lib_60.Services {
             {
                 "PDF", new() {
                     contentType = "application/pdf",
-                    extFile = "pdf"
+                    saveType = "PDF"
                 }
             },
             {
-                "WORDOPENXML", new() {
+                "DOCX", new() {
                     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    extFile = "docx"
+                    saveType = "WORDOPENXML"
                 }
             },
             {
-                "EXCELOPENXML", new() {
+                "XLSX", new() {
                     contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    extFile = "xlsx"
+                    saveType = "EXCELOPENXML"
                 }
             },
             {
-                "HTML5", new() {
+                "HTML", new() {
                     contentType = "text/html",
-                    extFile = "html"
+                    saveType = "html5"
                 }
             }
         };
@@ -149,7 +149,7 @@ namespace bifeldy_sd3_lib_60.Services {
             string rdlcName,
             ReportDataSource rds,
             IEnumerable<ReportParameter> param = null,
-            string saveAs = "HTML5",
+            string fileType = "HTML",
             MarginSettings margin = null,
             Orientation pageOrientation = Orientation.Portrait,
             PaperKind paperType = PaperKind.Custom
@@ -161,16 +161,16 @@ namespace bifeldy_sd3_lib_60.Services {
                 Margins = margin,
                 PageOrientation = pageOrientation,
                 PaperType = paperType,
-                RenderType = saveAs
+                RenderType = this.FileType[fileType].saveType
             };
 
-            if (saveAs == "PDF" && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            if (fileType == "PDF" && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 model.RenderType = "HTML5";
                 model.HtmlContent = Encoding.UTF8.GetString(report.Render(model.RenderType));
                 model.Report = this._converter.HtmlToPdf(this.GenerateHtmlReport(model));
             }
             else {
-                model.Report = report.Render(saveAs);
+                model.Report = report.Render(model.RenderType);
             }
 
             return model;
@@ -181,14 +181,14 @@ namespace bifeldy_sd3_lib_60.Services {
             DataTable dt,
             string dsName,
             IEnumerable<ReportParameter> param = null,
-            string saveAs = "HTML5",
+            string fileType = "HTML",
             MarginSettings margin = null,
             Orientation pageOrientation = Orientation.Portrait,
             PaperKind paperType = PaperKind.Custom
         ) {
             margin ??= this.SetupPage();
             ReportDataSource rds = this.CreateReportDataSource(dsName, dt);
-            return this.GenerateReport(rdlcName, rds, param, saveAs, margin, pageOrientation, paperType);
+            return this.GenerateReport(rdlcName, rds, param, fileType, margin, pageOrientation, paperType);
         }
 
         public RdlcReport GeneratePdfWordExcelHtmlReport<T>(
@@ -196,14 +196,14 @@ namespace bifeldy_sd3_lib_60.Services {
             List<T> ls,
             string dsName,
             IEnumerable<ReportParameter> param = null,
-            string saveAs = "HTML5",
+            string fileType = "HTML",
             MarginSettings margin = null,
             Orientation pageOrientation = Orientation.Portrait,
             PaperKind paperType = PaperKind.Custom
         ) {
             margin ??= this.SetupPage();
             ReportDataSource rds = this.CreateReportDataSource(dsName, ls);
-            return this.GenerateReport(rdlcName, rds, param, saveAs, margin, pageOrientation, paperType);
+            return this.GenerateReport(rdlcName, rds, param, fileType, margin, pageOrientation, paperType);
         }
 
     }

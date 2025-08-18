@@ -147,13 +147,10 @@ namespace bifeldy_sd3_lib_60.Controllers {
                         default:
                             bool isFound = false;
 
-                            foreach (KeyValuePair<string, RdlcInfo> ft in this._rdlc.FileType) {
-                                if (ft.Value.extFile?.ToUpper() == fileType) {
-                                    isFound = true;
-                                    dirPath = this._gs.TempFolderPath;
-                                    mimeType = ft.Value.contentType;
-                                    break;
-                                }
+                            if (this._rdlc.FileType.Keys.Contains(fileType)) {
+                                isFound = true;
+                                dirPath = this._gs.TempFolderPath;
+                                mimeType = this._rdlc.FileType[fileType].contentType;
                             }
 
                             if (!isFound) {
