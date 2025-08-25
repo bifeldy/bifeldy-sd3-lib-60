@@ -262,18 +262,12 @@ namespace bifeldy_sd3_lib_60.Databases {
                                         await writer.WriteAsync(Convert.ToBoolean(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Char:
-                                        char[] _chars = ((string) Convert.ToString(_obj)).ToCharArray();
-                                        if (lengths[i] > 1) {
-                                            await writer.WriteAsync(_chars, types[i], token);
-                                        }
-                                        else if (lengths[i] == 1) {
-                                            await writer.WriteAsync(Convert.ToChar(_chars[0]), types[i], token);
-                                        }
-                                        else {
-                                            await writer.WriteAsync(string.Empty, types[i], token);
+                                        if (lengths[i] == 1) {
+                                            await writer.WriteAsync(Convert.ToString(_obj).ToCharArray().First(), types[i], token);
+                                            break;
                                         }
 
-                                        break;
+                                        goto case NpgsqlDbType.Varchar;
                                     case NpgsqlDbType.Varchar:
                                     case NpgsqlDbType.Text:
                                         await writer.WriteAsync(Convert.ToString(_obj), types[i], token);
