@@ -56,13 +56,13 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public void InitializeConnection(string dbName = null) {
-            string targetDatabaseLocation = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{this._as.AppName}.db");
-            if (!File.Exists(targetDatabaseLocation)) {
+            string targetDatabaseLocationApp = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{this._as.AppName}.db");
+            if (!File.Exists(targetDatabaseLocationApp)) {
                 string defaultDatabaseLocation = Path.Combine(this._as.AppLocation, $"{this._as.AppName}.db");
                 if (!File.Exists(defaultDatabaseLocation)) {
                     AssemblyName libAsm = Assembly.GetExecutingAssembly().GetName();
-                    targetDatabaseLocation = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{libAsm.Name}.db");
-                    if (!File.Exists(targetDatabaseLocation)) {
+                    string targetDatabaseLocationLib = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{libAsm.Name}.db");
+                    if (!File.Exists(targetDatabaseLocationLib)) {
                         defaultDatabaseLocation = Path.Combine(this._as.AppLocation, $"{libAsm.Name}.db");
                         if (!File.Exists(defaultDatabaseLocation)) {
                             throw new FileNotFoundException("Default Database Not Found!", defaultDatabaseLocation);
@@ -70,12 +70,12 @@ namespace bifeldy_sd3_lib_60.Databases {
                     }
                 }
 
-                if (!File.Exists(targetDatabaseLocation)) {
-                    File.Copy(defaultDatabaseLocation, targetDatabaseLocation);
+                if (!File.Exists(targetDatabaseLocationApp)) {
+                    File.Copy(defaultDatabaseLocation, targetDatabaseLocationApp);
                 }
             }
 
-            this.DbName = dbName ?? targetDatabaseLocation;
+            this.DbName = dbName ?? targetDatabaseLocationApp;
 
             this.DbConnectionString = $"Data Source={this.DbName}";
         }
