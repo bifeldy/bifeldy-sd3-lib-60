@@ -249,62 +249,59 @@ namespace bifeldy_sd3_lib_60.Databases {
                 using (NpgsqlBinaryImporter writer = await ((NpgsqlConnection) this.GetConnection()).BeginBinaryImportAsync($"COPY {tableName} ({sB}) FROM STDIN (FORMAT BINARY)", token)) {
                     for (int j = 0; j < dataTable.Rows.Count; j++) {
                         DataRow dR = dataTable.Rows[j];
-                        writer.StartRow();
+                        await writer.StartRowAsync(token);
 
                         for (int i = 0; i < colCount; i++) {
                             if (dR[fieldNames[i]] == DBNull.Value) {
-                                writer.WriteNull();
+                                await writer.WriteNullAsync(token);
                             }
                             else {
                                 dynamic _obj = dR[fieldNames[i]];
                                 switch (types[i]) {
                                     case NpgsqlDbType.Bigint:
-                                        writer.Write(Convert.ToInt64(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToInt64(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Integer:
-                                        writer.Write(Convert.ToInt32(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToInt32(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Smallint:
-                                        writer.Write(Convert.ToInt16(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToInt16(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Money:
                                     case NpgsqlDbType.Numeric:
-                                        writer.Write(((decimal) Convert.ToDecimal(_obj)).RemoveTrail(), types[i]);
+                                        await writer.WriteAsync(((decimal) Convert.ToDecimal(_obj)).RemoveTrail(), types[i], token);
                                         break;
                                     case NpgsqlDbType.Double:
-                                        writer.Write(Convert.ToDouble(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToDouble(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Real:
-                                        writer.Write(Convert.ToSingle(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToSingle(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Boolean:
-                                        writer.Write(Convert.ToBoolean(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToBoolean(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Char:
-                                        char[] _chars = ((string) Convert.ToString(_obj)).ToCharArray();
-                                        if (lengths[i] > 1) {
-                                            writer.Write(_chars, types[i]);
-                                        }
-                                        else {
-                                            writer.Write(Convert.ToChar(_chars[0]), types[i]);
+                                        if (lengths[i] == 1) {
+                                            await writer.WriteAsync(Convert.ToString(_obj).ToCharArray().First(), types[i], token);
+                                            break;
                                         }
 
-                                        break;
+                                        goto case NpgsqlDbType.Varchar;
                                     case NpgsqlDbType.Varchar:
                                     case NpgsqlDbType.Text:
-                                        writer.Write(Convert.ToString(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToString(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Time:
                                     case NpgsqlDbType.Timestamp:
                                     case NpgsqlDbType.TimestampTz:
                                     case NpgsqlDbType.Date:
-                                        writer.Write(Convert.ToDateTime(_obj), types[i]);
+                                        await writer.WriteAsync(Convert.ToDateTime(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Bytea:
-                                        writer.Write((byte[]) _obj, types[i]);
+                                        await writer.WriteAsync((byte[]) _obj, types[i], token);
                                         break;
                                     default:
-                                        writer.Write(_obj, types[i]);
+                                        await writer.WriteAsync(_obj, types[i], token);
                                         break;
 
                                     //
@@ -315,7 +312,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                         }
                     }
 
-                    _ = writer.Complete();
+                    _ = await writer.CompleteAsync(token);
                 }
 
                 result = true;
