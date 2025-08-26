@@ -53,7 +53,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                 var metadata = new Metadata();
 
                 foreach (KeyValuePair<string, StringValues> header in this._httpHeader) {
-                    metadata.Add(header.Key, header.Value);
+                    if (!string.IsNullOrEmpty(header.Value)) {
+                        metadata.Add(header.Key, header.Value);
+                    }
                 }
 
                 if (context.Options.Headers != null) {
