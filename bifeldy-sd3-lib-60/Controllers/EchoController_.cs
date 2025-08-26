@@ -23,7 +23,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
     [ApiExplorerSettings(IgnoreApi = true)]
     public sealed class EchoController : ControllerBase {
 
-        public IActionResult ReturnData(dynamic json = null) {
+        private IActionResult ReturnData(dynamic json = null) {
             var query = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
             foreach (KeyValuePair<string, StringValues> data in this.Request.Query) {
                 if (data.Value.Count > 1) {

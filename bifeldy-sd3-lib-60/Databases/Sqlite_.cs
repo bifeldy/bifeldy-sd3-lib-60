@@ -8,81 +8,80 @@
  * 
  * Catatan      :: Turunan `CDatabase`
  *              :: Harap Didaftarkan Ke DI Container
- *              :: Instance Microsoft SQL Server
+ *              :: Instance Sqlite
  * 
  */
 
 using System.Data;
 using System.Data.Common;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
-    public interface IMsSQL : IDatabase {
-        CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName);
-        CMsSQL CloneConnection();
+    public interface ISqlite : IDatabase {
+        CSqlite NewExternalConnection(string dbName);
+        CSqlite CloneConnection();
     }
 
-    public sealed class CMsSQL : CDatabase, IMsSQL {
+    public sealed class CSqlite : CDatabase, ISqlite {
 
-        private readonly IHttpContextAccessor _hca;
-        private readonly IServerConfigRepository _scr;
-
-        public CMsSQL (
-            DbContextOptions<CMsSQL> options,
-            ILogger<CMsSQL> logger,
+        public CSqlite (
+            DbContextOptions<CSqlite> options,
+            ILogger<CSqlite> logger,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs,
-            IGlobalService gs,
-            IHttpContextAccessor hca,
-            IServerConfigRepository scr
+            IGlobalService gs
         ) : base(options, logger, envVar, @as, cs, gs) {
-            this._hca = hca;
-            this._scr = scr;
-            //
             this.InitializeConnection();
             this.SetCommandTimeout();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
-            _ = options.UseSqlServer(this.DbConnectionString)
+            _ = options.UseSqlite(this.DbConnectionString)
                 // .LogTo(s => Console.WriteLine(s))
                 .EnableDetailedErrors(this._as.DebugMode)
                 .EnableSensitiveDataLogging(this._as.DebugMode);
         }
 
-        public void InitializeConnection(string dbIpAddrss = null, string dbName = null, string dbUsername = null, string dbPassword = null) {
-            string kunciGxxx = null;
+        public void InitializeConnection(string dbName = null) {
+            string targetDatabaseLocation = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{this._as.AppName}.db");
+            if (!File.Exists(targetDatabaseLocation)) {
+                string defaultDatabaseLocation = Path.Combine(this._as.AppLocation, $"{this._as.AppName}.db");
+                if (!File.Exists(defaultDatabaseLocation)) {
+                    AssemblyName libAsm = Assembly.GetExecutingAssembly().GetName();
+                    targetDatabaseLocation = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{libAsm.Name}.db");
+                    if (!File.Exists(targetDatabaseLocation)) {
+                        defaultDatabaseLocation = Path.Combine(this._as.AppLocation, $"{libAsm.Name}.db");
+                        if (!File.Exists(defaultDatabaseLocation)) {
+                            throw new FileNotFoundException("Default Database Not Found!", defaultDatabaseLocation);
+                        }
+                    }
+                }
 
-            if (this._hca.HttpContext != null) {
-                kunciGxxx = this._hca.HttpContext.Items["KunciKodeDc"]?.ToString();
+                if (!File.Exists(targetDatabaseLocation)) {
+                    File.Copy(defaultDatabaseLocation, targetDatabaseLocation);
+                }
             }
 
-            kunciGxxx ??= this._scr.CurrentLoadedKodeServerKunciDc();
+            this.DbName = dbName ?? targetDatabaseLocation;
 
-            this.DbIpAddrss = dbIpAddrss ?? this._as.GetVariabel("IPSql", kunciGxxx);
-            this.DbName = dbName ?? this._as.GetVariabel("DatabaseSql", kunciGxxx);
-            this.DbUsername = dbUsername ?? this._as.GetVariabel("UserSql", kunciGxxx);
-            this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordSql", kunciGxxx);
-
-            this.DbConnectionString = $"Data Source={this.DbIpAddrss};Initial Catalog={this.DbName};User ID={this.DbUsername};Password={this.DbPassword};Connection Timeout=180;"; // 3 Minutes
+            this.DbConnectionString = $"Data Source={this.DbName}";
         }
 
         protected override void BindQueryParameter(DbCommand cmd, List<CDbQueryParamBind> parameters) {
-            char prefix = '@';
+            char prefix = ':';
             cmd.Parameters.Clear();
             if (parameters != null) {
                 for (int i = 0; i < parameters.Count; i++) {
@@ -102,7 +101,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                             }
 
                             bindStr += $"{prefix}{pName}_{id}";
-                            _ = cmd.Parameters.Add(new SqlParameter() {
+                            _ = cmd.Parameters.Add(new SqliteParameter() {
                                 ParameterName = $"{pName}_{id}",
                                 Value = data ?? DBNull.Value
                             });
@@ -113,7 +112,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                         cmd.CommandText = regex.Replace(cmd.CommandText, bindStr, 1);
                     }
                     else {
-                        var param = new SqlParameter() {
+                        var param = new SqliteParameter() {
                             ParameterName = pName,
                             Value = pVal ?? DBNull.Value
                         };
@@ -134,14 +133,14 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -149,7 +148,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -157,7 +156,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -165,7 +164,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -173,7 +172,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -181,31 +180,90 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
-            cmd.CommandText = procedureName;
-            cmd.CommandType = CommandType.StoredProcedure;
-            this.BindQueryParameter(cmd, bindParam);
-            return await this.ExecProcedureAsync(cmd, token);
+            await Task.Delay(0);
+            throw new Exception("Sqlite Tidak Memiliki Stored Procedure");
         }
 
         public override async Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
             bool result = false;
             Exception exception = null;
+
             try {
-                await this.OpenConnection();
-                using (var dbBulkCopy = new SqlBulkCopy((SqlConnection) this.GetConnection()) {
-                    DestinationTableName = tableName
-                }) {
-                    await dbBulkCopy.WriteToServerAsync(dataTable, token);
-                    result = true;
+                if (string.IsNullOrEmpty(tableName)) {
+                    throw new Exception("Target Tabel Tidak Ditemukan");
                 }
+
+                int colCount = dataTable.Columns.Count;
+
+                var types = new Type[colCount];
+                int[] lengths = new int[colCount];
+                string[] fieldNames = new string[colCount];
+
+                var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+
+                cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
+                using (var rdr = (SqliteDataReader) await this.ExecReaderAsync(cmd, CommandBehavior.Default, token)) {
+                    if (rdr.FieldCount != colCount) {
+                        throw new Exception("Jumlah Kolom Tabel Tidak Sama");
+                    }
+
+                    DataColumnCollection columns = rdr.GetSchemaTable().Columns;
+                    for (int i = 0; i < colCount; i++) {
+                        types[i] = columns[i].DataType;
+                        lengths[i] = columns[i].MaxLength;
+                        fieldNames[i] = columns[i].ColumnName;
+                    }
+                }
+
+                var param = new List<CDbQueryParamBind>();
+                var sB = new StringBuilder($"INSERT INTO {tableName} (");
+
+                string sbHeader = string.Empty;
+                for (int c = 0; c < colCount; c++) {
+                    if (!string.IsNullOrEmpty(sbHeader)) {
+                        sbHeader += ", ";
+                    }
+
+                    sbHeader += fieldNames[c];
+                }
+
+                _ = sB.Append(sbHeader + ") VALUES (");
+                string sbRow = "(";
+                for (int r = 0; r < dataTable.Rows.Count; r++) {
+                    if (sbRow.EndsWith(")")) {
+                        sbRow += ", (";
+                    }
+
+                    string sbColumn = string.Empty;
+                    for (int c = 0; c < colCount; c++) {
+                        if (!string.IsNullOrEmpty(sbColumn)) {
+                            sbColumn += ", ";
+                        }
+
+                        string paramKey = $"{fieldNames[c]}_{r}";
+                        sbColumn += paramKey;
+                        param.Add(new CDbQueryParamBind {
+                            NAME = paramKey,
+                            VALUE = dataTable.Rows[r][fieldNames[c]]
+                        });
+                    }
+
+                    sbRow += $"{sbColumn} )";
+                }
+
+                _ = sB.Append(sbRow);
+
+                string query = sB.ToString();
+                _ = await this.TransactionStart();
+                bool run = await this.ExecQueryAsync(query, param);
+                _ = this.TransactionCommit();
+
+                result = run;
             }
             catch (Exception ex) {
-                this._logger.LogError("[SQL_BULK_INSERT] {ex}", ex.Message);
+                await this.TransactionRollback();
+                this._logger.LogError("[PG_BULK_INSERT] {ex}", ex.Message);
                 exception = ex;
-            }
-            finally {
-                await this.CloseConnection();
             }
 
             return (exception == null) ? result : throw exception;
@@ -213,7 +271,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -221,26 +279,26 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.RetrieveBlob(cmd, stringPathDownload, stringCustomSingleFileName, encoding ?? Encoding.UTF8, token);
         }
 
-        public CMsSQL NewExternalConnection(string dbIpAddrss, string dbUsername, string dbPassword, string dbName) {
-            var mssql = (CMsSQL) this.Clone();
-            mssql.InitializeConnection(dbIpAddrss, dbUsername, dbPassword, dbName);
-            mssql.ReSetConnectionString();
-            return mssql;
+        public CSqlite NewExternalConnection(string dbName) {
+            var sqlite = (CSqlite) this.Clone();
+            sqlite.InitializeConnection(dbName);
+            sqlite.ReSetConnectionString();
+            return sqlite;
         }
 
-        public CMsSQL CloneConnection() {
-            var mssql = (CMsSQL) this.Clone();
-            mssql.InitializeConnection(this.DbIpAddrss, this.DbUsername, this.DbPassword, this.DbName);
-            mssql.ReSetConnectionString();
-            mssql.SetCommandTimeout();
-            return mssql;
+        public CSqlite CloneConnection() {
+            var sqlite = (CSqlite) this.Clone();
+            sqlite.InitializeConnection(this.DbName);
+            sqlite.ReSetConnectionString();
+            sqlite.SetCommandTimeout();
+            return sqlite;
         }
 
     }

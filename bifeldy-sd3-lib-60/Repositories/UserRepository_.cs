@@ -14,7 +14,6 @@
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -32,17 +31,15 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<DC_USER_T> GetByUserNameNik(bool isPg, IDatabase db, string userNameNik);
         Task<DC_USER_T> GetByUserNameNikPassword(bool isPg, IDatabase db, string userNameNik, string password);
         Task<bool> Delete(bool isPg, IDatabase db, string userNik);
-        Task<string> LoginUser(bool isPg, IDatabase db, string userNameNik, string password);
-        Task LogoutUser();
+        Task<string> LoginUserBlazor(AuthenticationStateProvider asp, bool isPg, IDatabase db, string userNameNik, string password);
+        Task LogoutUserBlazor(AuthenticationStateProvider asp);
     }
 
-    [ScopedServiceRegistration]
+    [SingletonServiceRegistration]
     public sealed class CUserRepository : CRepository, IUserRepository {
 
-        private readonly IServiceProvider _sp;
-
-        public CUserRepository(IServiceProvider sp) {
-            this._sp = sp;
+        public CUserRepository() {
+            //
         }
 
         public async Task<bool> Create(bool isPg, IDatabase db, DC_USER_T user) {
@@ -102,10 +99,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
         /* ** */
 
-        public async Task<string> LoginUser(bool isPg, IDatabase db, string userNameNik, string password) {
+        public async Task<string> LoginUserBlazor(AuthenticationStateProvider asp, bool isPg, IDatabase db, string userNameNik, string password) {
             DC_USER_T dcUserT = await this.GetByUserNameNikPassword(isPg, db, userNameNik, password);
             if (dcUserT != null) {
-                var basp = (BlazorAuthenticationStateProvider)this._sp.GetRequiredService<AuthenticationStateProvider>();
+                var basp = (BlazorAuthenticationStateProvider) asp;
                 await basp.UpdateAuthenticationState(new UserWebSession() {
                     name = dcUserT.USER_NAME,
                     nik = dcUserT.USER_NIK,
@@ -118,8 +115,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return "Username / Password Salah";
         }
 
-        public async Task LogoutUser() {
-            var _basp = (BlazorAuthenticationStateProvider) this._sp.GetRequiredService<AuthenticationStateProvider>();
+        public async Task LogoutUserBlazor(AuthenticationStateProvider asp) {
+            var _basp = (BlazorAuthenticationStateProvider) asp;
             await _basp.UpdateAuthenticationState(null);
         }
 

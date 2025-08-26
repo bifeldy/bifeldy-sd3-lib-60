@@ -20,26 +20,21 @@ using Confluent.Kafka;
 using System.Reactive.Subjects;
 
 using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
-using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaConsumer : BackgroundService {
 
         private readonly EnvVar _env;
-
-        private readonly IServiceScope _scopedService;
-
         private readonly ILogger<CKafkaConsumer> _logger;
         private readonly IApplicationService _app;
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
         private readonly IKafkaService _kafka;
-
-        private readonly IOraPg _orapg;
         private readonly IGeneralRepository _generalRepo;
 
         private string _hostPort;
@@ -49,11 +44,10 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly string _logTableName;
         private readonly bool _suffixKodeDc;
         private readonly string _pubSubName;
+
         private readonly List<EJenisDc> _excludeJenisDc;
 
-        private BehaviorSubject<Message<string, dynamic>> observeable = null;
-
-        private IConsumer<string, string> consumer = null;
+        private readonly IServiceScope _scopedService = null;
 
         private string KAFKA_NAME => "KAFKA_" + this._pubSubName ?? $"CONSUMER_{this._hostPort.ToUpper()}#{this._topicName.ToUpper()}";
 
@@ -70,10 +64,9 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             this._converter = serviceProvider.GetRequiredService<IConverterService>();
             this._pubSub = serviceProvider.GetRequiredService<IPubSubService>();
             this._kafka = serviceProvider.GetRequiredService<IKafkaService>();
+            this._generalRepo = serviceProvider.GetRequiredService<IGeneralRepository>();
 
             this._scopedService = serviceProvider.CreateScope();
-            this._orapg = this._scopedService.ServiceProvider.GetRequiredService<IOraPg>();
-            this._generalRepo = this._scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
             this._hostPort = hostPort;
             this._topicName = topicName;
@@ -86,23 +79,27 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         }
 
         public override void Dispose() {
-            this.consumer?.Dispose();
-            this._pubSub?.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
-            this._scopedService?.Dispose();
+            this._pubSub.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
+            this._scopedService.Dispose();
             base.Dispose();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        private async Task DoWorkMultiDc(IServiceProvider sp, CancellationToken stoppingToken) {
+            BehaviorSubject<Message<string, dynamic>> observeable = null;
+            IConsumer<string, string> consumer = null;
+
             try {
+                IOraPg orapg = sp.GetRequiredService<IOraPg>();
+
                 if (this._excludeJenisDc != null) {
-                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg);
+                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, orapg);
                     if (this._excludeJenisDc.Contains(jenisDc)) {
                         return;
                     }
                 }
 
                 if (string.IsNullOrEmpty(this._hostPort)) {
-                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, this._orapg, this._topicName);
+                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, orapg, this._topicName);
                     if (kafka == null) {
                         throw new Exception("KAFKA Tidak Tersedia!");
                     }
@@ -119,29 +116,29 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         this._topicName += "_";
                     }
 
-                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, this._orapg);
+                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, orapg);
                     this._groupId += kodeDc;
                     this._topicName += kodeDc;
                 }
 
-                this.observeable ??= this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(this.KAFKA_NAME);
+                observeable = this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(this.KAFKA_NAME);
 
-                if (this.consumer == null) {
-                    await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName);
-                    this.consumer = this._kafka.CreateKafkaConsumerInstance<string, string>(this._hostPort, this._groupId);
-                    TopicPartition topicPartition = this._kafka.CreateKafkaConsumerTopicPartition(this._topicName, -1);
-                    TopicPartitionOffset topicPartitionOffset = this._kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
-                    this.consumer.Assign(topicPartitionOffset);
-                    this.consumer.Subscribe(this._topicName);
-                }
+                await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName);
+                consumer = this._kafka.CreateKafkaConsumerInstance<string, string>(this._hostPort, this._groupId);
+
+                TopicPartition topicPartition = this._kafka.CreateKafkaConsumerTopicPartition(this._topicName, -1);
+                TopicPartitionOffset topicPartitionOffset = this._kafka.CreateKafkaConsumerTopicPartitionOffset(topicPartition, 0);
+
+                consumer.Assign(topicPartitionOffset);
+                consumer.Subscribe(this._topicName);
 
                 ulong i = 0;
                 while (!stoppingToken.IsCancellationRequested) {
                     await Task.Yield();
 
                     try {
-                        ConsumeResult<string, string> result = this.consumer.Consume(stoppingToken);
-                        _ = await this._generalRepo.SaveKafkaToTable(this._env.IS_USING_POSTGRES, this._orapg, result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
+                        ConsumeResult<string, string> result = consumer.Consume(stoppingToken);
+                        _ = await this._generalRepo.SaveKafkaToTable(this._env.IS_USING_POSTGRES, orapg, result.Topic, result.Offset.Value, result.Partition.Value, result.Message, this._logTableName);
 
                         var msg = new Message<string, dynamic>() {
                             Headers = result.Message.Headers,
@@ -150,9 +147,9 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                             Timestamp = result.Message.Timestamp
                         };
 
-                        this.observeable.OnNext(msg);
+                        observeable.OnNext(msg);
                         if (++i % COMMIT_AFTER_N_MESSAGES == 0) {
-                            _ = this.consumer.Commit();
+                            _ = consumer.Commit();
                             i = 0;
                         }
                     }
@@ -165,7 +162,37 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                 this._logger.LogError("[KAFKA_CONSUMER_ERROR] 🏗 {ex}", ex.Message);
             }
             finally {
-                this.consumer?.Close();
+                consumer?.Dispose();
+                observeable?.Dispose();
+            }
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            try {
+                var tasks = new List<Task>();
+
+                IServerConfigRepository scr = this._scopedService.ServiceProvider.GetRequiredService<IServerConfigRepository>();
+
+                List<ServerConfigKunci> kunci = await scr.GetKodeServerKunciDc();
+                foreach (ServerConfigKunci k in kunci) {
+                    Task task = await Task.Factory.StartNew(async () => {
+                        using (IServiceScope scope = this._scopedService.ServiceProvider.CreateScope()) {
+                            IServiceProvider _sp = scope.ServiceProvider;
+                            IServerConfigRepository _scr = _sp.GetRequiredService<IServerConfigRepository>();
+
+                            _ = await _scr.UseKodeServerKunciDc(k.kode_dc, k.kunci_gxxx);
+
+                            await this.DoWorkMultiDc(_sp, stoppingToken);
+                        }
+                    }, stoppingToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+                    tasks.Add(task);
+                }
+
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex) {
+                this._logger.LogError("[KAFKA_CONSUMER_HOST] 💉 {ex}", ex.Message);
             }
         }
 

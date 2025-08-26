@@ -61,16 +61,16 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
             bool isGrpc = Bifeldy.GRPC_ROUTH_PATH.Contains(apiPathRequestedForGrpc);
-            bool isSignalr = apiPathRequested.StartsWith(Bifeldy.SIGNALR_PREFIX_HUB);
-            bool isApi = apiPathRequested.StartsWith("/api/");
-            bool isSwagger = apiPathRequested.StartsWith("/api/swagger");
+            bool isSignalr = apiPathRequested.StartsWith(Bifeldy.SIGNALR_PREFIX_HUB, StringComparison.InvariantCultureIgnoreCase);
+            bool isApi = apiPathRequested.StartsWith($"/{Bifeldy.API_PREFIX}/", StringComparison.InvariantCultureIgnoreCase);
+            bool isSwagger = apiPathRequested.StartsWith($"/{Bifeldy.API_PREFIX}/swagger", StringComparison.InvariantCultureIgnoreCase);
 
             if ((!isGrpc && !isSignalr && !isApi) || (isSwagger && string.IsNullOrEmpty(Bifeldy.PLUGINS_PROJECT_NAMESPACE))) {
                 await this._next(context);
                 return;
             }
 
-            RequestJson reqBody = await this._gs.GetRequestBody(request);
+            RequestJson reqBody = await this._gs.GetHttpRequestBody<RequestJson>(request);
             string secret = this._gs.GetSecretData(request, reqBody);
 
             context.Items["secret"] = secret;

@@ -17,6 +17,7 @@ using System.Reflection;
 using Microsoft.Extensions.Caching.Distributed;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 
@@ -66,8 +67,10 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string GetVariabel(string key, string kunci) {
+            string cacheKey = $"{this.GetType().Name}_{key}_{kunci}";
+
             try {
-                string result = this._cache.GetString($"{this.GetType().Name}_{key}");
+                string result = this._cache.GetString(cacheKey);
                 if (!string.IsNullOrEmpty(result)) {
                     return result;
                 }
@@ -78,30 +81,29 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 string errorEmpty = $"Terjadi Kesalahan Saat Mendapatkan Kunci {key} @ {kunci} ::";
                 if (string.IsNullOrEmpty(result)) {
-                    throw new Exception($"{errorEmpty} [#1] Kosong / Tidak Tersedia");
+                    throw new KunciServerTidakTersediaException($"{errorEmpty} [#1] Kosong / Tidak Tersedia");
                 }
 
                 if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
-                    throw new Exception($"{errorEmpty} {result}");
+                    throw new KunciServerTidakTersediaException($"{errorEmpty} {result}");
                 }
 
                 result = result.Split(';').FirstOrDefault();
                 result = result?.Trim();
 
                 if (string.IsNullOrEmpty(result)) {
-                    throw new Exception($"{errorEmpty} [#2] Kosong / Tidak Tersedia");
+                    throw new KunciServerTidakTersediaException($"{errorEmpty} [#2] Kosong / Tidak Tersedia");
                 }
 
-                this._cache.SetString($"{this.GetType().Name}_{key}", result, new DistributedCacheEntryOptions() {
+                this._cache.SetString(cacheKey, result, new DistributedCacheEntryOptions() {
                     SlidingExpiration = TimeSpan.FromMinutes(15)
                 });
 
                 return result;
             }
             catch {
-                this._cache.Remove(key);
-
-                return null;
+                this._cache.Remove(cacheKey);
+                throw;
             }
         }
 

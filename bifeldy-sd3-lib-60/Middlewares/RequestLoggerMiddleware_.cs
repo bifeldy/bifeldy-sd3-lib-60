@@ -56,7 +56,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             string requestPath = request.Path;
             string requestQuery = request.QueryString.ToString();
 
-            (string contentType, string rbString) = await this._gs.ParseRequestBodyJsonString(request);
+            (string contentType, string rbString) = await this._gs.ParseHttpRequestBodyJsonString(request);
 
             //
             // TODO :: Log Request Mulai

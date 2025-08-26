@@ -73,7 +73,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     this.JenisDc = EJenisDc.HO;
                 }
                 else if (_dbUser.Contains("PGCBN")) {
-                    this.JenisDc = EJenisDc.KONSOLIDASI_CBN;
+                    this.JenisDc = EJenisDc.KONSOLIDASICBN;
                 }
                 else {
                     string jenisDc = await this.GetJenisDc(isPg, db, null);

@@ -1,12 +1,4 @@
-﻿
-
-using Microsoft.AspNetCore.Http;
-
-
-
-using System.Text;
-
-/**
+﻿/**
  * 
  * Author       :: Basilius Bias Astho Christyono
  * Phone        :: (+62) 889 236 6466
@@ -18,11 +10,15 @@ using System.Text;
  * 
  */
 
+using System.Text;
+
+using Microsoft.AspNetCore.Http;
+
 namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class HttpRequestExtensions {
 
-        public static async Task<string> GetRequestBodyStringAsync(this HttpRequest request, Encoding encoding = null) {
+        public static async Task<string> GetHttpRequestBodyStringAsync(this HttpRequest request, Encoding encoding = null) {
             string body = string.Empty;
 
             request.EnableBuffering();

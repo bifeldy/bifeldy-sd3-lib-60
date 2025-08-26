@@ -13,19 +13,23 @@
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
-    public class RouteExcludeKonsolidasiCbnAttribute : Attribute {
+    public class RouteExcludeCompleteAttribute : Attribute {
         //
     }
 
-    public class RouteExcludeDcHoAttribute : Attribute {
+    public class RouteExcludeKonsolidasiCbnAttribute : RouteExcludeCompleteAttribute {
         //
     }
 
-    public class RouteExcludeWhHoAttribute : Attribute {
+    public class RouteExcludeDcHoAttribute : RouteExcludeCompleteAttribute {
         //
     }
 
-    public class RouteExcludeAllDcAttribute : Attribute {
+    public class RouteExcludeWhHoAttribute : RouteExcludeCompleteAttribute {
+        //
+    }
+
+    public class RouteExcludeAllDcAttribute : RouteExcludeCompleteAttribute {
         //
     }
 

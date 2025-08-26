@@ -36,6 +36,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
     [ApiController]
     [Route("")]
+    [ApiExplorerSettings(GroupName = "_")]
     public class _Controller : ControllerBase {
 
         private readonly IServer _server;

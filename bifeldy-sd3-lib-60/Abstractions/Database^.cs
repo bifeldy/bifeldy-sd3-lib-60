@@ -15,7 +15,9 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -27,8 +29,8 @@ using Microsoft.Extensions.Options;
 
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Plugins;
 using bifeldy_sd3_lib_60.Services;
-using System.DirectoryServices.ActiveDirectory;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
@@ -36,7 +38,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         string DbUsername { get; } // Hanya Expose Get Saja
         string DbName { get; } // Hanya Expose Get Saja
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        DbSet<TEntity> Set<TEntity>() where TEntity : class;
+        DbSet<TEntity> Set<TEntity>(string name = null, [CallerMemberName] string callerMemberName = null) where TEntity : EntityTableView;
         object Clone();
         Task CloseConnection(bool force = false);
         Task<IDbContextTransaction> TransactionStart(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
@@ -93,11 +95,19 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);
-            var libAsm = Assembly.GetExecutingAssembly();
-            var prgAsm = Assembly.GetEntryAssembly();
 
-            modelBuilder.RegisterAllEntities<EntityTableView>(libAsm);
-            modelBuilder.RegisterAllEntities<EntityTableView>(prgAsm);
+            var existingAssemblies = new List<Assembly> {
+                Assembly.GetExecutingAssembly(),
+                Assembly.GetEntryAssembly()
+            };
+
+            lock (CPluginManager.LOADED_PLUGIN) {
+                existingAssemblies.AddRange(CPluginManager.LOADED_PLUGIN.Values.Select(v => v.Item2));
+            }
+
+            foreach (Assembly asm in existingAssemblies) {
+                modelBuilder.RegisterAllEntities<EntityTableView>(asm);
+            }
 
             // DbSet<T> Case Sensitive ~
             foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes()) {
@@ -111,6 +121,27 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     property.SetColumnName(colName);
                 }
             }
+        }
+
+        public DbSet<TEntity> Set<TEntity>(string name = null, [CallerMemberName] string callerMemberName = null) where TEntity : EntityTableView {
+            var existingAssemblies = new List<Assembly> {
+                Assembly.GetExecutingAssembly(),
+                Assembly.GetEntryAssembly()
+            };
+
+            var stack = new StackTrace();
+            MethodBase method = stack.GetFrame(1).GetMethod();
+            Type type = method.DeclaringType ?? method.GetType();
+
+            while (type.DeclaringType != null) {
+                type = type.DeclaringType;
+            }
+
+            if (!existingAssemblies.Any(a => a.FullName == type.Assembly.FullName)) {
+                throw new Exception("Belum Mendukung Fitur Entity-Framework Database Table Untuk Digunakan Plug-&-Play Saat Run-Time Di Luar Project (Misal Plugin)");
+            }
+
+            return string.IsNullOrEmpty(name) ? base.Set<TEntity>(name) : base.Set<TEntity>();
         }
 
         public object Clone() => this.MemberwiseClone();
@@ -329,7 +360,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         /// <summary> Saat Setelah Selesai Baca Dan Tidak Digunakan Lagi </summary>
         /// <summary> Bisa Pakai Manual Panggil Fungsi Close / Commit / Rollback Di Atas </summary>
-        protected virtual async Task<DbDataReader> ExecReaderAsync(DbCommand databaseCommand, CommandBehavior commandBehavior, CancellationToken token = default) {
+        protected virtual async Task<DbDataReader> ExecReaderAsync(DbCommand databaseCommand, CommandBehavior commandBehavior = CommandBehavior.Default, CancellationToken token = default) {
             DbDataReader result = null;
             Exception exception = null;
             try {

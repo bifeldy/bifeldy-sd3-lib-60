@@ -28,8 +28,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
     [Route("downloader")]
     [RouteExcludeAllDc]
     [MinRole(UserSessionRole.EXTERNAL_BOT)]
-    [ApiExplorerSettings(IgnoreApi = true)]
-    public sealed class UpdaterController : ControllerBase {
+    [ApiExplorerSettings(GroupName = "_", IgnoreApi = true)]
+    public sealed class DownloaderController : ControllerBase {
 
         private readonly IDistributedCache _cache;
         private readonly ISchedulerService _scheduler;
@@ -41,7 +41,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly IOraPg _orapg;
         private readonly IRdlcService _rdlc;
 
-        public UpdaterController(
+        public DownloaderController(
             IDistributedCache cache,
             ISchedulerService scheduler,
             IApplicationService @as,
@@ -69,6 +69,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
             [FromQuery, SwaggerParameter("Pastikan file sudah selesai ditulis dan bukan parsial", Required = false)] bool? completedOnly = false,
             [FromQuery, SwaggerParameter("Bandingkan file kalau berbeda akan dapat balikan unduhan baru", Required = false)] string compareMd5 = null
         ) {
+            string cacheKey = this.HttpContext.Request.Path;
+
             try {
                 var user = (UserApiSession)this.HttpContext.Items["user"];
 
@@ -84,7 +86,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     Dictionary<string, string> fileHash = null;
 
-                    string cache = await this._cache.GetStringAsync(this.GetType().Name);
+                    string cache = await this._cache.GetStringAsync(cacheKey);
                     if (string.IsNullOrEmpty(cache)) {
                         fileHash = new Dictionary<string, string>();
 
@@ -104,7 +106,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             }
                         }
 
-                        await this._cache.SetStringAsync(this.GetType().Name, this._converter.ObjectToJson(fileHash), new DistributedCacheEntryOptions() {
+                        await this._cache.SetStringAsync(cacheKey, this._converter.ObjectToJson(fileHash), new DistributedCacheEntryOptions() {
                             SlidingExpiration = TimeSpan.FromMinutes(30)
                         });
                     }
@@ -147,7 +149,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                         default:
                             bool isFound = false;
 
-                            if (this._rdlc.FileType.Keys.Contains(fileType)) {
+                            if (this._rdlc.FileType.ContainsKey(fileType)) {
                                 isFound = true;
                                 dirPath = this._gs.TempFolderPath;
                                 mimeType = this._rdlc.FileType[fileType].contentType;
@@ -233,7 +235,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 }
             }
             catch {
-                this._cache.Remove(this.GetType().Name);
+                this._cache.Remove(cacheKey);
 
                 return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = $"400 - {this.GetType().Name} :: Hash File",

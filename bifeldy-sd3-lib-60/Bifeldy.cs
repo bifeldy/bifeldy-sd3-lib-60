@@ -38,7 +38,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
-using Microsoft.OpenApi.Writers;
 
 using DinkToPdf;
 using DinkToPdf.Contracts;
@@ -55,8 +54,6 @@ using Serilog.Events;
 
 using StackExchange.Redis;
 
-using Swashbuckle.AspNetCore.Swagger;
-
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
@@ -66,8 +63,10 @@ using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Plugins;
+using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
+using bifeldy_sd3_lib_60.Exceptions;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -85,6 +84,7 @@ namespace bifeldy_sd3_lib_60 {
         public static bool IS_USING_API_KEY = false;
         public static bool IS_USING_JWT = false;
 
+        public static string API_PREFIX = "api";
         public static string SIGNALR_PREFIX_HUB = "/signalr";
         public static string NGINX_PATH_NAME = "x-forwarded-prefix";
 
@@ -154,9 +154,16 @@ namespace bifeldy_sd3_lib_60 {
         /* ** */
 
         public static void SetupSerilog() {
+            _ = Services.AddSingleton<SerilogKunciKodeDcPropertyEnricher>();
             _ = Builder.Host.UseSerilog((hostContext, services, configuration) => {
                 string appPathDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-                _ = configuration.WriteTo.File(appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Day);
+                SerilogKunciKodeDcPropertyEnricher spe = services.GetRequiredService<SerilogKunciKodeDcPropertyEnricher>();
+                _ = configuration.Enrich.With(spe).WriteTo.File(
+                    appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt",
+                    LogEventLevel.Error,
+                    "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {KunciKodeDc} | {Message:lj}{NewLine}{Exception}",
+                    rollingInterval: RollingInterval.Day
+                );
             });
         }
 
@@ -203,9 +210,11 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static IMvcBuilder AddControllers(string apiUrlPrefix = "api") {
+            API_PREFIX = apiUrlPrefix;
+
             IMvcBuilder mvcBuilder = Services.AddControllers(x => {
                 x.UseRoutePrefix(apiUrlPrefix);
-                x.UseHideControllerEndPointDc(Services);
+                x.UseHideControllerEndPointDc(App.Services);
             }).AddJsonOptions(x => {
                 x.JsonSerializerOptions.PropertyNamingPolicy = null;
                 x.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
@@ -227,16 +236,16 @@ namespace bifeldy_sd3_lib_60 {
             bool enableApiKey = true,
             bool enableJwt = false
         ) {
+            API_PREFIX = swaggerPrefix;
+
             _ = Services.AddEndpointsApiExplorer();
 
             _ = Services.AddSwaggerGen(c => {
                 c.EnableAnnotations();
 
-                if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
-                    swaggerPrefix = Assembly.GetEntryAssembly().GetName().Version.ToString();
-                }
+                string swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
 
-                c.SwaggerDoc(swaggerPrefix, new OpenApiInfo() {
+                c.SwaggerDoc(swaggerName, new OpenApiInfo() {
                     Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
                     Description = docsDescription ?? "API Documentation ~"
                 });
@@ -297,7 +306,6 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void UseSwagger(
-            string apiUrlPrefix = "api",
             string proxyHeaderName = "x-forwarded-prefix"
         ) {
             NGINX_PATH_NAME = proxyHeaderName;
@@ -307,8 +315,11 @@ namespace bifeldy_sd3_lib_60 {
                 c.PreSerializeFilters.Add((swaggerDoc, request) => {
                     var openApiServers = new List<OpenApiServer>();
 
-                    if (request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
+                    IApplicationService app = request.HttpContext.RequestServices.GetRequiredService<IApplicationService>();
+
+                    if (!app.DebugMode && request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
                         string proxyPath = pathBase.Last();
+
                         if (!string.IsNullOrEmpty(proxyPath)) {
                             openApiServers.Add(new OpenApiServer() {
                                 Description = "Reverse Proxy Path",
@@ -327,15 +338,10 @@ namespace bifeldy_sd3_lib_60 {
             });
 
             _ = App.UseSwaggerUI(c => {
-                c.RoutePrefix = apiUrlPrefix;
+                c.RoutePrefix = API_PREFIX;
 
-                string swaggerUrl = "swagger.json";
-                string swaggerName = apiUrlPrefix;
-
-                if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
-                    swaggerUrl = $"open-api.json?v={DateTime.UtcNow.Ticks}";
-                    swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
-                }
+                string swaggerUrl = $"open-api.json?v={DateTime.UtcNow.Ticks}";
+                string swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
 
                 c.SwaggerEndpoint(swaggerUrl, swaggerName);
 
@@ -356,6 +362,7 @@ namespace bifeldy_sd3_lib_60 {
             // --
             // Transient Selalu Dapat Object Baru ~
             // --
+            _ = Services.AddDbContext<ISqlite, CSqlite>(ServiceLifetime.Transient);
             _ = Services.AddDbContext<IOracle, COracle>(ServiceLifetime.Transient);
             _ = Services.AddDbContext<IPostgres, CPostgres>(ServiceLifetime.Transient);
             _ = Services.AddDbContext<IMsSQL, CMsSQL>(ServiceLifetime.Transient);
@@ -447,7 +454,7 @@ namespace bifeldy_sd3_lib_60 {
             }
         }
 
-        public static List<string> AutoMapHubService(string signalrPrefixHub = "/signalr", Action<HttpConnectionDispatcherOptions> configureOptions = null) {
+        public static List<string> AutoMapHubService(string signalrPrefixHub = "signalr", Action<HttpConnectionDispatcherOptions> configureOptions = null) {
             return App.AutoMapHubService(signalrPrefixHub, configureOptions);
         }
 
@@ -589,12 +596,15 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         /* ** */
+        public static void AutoCheckKunciKodeMultiDc() {
+            _ = App.UseMiddleware<AutoCheckKunciKodeMultiDcMiddleware>();
+        }
 
         public static void UseNginxProxyPathSegment() {
             _ = App.Use(async (context, next) => {
                 if (context.Request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
                     string proxyPath = pathBase.Last();
-                    if (context.Request.Path.StartsWithSegments(proxyPath, out PathString path)) {
+                    if (context.Request.Path.StartsWithSegments(proxyPath, StringComparison.InvariantCultureIgnoreCase, out PathString path)) {
                         context.Request.Path = path;
                     }
                 }
@@ -619,14 +629,14 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void Handle500ApiError<T>(string apiUrlPrefix = "api") {
+        public static void Handle500ApiError<T>() {
             _ = App.Use(async (context, next) => {
 
                 // Khusus API Path :: Akan Di Handle Error Dengan Balikan Data JSON
                 // Selain Itu Atau Jika Masih Ada Error Lain
                 // Misal Di Catch Akan Terlempar Ke Halaman Error Bawaan UI
 
-                if (!context.Request.Path.Value.StartsWith($"/{apiUrlPrefix}/")) {
+                if (!context.Request.Path.Value.StartsWith($"/{API_PREFIX}/", StringComparison.InvariantCultureIgnoreCase)) {
                     await next();
                 }
                 else {
@@ -708,11 +718,11 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void HandleDynamicApiPluginRouteEndpoint(string apiUrlPrefix = "api", string pluginFolderName = "plugins") {
+        public static void HandleDynamicApiPluginRouteEndpoint(string pluginFolderName = "plugins") {
             _ = App.Use(async (context, next) => {
                 string path = context.Request.Path.Value?.Trim('/');
 
-                if (!string.IsNullOrEmpty(path) && path.StartsWith(apiUrlPrefix)) {
+                if (!string.IsNullOrEmpty(path) && path.StartsWith(API_PREFIX)) {
                     string[] segments = path.Split('/');
 
                     if (segments.Length >= 2) {
@@ -764,11 +774,11 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void Handle404ApiNotFound(string apiUrlPrefix = "api") {
-            string urlPattern = "/" + apiUrlPrefix + "/{*url:regex(^(?!swagger).*$)}";
+        public static void Handle404ApiNotFound() {
+            string urlPattern = "/" + API_PREFIX + "/{*url:regex(^(?!swagger).*$)}";
 
             if (!string.IsNullOrEmpty(PLUGINS_PROJECT_NAMESPACE)) {
-                urlPattern = "/" + apiUrlPrefix + "/{*url:regex(.*$)}";
+                urlPattern = "/" + API_PREFIX + "/{*url:regex(.*$)}";
             }
 
             _ = App.MapFallback(urlPattern, async context => {

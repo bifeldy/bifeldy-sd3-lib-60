@@ -57,19 +57,6 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.grpcPort = value;
         }
 
-        private bool isUsingPostgres = true;
-        public bool IS_USING_POSTGRES {
-            get {
-                string dbPgEnv = GetEnvVar("IS_USING_POSTGRES");
-                if (!string.IsNullOrEmpty(dbPgEnv)) {
-                    this.isUsingPostgres = bool.Parse(dbPgEnv);
-                }
-
-                return this.isUsingPostgres;
-            }
-            set => this.isUsingPostgres = value;
-        }
-
         private string kunciIpDomain = "localhost";
         public string KUNCI_IP_DOMAIN {
             get {
@@ -83,17 +70,30 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.kunciIpDomain = value;
         }
 
-        private string kunciGxxx = "kuncirest";
-        public string KUNCI_GXXX {
+        private bool isUsingPostgres = true;
+        public bool IS_USING_POSTGRES {
             get {
-                string kunciGxxxEnv = GetEnvVar("KUNCI_GXXX");
-                if (!string.IsNullOrEmpty(kunciGxxxEnv)) {
-                    this.kunciGxxx = kunciGxxxEnv;
+                string dbPgEnv = GetEnvVar("IS_USING_POSTGRES");
+                if (!string.IsNullOrEmpty(dbPgEnv)) {
+                    this.isUsingPostgres = bool.Parse(dbPgEnv);
                 }
 
-                return this.kunciGxxx;
+                return this.isUsingPostgres;
             }
-            set => this.kunciGxxx = value;
+            set => this.isUsingPostgres = value;
+        }
+
+        private string devBasePath = string.Empty;
+        public string DEV_PATH_BASE {
+            get {
+                string devBasePathEnv = GetEnvVar("DEV_PATH_BASE");
+                if (!string.IsNullOrEmpty(devBasePathEnv)) {
+                    this.devBasePath = devBasePathEnv;
+                }
+
+                return this.devBasePath;
+            }
+            set => this.devBasePath = value;
         }
 
         private string jwtAudience = "jwt_audience";

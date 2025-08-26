@@ -17,6 +17,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Models;
@@ -24,6 +25,7 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
+        List<Tuple<string, string>> CleanHeader(IHeaderDictionary httpHeader);
         HttpClient CreateHttpClient(uint timeoutSeconds = 60);
         Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300);
         Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null);
@@ -64,6 +66,33 @@ namespace bifeldy_sd3_lib_60.Services {
             this._logger = logger;
             this._httpClientFactory = httpClientFactory;
             this._cs = cs;
+        }
+
+        public List<Tuple<string, string>> CleanHeader(IHeaderDictionary httpHeader) {
+            var lsHeader = new List<Tuple<string, string>>();
+
+            string[] hdrListReq = this.ProhibitedHeaders.Union(this.RequestHeadersToRemove).ToArray();
+            foreach (KeyValuePair<string, StringValues> header in httpHeader) {
+                bool isOk = true;
+                foreach (string hl in hdrListReq) {
+                    string h = hl.ToLower();
+                    string hdrKey = header.Key.ToLower();
+                    if (h.EndsWith("*")) {
+                        if (hdrKey.StartsWith(h.Split("*")[0])) {
+                            isOk = false;
+                        }
+                    }
+                    else if (hdrKey == h) {
+                        isOk = false;
+                    }
+                }
+
+                if (isOk) {
+                    lsHeader.Add(new Tuple<string, string>(header.Key, header.Value));
+                }
+            }
+
+            return lsHeader;
         }
 
         private async Task<HttpContent> GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
@@ -205,27 +234,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300) {
-            string[] hdrListReq = this.ProhibitedHeaders.Union(this.RequestHeadersToRemove).ToArray();
-            var lsHeader = new List<Tuple<string, string>>();
-            foreach (KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues> header in request.Headers) {
-                bool isOk = true;
-                foreach (string hl in hdrListReq) {
-                    string h = hl.ToLower();
-                    string hdrKey = header.Key.ToLower();
-                    if (h.EndsWith("*")) {
-                        if (hdrKey.StartsWith(h.Split("*")[0])) {
-                            isOk = false;
-                        }
-                    }
-                    else if (hdrKey == h) {
-                        isOk = false;
-                    }
-                }
-
-                if (isOk) {
-                    lsHeader.Add(new Tuple<string, string>(header.Key, header.Value));
-                }
-            }
+            List<Tuple<string, string>> lsHeader = this.CleanHeader(request.Headers);
 
             HttpResponseMessage res = await this.CreateHttpClient(timeoutSeconds).SendAsync(
                 await this.ParseApiData(
@@ -245,7 +254,7 @@ namespace bifeldy_sd3_lib_60.Services {
             response.Clear();
             response.StatusCode = statusCode;
 
-            if (statusCode == 404 && (isApiEndpoint || urlTarget.Contains("/api/"))) {
+            if (statusCode == 404 && (isApiEndpoint || urlTarget.Contains($"/{Bifeldy.API_PREFIX}/"))) {
                 return new NotFoundObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "404 - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
                     result = new ResponseJsonMessage() {
@@ -253,7 +262,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 });
             }
-            else if (statusCode == 502 && (isApiEndpoint || urlTarget.Contains("/api/"))) {
+            else if (statusCode == 502 && (isApiEndpoint || urlTarget.Contains($"/{Bifeldy.API_PREFIX}/"))) {
                 return new BadRequestObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "502 - Whoops :: Alamat Server Tujuan Tidak Tersedia",
                     result = new ResponseJsonMessage() {

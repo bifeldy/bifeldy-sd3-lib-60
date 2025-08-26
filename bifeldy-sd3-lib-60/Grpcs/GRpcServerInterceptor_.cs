@@ -39,7 +39,24 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger = loggerFactory.CreateLogger<CGRpcServerInterceptor>();
         }
 
-        public async Task CheckUserLogin(ServerCallContext context, dynamic body = null) {
+        public void LoadServerKunciDc(ServerCallContext context) {
+            HttpContext http = context.GetHttpContext();
+
+            try {
+                IServerConfigRepository scr = http.RequestServices.GetRequiredService<IServerConfigRepository>();
+                http.Items["KunciKodeDc"] ??= scr.CurrentLoadedKodeServerKunciDc(http);
+            }
+            catch (Exception ex) {
+                throw new RpcException(
+                    new Status(
+                        StatusCode.Unavailable,
+                        ex.Message
+                    )
+                );
+            }
+        }
+
+        public async Task CheckUserLogin<TRequest>(ServerCallContext context, TRequest body = default) {
             if (!context.Method.Contains("ServerReflection")) {
                 HttpContext http = context.GetHttpContext();
                 ConnectionInfo connection = http.Connection;
@@ -54,10 +71,19 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                 IGeneralRepository generalRepo = http.RequestServices.GetRequiredService<IGeneralRepository>();
 
                 if (http.Items["user"] == null) {
-                    if (body != null) {
-                        string secret = body.secret;
-                        string apiKey = body.key;
-                        string token = body.token;
+
+                    RequestJson reqBody = null;
+                    if (typeof(RequestJson).IsAssignableFrom(body?.GetType())) {
+                        reqBody = (dynamic)body;
+                    }
+                    else {
+                        reqBody = await gs.GetHttpRequestBody<RequestJson>(http.Request);
+                    }
+
+                    if (reqBody != null) {
+                        string secret = reqBody.secret;
+                        string apiKey = reqBody.key;
+                        string token = reqBody.token;
 
                         // -- Secret
 
@@ -207,6 +233,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
+                this.LoadServerKunciDc(context);
                 await this.CheckUserLogin(context, request);
 
                 TResponse result = await continuation(request, context);
@@ -232,7 +259,8 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
-                await this.CheckUserLogin(context);
+                this.LoadServerKunciDc(context);
+                await this.CheckUserLogin<TRequest>(context);
 
                 TResponse result = await continuation(requestStream, context);
 
@@ -258,6 +286,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
+                this.LoadServerKunciDc(context);
                 await this.CheckUserLogin(context, request);
 
                 await continuation(request, responseStream, context);
@@ -282,7 +311,8 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
-                await this.CheckUserLogin(context);
+                this.LoadServerKunciDc(context);
+                await this.CheckUserLogin<TRequest>(context);
 
                 await continuation(requestStream, responseStream, context);
 

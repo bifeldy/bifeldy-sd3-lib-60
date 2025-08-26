@@ -17,6 +17,7 @@ using System.Web;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Confluent.Kafka;
@@ -36,13 +37,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<bool> SaveKafkaToTable(bool isPg, IDatabase db, string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
         Task<KAFKA_SERVER_T> GetKafkaServerInfo(bool isPg, IDatabase db, string topicName);
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(bool isPg, IDatabase db, string kodeDcInduk);
-        Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk);
-        Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget);
+        Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk, IServiceProvider sp);
+        Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp);
         Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> Callback);
         Task<string> GetAppHoApiUrlBase(bool isPg, IDatabase db, string apiPath);
     }
 
-    [ScopedServiceRegistration]
+    [SingletonServiceRegistration]
     public class CGeneralRepository : CRepository, IGeneralRepository {
 
         private readonly EnvVar _envVar;
@@ -52,10 +53,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private readonly IHttpService _http;
         private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
-
-        private readonly IOracle _oracle;
-        private readonly IPostgres _postgres;
-        private readonly IMsSQL _mssql;
 
         private IDictionary<
             string, IDictionary<
@@ -73,10 +70,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             IGlobalService gs,
             IHttpService http,
             IChiperService chiper,
-            IConverterService converter,
-            IOracle oracle,
-            IPostgres postgres,
-            IMsSQL mssql
+            IConverterService converter
         ) {
             this._envVar = envVar.Value;
             this._as = @as;
@@ -84,9 +78,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
             this._http = http;
             this._chiper = chiper;
             this._converter = converter;
-            this._oracle = oracle;
-            this._postgres = postgres;
-            this._mssql = mssql;
         }
 
         /** Custom Queries */
@@ -140,10 +131,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // Item1 => bool :: Apakah Menggunakan Postgre
         // Item2 => CDatabase :: Koneksi Ke Database Oracle / Postgre (Tidak Ada SqlServer)
         //
-        // IDictionary<string, (bool, CDatabase)> dbCon = await GetListBranchDbConnection("G001");
+        // IDictionary<string, (bool, CDatabase)> dbCon = await GetListBranchDbConnection(..., "G001", ...);
         // var res = dbCon["G055"].Item2.ExecScalarAsync<...>(...);
         //
-        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk) {
+        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk, IServiceProvider sp) {
+            IOracle oracle = sp.GetRequiredService<IOracle>();
+            IPostgres postgres = sp.GetRequiredService<IPostgres>();
+
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
                 IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -152,10 +146,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
                     CDatabase dbCon;
                     bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                     if (isPostgre) {
-                        dbCon = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                        dbCon = postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                     }
                     else {
-                        dbCon = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                        dbCon = oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
                     dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
@@ -167,7 +161,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return this.BranchConnectionInfo[kodeDcInduk];
         }
 
-        public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget) {
+        public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp) {
+            IOracle oracle = sp.GetRequiredService<IOracle>();
+            IPostgres postgres = sp.GetRequiredService<IPostgres>();
+            IMsSQL mssql = sp.GetRequiredService<IMsSQL>();
+
             IDatabase dbConHo = db;
 
             string kodeDcSekarang = await this.GetKodeDc(isPg, db);
@@ -176,7 +174,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(isPg, db, "DCHO");
                 DC_TABEL_V dcho = dbInfo.FirstOrDefault();
                 if (dcho != null) {
-                    dbConHo = this._oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
+                    dbConHo = oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
                 }
             }
 
@@ -189,13 +187,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 if (dbi != null) {
                     dbIsUsingPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                     if (dbIsUsingPostgre) {
-                        dbOraPgDc = this._postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                        dbOraPgDc = postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                     }
                     else {
-                        dbOraPgDc = this._oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                        dbOraPgDc = oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
-                    dbSqlDc = this._mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
+                    dbSqlDc = mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
                 }
             }
 
@@ -233,7 +231,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 Callback($"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!", null);
             }
             else {
-                string separator = "/api/";
+                string separator = $"/{Bifeldy.API_PREFIX}/";
 
                 //
                 // dotnet blablabla.dll

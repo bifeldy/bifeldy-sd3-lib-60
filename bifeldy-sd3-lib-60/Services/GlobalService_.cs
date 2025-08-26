@@ -34,8 +34,8 @@ namespace bifeldy_sd3_lib_60.Services {
         string GetIpOriginData(ConnectionInfo connection, HttpRequest request, bool ipOnly = false, bool removeReverseProxyRoute = false);
         string CleanIpOrigin(string ipOrigins);
         string GetTokenData(HttpRequest request, RequestJson reqBody);
-        Task<(string, string)> ParseRequestBodyJsonString(HttpRequest request);
-        Task<RequestJson> GetRequestBody(HttpRequest request);
+        Task<(string, string)> ParseHttpRequestBodyJsonString(HttpRequest request);
+        Task<T> GetHttpRequestBody<T>(HttpRequest request);
     }
 
     [SingletonServiceRegistration]
@@ -225,13 +225,13 @@ namespace bifeldy_sd3_lib_60.Services {
             return token;
         }
 
-        public async Task<(string, string)> ParseRequestBodyJsonString(HttpRequest request) {
+        public async Task<(string, string)> ParseHttpRequestBodyJsonString(HttpRequest request) {
             string contentType = request.ContentType ?? request.Headers["content-type"].ToString();
 
             string rbString = null;
             if (contentType == "application/grpc" || SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
                 try {
-                    rbString = await request.GetRequestBodyStringAsync();
+                    rbString = await request.GetHttpRequestBodyStringAsync();
                 }
                 catch {
                     // Bukan Text
@@ -241,16 +241,19 @@ namespace bifeldy_sd3_lib_60.Services {
             return (contentType, rbString);
         }
 
-        public async Task<RequestJson> GetRequestBody(HttpRequest request) {
-            RequestJson reqBody = null;
+        public async Task<T> GetHttpRequestBody<T>(HttpRequest request) {
+            T reqBody = default;
 
-            (string contentType, string rbString) = await this.ParseRequestBodyJsonString(request);
-            if (!string.IsNullOrEmpty(rbString)) {
-                try {
-                    reqBody = this._cs.XmlJsonToObject<RequestJson>(contentType, rbString);
-                }
-                catch (Exception ex) {
-                    this._logger.LogError("[JSON_BODY] 🌸 {ex}", ex.Message);
+            if (typeof(RequestJson).IsAssignableFrom(typeof(T))) {
+                (string contentType, string rbString) = await this.ParseHttpRequestBodyJsonString(request);
+
+                if (!string.IsNullOrEmpty(rbString)) {
+                    try {
+                        reqBody = this._cs.XmlJsonToObject<T>(contentType, rbString);
+                    }
+                    catch (Exception ex) {
+                        this._logger.LogError("[JSON_BODY] 🌸 {ex}", ex.Message);
+                    }
                 }
             }
 

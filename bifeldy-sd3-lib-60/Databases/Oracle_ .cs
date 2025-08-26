@@ -17,6 +17,7 @@ using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,7 @@ using Oracle.ManagedDataAccess.Client;
 
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Databases {
@@ -36,14 +38,22 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public sealed class COracle : CDatabase, IOracle {
 
+        private readonly IHttpContextAccessor _hca;
+        private readonly IServerConfigRepository _scr;
+
         public COracle(
             DbContextOptions<COracle> options,
             ILogger<COracle> logger,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs,
-            IGlobalService gs
+            IGlobalService gs,
+            IHttpContextAccessor hca,
+            IServerConfigRepository scr
         ) : base(options, logger, envVar, @as, cs, gs) {
+            this._hca = hca;
+            this._scr = scr;
+            //
             this.InitializeConnection();
             this.SetCommandTimeout();
         }
@@ -58,7 +68,15 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public void InitializeConnection(string dbUsername = null, string dbPassword = null, string dbTnsOdp = null) {
-            string _dbTnsOdp = dbTnsOdp ?? this._as.GetVariabel("ODPOrcl", this._envVar.KUNCI_GXXX);
+            string kunciGxxx = null;
+
+            if (this._hca.HttpContext != null) {
+                kunciGxxx = this._hca.HttpContext.Items["KunciKodeDc"]?.ToString();
+            }
+
+            kunciGxxx ??= this._scr.CurrentLoadedKodeServerKunciDc();
+
+            string _dbTnsOdp = dbTnsOdp ?? this._as.GetVariabel("ODPOrcl", kunciGxxx);
             if (!string.IsNullOrEmpty(_dbTnsOdp)) {
                 _dbTnsOdp = Regex.Replace(_dbTnsOdp, @"\s+", "");
             }
@@ -76,8 +94,8 @@ namespace bifeldy_sd3_lib_60.Databases {
             }
 
             this.DbName = _dbName;
-            this.DbUsername = dbUsername ?? this._as.GetVariabel("UserOrcl", this._envVar.KUNCI_GXXX);
-            this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordOrcl", this._envVar.KUNCI_GXXX);
+            this.DbUsername = dbUsername ?? this._as.GetVariabel("UserOrcl", kunciGxxx);
+            this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordOrcl", kunciGxxx);
             this.DbConnectionString = $"Data Source={this.DbTnsOdp};User ID={this.DbUsername};Password={this.DbPassword};Connection Timeout=180;"; // 3 Minutes
         }
 

@@ -38,7 +38,8 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         private readonly ConcurrentDictionary<string, IPlugin> _pluginInstances = new();
         private readonly ConcurrentDictionary<string, IServiceProvider> _pluginServiceProviders = new();
-        private readonly ConcurrentDictionary<string, (CPluginLoadContext, Assembly, FileStream, string)> _loaded = new();
+
+        public static ConcurrentDictionary<string, (CPluginLoadContext, Assembly, FileStream, string)> LOADED_PLUGIN = new();
 
         public CPluginManager(string pluginDir, ILogger logger, IOptions<EnvVar> envVar, IServiceProvider serviceProvider) {
             this._pluginDir = pluginDir;
@@ -66,7 +67,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 }
 
                 DateTime lastWrite = File.GetLastWriteTimeUtc(mainDllPath);
-                if (this._loaded.TryGetValue(name, out (CPluginLoadContext context, Assembly asm, FileStream fs, string tempPath) oldEntry)) {
+                if (LOADED_PLUGIN.TryGetValue(name, out (CPluginLoadContext context, Assembly asm, FileStream fs, string tempPath) oldEntry)) {
                     DateTime oldWrite = File.GetLastWriteTimeUtc(oldEntry.tempPath);
                     if (lastWrite == oldWrite) {
                         return;
@@ -84,7 +85,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     throw new Exception($"[PLUGIN] Failed To Copy Plugin DLL To Temp Folder 💉 {mainDllPath}");
                 }
 
-                lock (this._loaded) {
+                lock (LOADED_PLUGIN) {
                     // Butuh Yang Asli Karena Barang Kali Ada External Lib.dll Yang 1 Folder Dengannya ~
                     var plc = new CPluginLoadContext(mainDllPath);
 
@@ -102,7 +103,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         Assembly.GetEntryAssembly()
                     };
 
-                    existingAssemblies.AddRange(this._loaded.Values.Select(v => v.Item2));
+                    existingAssemblies.AddRange(LOADED_PLUGIN.Values.Select(v => v.Item2));
 
                     foreach (Assembly existingAsm in existingAssemblies) {
                         foreach (Type existingType in this.SafeGetTypes(existingAsm)) {
@@ -113,7 +114,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         }
                     }
 
-                    this._loaded[name] = (plc, asm, fs, tempPath);
+                    LOADED_PLUGIN[name] = (plc, asm, fs, tempPath);
 
                     this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
 
@@ -219,14 +220,14 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
             this._logger.LogInformation("[PLUGIN] Removing 💉 {name}", name);
 
-            lock (this._loaded) {
+            lock (LOADED_PLUGIN) {
                 if (this._partManager != null) {
                     ApplicationPart part = this._partManager.ApplicationParts
                         .FirstOrDefault(p => p.Name.ToUpper() == name.ToUpper());
 
                     // AssemblyPart part = this._partManager.ApplicationParts
                     //     .OfType<AssemblyPart>()
-                    //     .FirstOrDefault(p => p.Assembly == this._loaded[name].Item2);
+                    //     .FirstOrDefault(p => p.Assembly == LOADED_PLUGIN[name].Item2);
 
                     if (part != null) {
                         _ = this._partManager.ApplicationParts.Remove(part);
@@ -252,7 +253,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                 this._logger.LogInformation("[PLUGIN] Instance Removed 💉 {name}", name);
 
-                if (this._loaded.TryRemove(name, out (CPluginLoadContext context, Assembly asm, FileStream fs, string tempPath) entry)) {
+                if (LOADED_PLUGIN.TryRemove(name, out (CPluginLoadContext context, Assembly asm, FileStream fs, string tempPath) entry)) {
                     entry.context.Unload();
                     entry.fs.Dispose();
 
@@ -278,7 +279,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
         }
 
         public void UnloadAll(bool skipGC = false) {
-            foreach (string key in this._loaded.Keys.ToArray()) {
+            foreach (string key in LOADED_PLUGIN.Keys.ToArray()) {
                 try {
                     this.UnloadPlugin(key, skipGC);
                 }
@@ -334,11 +335,11 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
         public bool IsPluginLoaded(string name) {
             name = name.RemoveIllegalFileName();
-            return this._loaded.ContainsKey(name);
+            return LOADED_PLUGIN.ContainsKey(name);
         }
 
         public List<CPluginInfoAttribute> GetLoadedPluginInfos() {
-            return this._loaded.Select(kvp => {
+            return LOADED_PLUGIN.Select(kvp => {
                 Assembly asm = kvp.Value.Item2;
                 Type pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
                 CPluginInfoAttribute attr = pluginType?.GetCustomAttribute<CPluginInfoAttribute>();

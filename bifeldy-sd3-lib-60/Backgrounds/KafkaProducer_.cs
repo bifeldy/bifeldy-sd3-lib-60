@@ -20,26 +20,21 @@ using Confluent.Kafka;
 using System.Reactive.Subjects;
 
 using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
-using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Backgrounds {
 
     public sealed class CKafkaProducer : BackgroundService {
 
         private readonly EnvVar _env;
-
-        private readonly IServiceScope _scopedService;
-
         private readonly ILogger<CKafkaProducer> _logger;
         private readonly IConverterService _converter;
         private readonly IPubSubService _pubSub;
         private readonly IKafkaService _kafka;
         private readonly ILockerService _locker;
-
-        private readonly IOraPg _orapg;
         private readonly IGeneralRepository _generalRepo;
 
         private string _hostPort;
@@ -49,15 +44,10 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
         private readonly bool _suffixKodeDc;
         private readonly string _pubSubName;
+
         private readonly List<EJenisDc> _excludeJenisDc;
 
-        private IProducer<string, string> producer = null;
-
-        private BehaviorSubject<Message<string, dynamic>> observeable = null;
-
-        private readonly List<Message<string, string>> msgs = new();
-
-        private IDisposable kafkaSubs = null;
+        private readonly IServiceScope _scopedService = null;
 
         private string KAFKA_NAME => "KAFKA_" + this._pubSubName ?? $"PRODUCER_{this._hostPort.ToUpper()}#{this._topicName.ToUpper()}";
 
@@ -72,10 +62,9 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             this._pubSub = serviceProvider.GetRequiredService<IPubSubService>();
             this._kafka = serviceProvider.GetRequiredService<IKafkaService>();
             this._locker = serviceProvider.GetRequiredService<ILockerService>();
+            this._generalRepo = serviceProvider.GetRequiredService<IGeneralRepository>();
 
             this._scopedService = serviceProvider.CreateScope();
-            this._orapg = this._scopedService.ServiceProvider.GetRequiredService<IOraPg>();
-            this._generalRepo = this._scopedService.ServiceProvider.GetRequiredService<IGeneralRepository>();
 
             this._hostPort = hostPort;
             this._topicName = topicName;
@@ -88,24 +77,30 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         }
 
         public override void Dispose() {
-            this.producer?.Dispose();
-            this.kafkaSubs?.Dispose();
             this._pubSub?.DisposeAndRemoveSubscriber(this.KAFKA_NAME);
             this._scopedService?.Dispose();
             base.Dispose();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        private async Task DoWorkMultiDc(IServiceProvider sp, CancellationToken stoppingToken) {
+            BehaviorSubject<Message<string, dynamic>> observeable = null;
+            IProducer<string, string> producer = null;
+
+            IDisposable subs = null;
+            List<Message<string, string>> msgs = new();
+
             try {
+                IOraPg orapg = sp.GetRequiredService<IOraPg>();
+
                 if (this._excludeJenisDc != null) {
-                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg);
+                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, orapg);
                     if (this._excludeJenisDc.Contains(jenisDc)) {
                         return;
                     }
                 }
 
                 if (string.IsNullOrEmpty(this._hostPort)) {
-                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, this._orapg, this._topicName);
+                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, orapg, this._topicName);
                     if (kafka == null) {
                         throw new Exception("KAFKA Tidak Tersedia!");
                     }
@@ -120,42 +115,41 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         this._topicName += "_";
                     }
 
-                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, this._orapg);
+                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, orapg);
                     this._topicName += kodeDc;
                 }
 
-                if (this.producer == null) {
-                    await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName, this._replication, this._partition);
-                    this.producer = this._kafka.CreateKafkaProducerInstance<string, string>(this._hostPort);
-                }
+                await this._kafka.CreateTopicIfNotExist(this._hostPort, this._topicName, this._replication, this._partition);
+                producer = this._kafka.CreateKafkaProducerInstance<string, string>(this._hostPort);
 
-                if (this.observeable == null) {
-                    this.observeable = this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(this.KAFKA_NAME);
-                    this.kafkaSubs = this.observeable.Subscribe(async data => {
-                        if (data != null) {
-                            var msg = new Message<string, string>() {
-                                Key = data.Key,
-                                Value = typeof(string) == data.Value.GetType() ? data.Value : this._converter.ObjectToJson(data.Value)
-                            };
-                            await this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).WaitAsync();
-                            this.msgs.Add(msg);
-                            _ = this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).Release();
-                        }
-                    });
-                }
+                observeable = this._pubSub.GetGlobalAppBehaviorSubject<Message<string, dynamic>>(this.KAFKA_NAME);
+                subs = observeable.Subscribe(async data => {
+                    if (data != null) {
+                        var msg = new Message<string, string>() {
+                            Key = data.Key,
+                            Value = typeof(string) == data.Value.GetType() ? data.Value : this._converter.ObjectToJson(data.Value)
+                        };
+
+                        await this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).WaitAsync(stoppingToken);
+
+                        msgs.Add(msg);
+
+                        _ = this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).Release();
+                    }
+                });
 
                 while (!stoppingToken.IsCancellationRequested) {
                     await Task.Yield();
 
-                    if (this.msgs.Count > 0) {
+                    if (msgs.Count > 0) {
                         await this._locker.SemaphoreGlobalApp(this.KAFKA_NAME).WaitAsync(stoppingToken);
 
-                        Message<string, string>[] cpMsgs = this.msgs.ToArray();
-                        this.msgs.Clear();
+                        Message<string, string>[] cpMsgs = msgs.ToArray();
+                        msgs.Clear();
 
                         foreach (Message<string, string> msg in cpMsgs) {
                             try {
-                                _ = await this.producer.ProduceAsync(this._topicName, msg, stoppingToken);
+                                _ = await producer.ProduceAsync(this._topicName, msg, stoppingToken);
                             }
                             catch (Exception e) {
                                 this._logger.LogError("[KAFKA_PRODUCER_MESSAGE] {e}", e.Message);
@@ -168,6 +162,40 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             }
             catch (Exception ex) {
                 this._logger.LogError("[KAFKA_PRODUCER_ERROR] 🏗 {ex}", ex.Message);
+            }
+            finally {
+                subs?.Dispose();
+                producer?.Dispose();
+                observeable?.Dispose();
+            }
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            try {
+                var tasks = new List<Task>();
+
+                IServerConfigRepository scr = this._scopedService.ServiceProvider.GetRequiredService<IServerConfigRepository>();
+
+                List<ServerConfigKunci> kunci = await scr.GetKodeServerKunciDc();
+                foreach (ServerConfigKunci k in kunci) {
+                    Task task = await Task.Factory.StartNew(async () => {
+                        using (IServiceScope scope = this._scopedService.ServiceProvider.CreateScope()) {
+                            IServiceProvider _sp = scope.ServiceProvider;
+                            IServerConfigRepository _scr = _sp.GetRequiredService<IServerConfigRepository>();
+
+                            _ = await _scr.UseKodeServerKunciDc(k.kode_dc, k.kunci_gxxx);
+
+                            await this.DoWorkMultiDc(_sp, stoppingToken);
+                        }
+                    }, stoppingToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+                    tasks.Add(task);
+                }
+
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex) {
+                this._logger.LogError("[KAFKA_PRODUCER_HOST] 💉 {ex}", ex.Message);
             }
         }
 

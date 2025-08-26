@@ -18,6 +18,7 @@ using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,6 +31,7 @@ using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -40,14 +42,22 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public sealed class CPostgres : CDatabase, IPostgres {
 
+        private readonly IHttpContextAccessor _hca;
+        private readonly IServerConfigRepository _scr;
+
         public CPostgres(
             DbContextOptions<CPostgres> options,
             ILogger<CPostgres> logger,
             IOptions<EnvVar> envVar,
             IApplicationService @as,
             IConverterService cs,
-            IGlobalService gs
+            IGlobalService gs,
+            IHttpContextAccessor hca,
+            IServerConfigRepository scr
         ) : base(options, logger, envVar, @as, cs, gs) {
+            this._hca = hca;
+            this._scr = scr;
+            //
             this.InitializeConnection();
             this.SetCommandTimeout();
         }
@@ -60,11 +70,20 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public void InitializeConnection(string dbIpAddrss = null, string dbPort = null, string dbUsername = null, string dbPassword = null, string dbName = null) {
-            this.DbIpAddrss = dbIpAddrss ?? this._as.GetVariabel("IPPostgres", this._envVar.KUNCI_GXXX);
-            this.DbPort = dbPort ?? this._as.GetVariabel("PortPostgres", this._envVar.KUNCI_GXXX);
-            this.DbUsername = dbUsername ?? this._as.GetVariabel("UserPostgres", this._envVar.KUNCI_GXXX);
-            this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordPostgres", this._envVar.KUNCI_GXXX);
-            this.DbName = dbName ?? this._as.GetVariabel("DatabasePostgres", this._envVar.KUNCI_GXXX);
+            string kunciGxxx = null;
+
+            if (this._hca.HttpContext != null) {
+                kunciGxxx = this._hca.HttpContext.Items["KunciKodeDc"]?.ToString();
+            }
+
+            kunciGxxx ??= this._scr.CurrentLoadedKodeServerKunciDc();
+
+            this.DbIpAddrss = dbIpAddrss ?? this._as.GetVariabel("IPPostgres", kunciGxxx);
+            this.DbPort = dbPort ?? this._as.GetVariabel("PortPostgres", kunciGxxx);
+            this.DbUsername = dbUsername ?? this._as.GetVariabel("UserPostgres", kunciGxxx);
+            this.DbPassword = dbPassword ?? this._as.GetVariabel("PasswordPostgres", kunciGxxx);
+            this.DbName = dbName ?? this._as.GetVariabel("DatabasePostgres", kunciGxxx);
+
             this.DbConnectionString = $"Host={this.DbIpAddrss};Port={this.DbPort};Username={this.DbUsername};Password={this.DbPassword};Database={this.DbName};Timeout=180;ApplicationName={this._as.AppName}_{this._as.AppVersion};"; // 3 Minutes
         }
 
