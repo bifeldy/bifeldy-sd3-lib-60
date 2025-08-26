@@ -11,11 +11,8 @@
  * 
  */
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 
 using Grpc.Core;
 using Grpc.Core.Interceptors;
@@ -31,11 +28,11 @@ using bifeldy_sd3_lib_60.Models;
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IGRpcService {
-        GrpcChannelOptions CreateConfig(IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, IHeaderDictionary httpHeader = null);
-        GrpcChannel CreateChannel(string host, int port = 0, bool disableResolver = true, IHeaderDictionary httpHeader = null);
-        (GrpcChannel, T) ClientGetService<T>(string host, int port = 0, bool disableResolver = true, IHeaderDictionary httpHeader = null) where T : class;
-        GrpcChannel CreateChannelWithLoadBalanced(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, IHeaderDictionary httpHeader = null);
-        (GrpcChannel, T) ClientGetServiceWithLoadBalanced<T>(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, IHeaderDictionary httpHeader = null) where T : class;
+        GrpcChannelOptions CreateConfig(IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false);
+        GrpcChannel CreateChannel(string host, int port = 0, bool disableResolver = true);
+        (GrpcChannel, T) ClientGetService<T>(string host, int port = 0, bool disableResolver = true, CGRpcClientInterceptor interceptor = null) where T : class;
+        GrpcChannel CreateChannelWithLoadBalanced(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false);
+        (GrpcChannel, T) ClientGetServiceWithLoadBalanced<T>(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, CGRpcClientInterceptor interceptor = null) where T : class;
     }
 
     [SingletonServiceRegistration]
@@ -56,7 +53,7 @@ namespace bifeldy_sd3_lib_60.Services {
             this._serviceProvider = serviceProvider;
         }
 
-        public GrpcChannelOptions CreateConfig(IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, IHeaderDictionary httpHeader = null) {
+        public GrpcChannelOptions CreateConfig(IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false) {
             var cfg = new ServiceConfig();
 
             if (loadBalancingConfigs != null) {
@@ -72,23 +69,10 @@ namespace bifeldy_sd3_lib_60.Services {
                 DisableResolverServiceConfig = disableResolver
             };
 
-            if (httpHeader != null) {
-                IHttpService httpService = this._serviceProvider.GetRequiredService<IHttpService>();
-                HttpClient httpClient = httpService.CreateHttpClient();
-
-                foreach (KeyValuePair<string, StringValues> header in httpHeader) {
-                    if (!httpClient.DefaultRequestHeaders.Contains(header.Key)) {
-                        httpClient.DefaultRequestHeaders.Add(header.Key, header.Value.AsEnumerable());
-                    }
-                }
-
-                grpcChannel.HttpClient = httpClient;
-            }
-
             return grpcChannel;
         }
 
-        public GrpcChannel CreateChannel(string host, int port = 0, bool disableResolver = true, IHeaderDictionary httpHeader = null) {
+        public GrpcChannel CreateChannel(string host, int port = 0, bool disableResolver = true) {
             if (string.IsNullOrEmpty(host)) {
                 throw new ArgumentNullException("host", "Harus Berisi Alamat IP / Domain");
             }
@@ -101,28 +85,31 @@ namespace bifeldy_sd3_lib_60.Services {
                 host = $"http://{host}";
             }
 
-            return GrpcChannel.ForAddress($"{host}:{port}", this.CreateConfig(null, disableResolver, httpHeader));
+            return GrpcChannel.ForAddress($"{host}:{port}", this.CreateConfig(null, disableResolver));
         }
 
-        public (GrpcChannel, T) ClientGetService<T>(string host, int port = 0, bool disableResolver = true, IHeaderDictionary httpHeader = null) where T : class {
-            GrpcChannel channel = this.CreateChannel(host, port, disableResolver, httpHeader);
-            CallInvoker invoker = channel.Intercept(new CGRpcClientInterceptor(this._loggerFactory));
+        public (GrpcChannel, T) ClientGetService<T>(string host, int port = 0, bool disableResolver = true, CGRpcClientInterceptor interceptor = null) where T : class {
+            interceptor ??= new CGRpcClientInterceptor(this._loggerFactory);
+
+            GrpcChannel channel = this.CreateChannel(host, port, disableResolver);
+            CallInvoker invoker = channel.Intercept(interceptor);
             T service = invoker.CreateGrpcService<T>();
 
             return (channel, service);
         }
 
-        public GrpcChannel CreateChannelWithLoadBalanced(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, IHeaderDictionary httpHeader = null) {
-            return GrpcChannel.ForAddress(hostPort, this.CreateConfig(loadBalancingConfigs, disableResolver, httpHeader));
+        public GrpcChannel CreateChannelWithLoadBalanced(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false) {
+            return GrpcChannel.ForAddress(hostPort, this.CreateConfig(loadBalancingConfigs, disableResolver));
         }
 
-        public (GrpcChannel, T) ClientGetServiceWithLoadBalanced<T>(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, IHeaderDictionary httpHeader = null) where T : class {
+        public (GrpcChannel, T) ClientGetServiceWithLoadBalanced<T>(string hostPort, IEnumerable<LoadBalancingConfig> loadBalancingConfigs = null, bool disableResolver = false, CGRpcClientInterceptor interceptor = null) where T : class {
+            interceptor ??= new CGRpcClientInterceptor(this._loggerFactory);
             loadBalancingConfigs ??= new[] {
                 new RoundRobinConfig()
             };
 
-            GrpcChannel channel = this.CreateChannelWithLoadBalanced(hostPort, loadBalancingConfigs, disableResolver, httpHeader);
-            CallInvoker invoker = channel.Intercept(new CGRpcClientInterceptor(this._loggerFactory));
+            GrpcChannel channel = this.CreateChannelWithLoadBalanced(hostPort, loadBalancingConfigs, disableResolver);
+            CallInvoker invoker = channel.Intercept(interceptor);
             T service = invoker.CreateGrpcService<T>();
 
             return (channel, service);

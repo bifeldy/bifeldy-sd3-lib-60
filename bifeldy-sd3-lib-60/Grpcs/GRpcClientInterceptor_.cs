@@ -11,7 +11,9 @@
  * 
  */
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 using Grpc.Core;
 using Grpc.Core.Interceptors;
@@ -20,10 +22,16 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
     public sealed class CGRpcClientInterceptor : Interceptor {
 
-        private readonly ILogger<CGRpcClientInterceptor> _logger;
+        private readonly ILogger _logger;
+        private readonly IHeaderDictionary _httpHeader;
 
         public CGRpcClientInterceptor(ILoggerFactory loggerFactory) {
             this._logger = loggerFactory.CreateLogger<CGRpcClientInterceptor>();
+        }
+
+        public CGRpcClientInterceptor(ILogger logger, IHeaderDictionary httpHeader) {
+            this._logger = logger;
+            this._httpHeader = httpHeader;
         }
 
         private async Task<T> HandleClient<T>(Task<T> data, string nameOp, string targetServer) {
@@ -40,9 +48,29 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             }
         }
 
+        private void ApplyHttpHeader<TRequest, TResponse>(ref ClientInterceptorContext<TRequest, TResponse> context) where TRequest : class where TResponse : class {
+            if (this._httpHeader != null) {
+                var metadata = new Metadata();
+
+                foreach (KeyValuePair<string, StringValues> header in this._httpHeader) {
+                    metadata.Add(header.Key, header.Value);
+                }
+
+                if (context.Options.Headers != null) {
+                    foreach (Metadata.Entry hdr in context.Options.Headers) {
+                        metadata.Add(hdr);
+                    }
+                }
+
+                CallOptions co = context.Options.WithHeaders(metadata);
+                context = new(context.Method, context.Host, co);
+            }
+        }
+
         private void ApplyDeadline<TRequest, TResponse>(ref ClientInterceptorContext<TRequest, TResponse> context) where TRequest : class where TResponse : class {
             if (context.Options.Deadline is null) {
-                context = new(context.Method, context.Host, context.Options.WithDeadline(DateTime.UtcNow.AddMinutes(60)));
+                CallOptions co = context.Options.WithDeadline(DateTime.UtcNow.AddMinutes(60));
+                context = new(context.Method, context.Host, co);
             }
         }
 
@@ -58,7 +86,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyHttpHeader(ref context);
             this.ApplyDeadline(ref context);
+
             TResponse result = continuation(request, context);
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Finished {nameOp} ... {targetServer}", nameOp, targetServer);
@@ -76,7 +106,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyHttpHeader(ref context);
             this.ApplyDeadline(ref context);
+
             AsyncUnaryCall<TResponse> call = continuation(request, context);
 
             return new AsyncUnaryCall<TResponse>(
@@ -97,7 +129,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyHttpHeader(ref context);
             this.ApplyDeadline(ref context);
+
             AsyncClientStreamingCall<TRequest, TResponse> call = continuation(context);
 
             return new AsyncClientStreamingCall<TRequest, TResponse>(
@@ -120,7 +154,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyHttpHeader(ref context);
             this.ApplyDeadline(ref context);
+
             AsyncServerStreamingCall<TResponse> call = continuation(request, context);
 
             return new AsyncServerStreamingCall<TResponse>(
@@ -141,7 +177,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Calling {nameOp} ... {targetServer}", nameOp, targetServer);
 
+            this.ApplyHttpHeader(ref context);
             this.ApplyDeadline(ref context);
+
             AsyncDuplexStreamingCall<TRequest, TResponse> call = continuation(context);
 
             return new AsyncDuplexStreamingCall<TRequest, TResponse>(
