@@ -28,7 +28,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly EnvVar _env;
 
         private readonly RequestDelegate _next;
-        private readonly ILogger<AutoCheckKunciKodeMultiDcMiddleware> _logger;
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
 
@@ -451,13 +450,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         public AutoCheckKunciKodeMultiDcMiddleware(
             RequestDelegate next,
             IOptions<EnvVar> env,
-            ILogger<AutoCheckKunciKodeMultiDcMiddleware> logger,
             IApplicationService app,
             IGlobalService gs
         ) {
             this._next = next;
             this._env = env.Value;
-            this._logger = logger;
             this._app = app;
             this._gs = gs;
         }
