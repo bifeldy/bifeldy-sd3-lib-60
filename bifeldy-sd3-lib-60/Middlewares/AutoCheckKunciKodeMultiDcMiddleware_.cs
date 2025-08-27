@@ -11,6 +11,8 @@
  * 
  */
 
+using System.Net;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -356,11 +358,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                                     proxy_set_header Upgrade $http_upgrade;
                                     proxy_set_header Connection Upgrade;
                                     proxy_set_header X-Forwarded-Host $host;
+                                    proxy_set_header CF-Connecting-IP $proxy_protocol_addr;
+                                    proxy_set_header X-Real-IP $remote_addr;
                                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                                     proxy_set_header X-Forwarded-Proto $scheme;
                                     proxy_set_header X-Forwarded-Prefix /$1;
-                                    # proxy_set_header X-Real-IP $remote_addr;
-                                    # proxy_set_header CF-Connecting-IP $proxy_protocol_addr;
 
                                     # Ganti Target Dengan IP & Port Aplikasinya
                                     # nama-docker-container:port / localhost:port
@@ -464,34 +466,17 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             try {
-                if (this._app.DebugMode) {
-                    string proxyPath = this._env.DEV_PATH_BASE;
-
-                    if (!string.IsNullOrEmpty(proxyPath)) {
-                        if (!proxyPath.StartsWith("/")) {
-                            proxyPath = $"/{proxyPath}";
-                        }
-
-                        if (context.Request.Headers.ContainsKey(Bifeldy.NGINX_PATH_NAME)) {
-                            _ = context.Request.Headers.Remove(Bifeldy.NGINX_PATH_NAME);
-                        }
-
-                        context.Request.Headers.Add(Bifeldy.NGINX_PATH_NAME, proxyPath);
-                    }
-                }
-
-                context.Items["KunciKodeDc"] = scr.CurrentLoadedKodeServerKunciDc();
-
-                int shortCircuit = 0;
-                object res = null;
-
                 if (context.Request.Path.Value.StartsWith("/server-config.html", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "text/html; charset=utf-8";
                     await context.Response.WriteAsync(HTML);
                     return;
                 }
-                else if (context.Request.Path.Value.Equals("/server-config", StringComparison.InvariantCultureIgnoreCase)) {
+
+                int shortCircuit = 0;
+                object res = null;
+
+                if (context.Request.Path.Value.Equals("/server-config", StringComparison.InvariantCultureIgnoreCase)) {
                     try {
                         if (context.Request.Method == "GET") {
                             List<ServerConfigKunci> config = await scr.GetKodeServerKunciDc();
@@ -581,14 +566,29 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     return;
                 }
 
+                if (this._app.DebugMode) {
+                    string proxyPath = this._env.DEV_PATH_BASE;
+
+                    if (!string.IsNullOrEmpty(proxyPath)) {
+                        if (!proxyPath.StartsWith("/")) {
+                            proxyPath = $"/{proxyPath}";
+                        }
+
+                        if (context.Request.Headers.ContainsKey(Bifeldy.NGINX_PATH_NAME)) {
+                            _ = context.Request.Headers.Remove(Bifeldy.NGINX_PATH_NAME);
+                        }
+
+                        context.Request.Headers.Add(Bifeldy.NGINX_PATH_NAME, proxyPath);
+                    }
+                }
+
+                context.Items["KunciKodeDc"] = scr.CurrentLoadedKodeServerKunciDc();
+
                 await this._next(context);
             }
             catch (KunciServerTidakTersediaException ex) {
                 string redirectUrl = "/server-config.html";
-
-                if (context.Request.Path.ToUriComponent().Contains(redirectUrl, StringComparison.InvariantCultureIgnoreCase)) {
-                    throw;
-                }
+                string encodedString = WebUtility.UrlEncode(ex.Message);
 
                 if (!this._app.DebugMode && context.Request.Headers.TryGetValue(Bifeldy.NGINX_PATH_NAME, out StringValues pathBase)) {
                     string proxyPath = pathBase.Last();
@@ -599,7 +599,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
                 context.Response.Clear();
                 context.Response.StatusCode = StatusCodes.Status307TemporaryRedirect;
-                context.Response.Headers.Location = $"{redirectUrl}?errorInfo={ex.Message}";
+                context.Response.Headers.Location = $"{redirectUrl}?errorInfo={encodedString}";
             }
         }
 
