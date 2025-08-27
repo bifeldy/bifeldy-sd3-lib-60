@@ -45,6 +45,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly IApplicationService _app;
         private readonly IOraPg _orapg;
         private readonly ILockerService _locker;
+        private readonly IConverterService _cs;
         private readonly IGeneralRepository _generalRepo;
 
         public OpenApiController(
@@ -54,6 +55,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IApplicationService app,
             IOraPg orapg,
             ILockerService locker,
+            IConverterService cs,
             IGeneralRepository generalRepo
         ) {
             this._env = env.Value;
@@ -62,6 +64,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._app = app;
             this._orapg = orapg;
             this._locker = locker;
+            this._cs = cs;
             this._generalRepo = generalRepo;
         }
 
@@ -118,6 +121,11 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                 swaggerDoc.Servers = openApiServers;
 
+                string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, this._orapg);
+                EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg);
+
+                List<KeyValuePair<string, string>> excludeApiPath = new();
+
                 if (!this._app.DebugMode) {
                     var existingAssemblies = new List<Assembly> {
                         Assembly.GetExecutingAssembly(),
@@ -128,13 +136,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
                         existingAssemblies.AddRange(CPluginManager.LOADED_PLUGIN.Values.Select(v => v.Item2));
                     }
 
-                    IEnumerable<Type> controllerTypes = existingAssemblies.Select(asm => asm.GetType())
+                    IEnumerable<Type> controllerTypes = existingAssemblies.SelectMany(ea => ea.GetTypes())
                         .Where(type => typeof(ControllerBase).IsAssignableFrom(type) && !type.IsAbstract);
-
-                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, this._orapg);
-                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, this._orapg);
-
-                    List<KeyValuePair<string, string>> excludeApiPath = new();
 
                     foreach (Type controllerType in controllerTypes) {
                         string controllerRoutePath = "/";
@@ -194,32 +197,9 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             }
                         }
                     }
-
-                    foreach (KeyValuePair<string, string> path in excludeApiPath) {
-                        if (path.Value.ToUpper() == "ALL") {
-                            foreach (KeyValuePair<string, OpenApiPathItem> api in swaggerDoc.Paths) {
-                                if (api.Key.StartsWith(path.Key)) {
-                                    _ = swaggerDoc.Paths.Remove(api.Key);
-                                }
-                            }
-                        }
-                        else if (swaggerDoc.Paths.ContainsKey(path.Key)) {
-                            OpenApiPathItem api = swaggerDoc.Paths[path.Key];
-
-                            if (Enum.TryParse(typeof(OperationType), path.Value, true, out object httpMethod)) {
-                                if (api.Operations.ContainsKey((OperationType)httpMethod)) {
-                                    _ = api.Operations.Remove((OperationType)httpMethod);
-                                }
-                            }
-
-                            if (api.Operations.Count <= 0) {
-                                _ = swaggerDoc.Paths.Remove(path.Key);
-                            }
-                        }
-                    }
                 }
 
-                string jsonPath = Path.Combine(this._environment.WebRootPath, $"swagger.{DateTime.UtcNow.Ticks}");
+                string jsonPath = Path.Combine(this._environment.WebRootPath, $"swagger.{kodeDc.ToLower()}");
                 using (var streamWriter = new StreamWriter(jsonPath)) {
                     var writer = new OpenApiJsonWriter(streamWriter);
                     swaggerDoc.SerializeAsV3(writer);
@@ -230,10 +210,40 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     System.IO.File.Delete(jsonPath);
                 }
 
+                Dictionary<string, object> dict = this._cs.JsonToObject<Dictionary<string, object>>(jsonData);
+                if (dict != null && !this._app.DebugMode) {
+                    if (dict.ContainsKey("paths")) {
+                        var route = (Dictionary<string, object>)dict["paths"];
+                        if (route != null) {
+                            foreach (KeyValuePair<string, string> path in excludeApiPath) {
+                                if (path.Value.ToUpper() == "ALL") {
+                                    foreach (string key in route.Keys) {
+                                        if (key.StartsWith(path.Key)) {
+                                            _ = route.Remove(path.Key);
+                                        }
+                                    }
+                                }
+                                else if (route.ContainsKey(path.Key)) {
+                                    var rp = (Dictionary<string, object>)route[path.Key];
+                                    if (rp != null) {
+                                        string hm = path.Value.ToLower();
+                                        if (rp.ContainsKey(hm)) {
+                                            _ = rp.Remove(hm);
+                                            if (rp.Keys.Count <= 0) {
+                                                _ = route.Remove(path.Key);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 return new ContentResult() {
                     StatusCode = StatusCodes.Status200OK,
                     ContentType = "application/json",
-                    Content = jsonData
+                    Content = this._cs.ObjectToJson(dict)
                 };
             }
             finally {
