@@ -353,7 +353,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                             ev.preventDefault();
                             ev.stopPropagation();
 
-                            modalPreviewNginxConfigTitleEl.innerHTML = `Pratinjau Konfigurasi NginX :: ${txtKodeDcEl.value}`;
+                            modalPreviewNginxConfigTitleEl.innerHTML = `Pratinjau Konfigurasi NginX (RegEx) :: ${txtKodeDcEl.value}`;
 
                             let path = txtServerEl.value;
                             if (path.startsWith('/')) {
@@ -380,7 +380,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
                                     proxy_pass $upstream$2$is_args$args;
                                 }
-                            `.replaceAll('                    ', '').trim();
+                            `.replaceAll('                                ', '').trim();
                         });
 
                         modalBtnDeleteEl.addEventListener('click', async (ev) => {
