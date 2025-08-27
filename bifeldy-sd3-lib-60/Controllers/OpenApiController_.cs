@@ -219,7 +219,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                                 if (path.Value.ToUpper() == "ALL") {
                                     foreach (string key in route.Keys) {
                                         if (key.StartsWith(path.Key)) {
-                                            _ = route.Remove(path.Key);
+                                            _ = route.Remove(key);
                                         }
                                     }
                                 }
