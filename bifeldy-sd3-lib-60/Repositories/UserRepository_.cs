@@ -35,7 +35,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task LogoutUserBlazor(AuthenticationStateProvider asp);
     }
 
-    [SingletonServiceRegistration]
+    [ScopedServiceRegistration]
     public sealed class CUserRepository : CRepository, IUserRepository {
 
         public CUserRepository() {

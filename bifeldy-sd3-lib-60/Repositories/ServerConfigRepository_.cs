@@ -33,8 +33,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<ServerConfigKunci> UseKodeServerKunciDc(string kodeDc, string kunciGxxx = null, string serverTarget = null);
     }
 
-    // Khusus Ini Scoped Per Sesi User
-
     [ScopedServiceRegistration]
     public sealed class CServerConfigRepository : IServerConfigRepository {
 

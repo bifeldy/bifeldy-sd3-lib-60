@@ -42,7 +42,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task CreateAndSend(bool isPg, IDatabase db, string subject, string body, List<MailAddress> to, List<MailAddress> cc = null, List<MailAddress> bcc = null, List<Attachment> attachments = null, MailAddress from = null);
     }
 
-    [SingletonServiceRegistration]
+    [ScopedServiceRegistration]
     public sealed class CListMailServerRepository : CRepository, IListMailServerRepository {
 
         private readonly EnvVar _envVar;
