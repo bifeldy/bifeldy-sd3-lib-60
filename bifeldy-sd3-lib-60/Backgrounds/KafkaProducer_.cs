@@ -35,7 +35,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
         private readonly IPubSubService _pubSub;
         private readonly IKafkaService _kafka;
         private readonly ILockerService _locker;
-        private readonly IGeneralRepository _generalRepo;
 
         private string _hostPort;
         private string _topicName;
@@ -62,7 +61,6 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
             this._pubSub = serviceProvider.GetRequiredService<IPubSubService>();
             this._kafka = serviceProvider.GetRequiredService<IKafkaService>();
             this._locker = serviceProvider.GetRequiredService<ILockerService>();
-            this._generalRepo = serviceProvider.GetRequiredService<IGeneralRepository>();
 
             this._scopedService = serviceProvider.CreateScope();
 
@@ -91,16 +89,17 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
 
             try {
                 IOraPg orapg = sp.GetRequiredService<IOraPg>();
+                IGeneralRepository generalRepo = sp.GetRequiredService<IGeneralRepository>();
 
                 if (this._excludeJenisDc != null) {
-                    EJenisDc jenisDc = await this._generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, orapg);
+                    EJenisDc jenisDc = await generalRepo.GetJenisDc(this._env.IS_USING_POSTGRES, orapg);
                     if (this._excludeJenisDc.Contains(jenisDc)) {
                         return;
                     }
                 }
 
                 if (string.IsNullOrEmpty(this._hostPort)) {
-                    KAFKA_SERVER_T kafka = await this._generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, orapg, this._topicName);
+                    KAFKA_SERVER_T kafka = await generalRepo.GetKafkaServerInfo(this._env.IS_USING_POSTGRES, orapg, this._topicName);
                     if (kafka == null) {
                         throw new Exception("KAFKA Tidak Tersedia!");
                     }
@@ -115,7 +114,7 @@ namespace bifeldy_sd3_lib_60.Backgrounds {
                         this._topicName += "_";
                     }
 
-                    string kodeDc = await this._generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, orapg);
+                    string kodeDc = await generalRepo.GetKodeDc(this._env.IS_USING_POSTGRES, orapg);
                     this._topicName += kodeDc;
                 }
 
