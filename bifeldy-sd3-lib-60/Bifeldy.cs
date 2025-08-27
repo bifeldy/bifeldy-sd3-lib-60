@@ -63,10 +63,8 @@ using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Plugins;
-using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
-using bifeldy_sd3_lib_60.Exceptions;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -310,37 +308,12 @@ namespace bifeldy_sd3_lib_60 {
         ) {
             NGINX_PATH_NAME = proxyHeaderName;
 
-            _ = App.UseSwagger(c => {
-                c.RouteTemplate = "{documentName}/swagger.json";
-                c.PreSerializeFilters.Add((swaggerDoc, request) => {
-                    var openApiServers = new List<OpenApiServer>();
-
-                    IApplicationService app = request.HttpContext.RequestServices.GetRequiredService<IApplicationService>();
-
-                    if (!app.DebugMode && request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
-                        string proxyPath = pathBase.Last();
-
-                        if (!string.IsNullOrEmpty(proxyPath)) {
-                            openApiServers.Add(new OpenApiServer() {
-                                Description = "Reverse Proxy Path",
-                                Url = proxyPath.StartsWith("/") || proxyPath.StartsWith("http") ? proxyPath : $"/{proxyPath}"
-                            });
-                        }
-                    }
-
-                    openApiServers.Add(new OpenApiServer() {
-                        Description = "Direct IP Server",
-                        Url = "/"
-                    });
-
-                    swaggerDoc.Servers = openApiServers;
-                });
-            });
+            _ = App.UseSwagger();
 
             _ = App.UseSwaggerUI(c => {
                 c.RoutePrefix = API_PREFIX;
 
-                string swaggerUrl = $"open-api.json?v={DateTime.UtcNow.Ticks}";
+                string swaggerUrl = $"open-api.json";
                 string swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
 
                 c.SwaggerEndpoint(swaggerUrl, swaggerName);
@@ -597,6 +570,33 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
         public static void AutoCheckKunciKodeMultiDc() {
+            string appLocation = AppDomain.CurrentDomain.BaseDirectory;
+
+            AssemblyName prgAsm = Assembly.GetEntryAssembly().GetName();
+            AssemblyName libAsm = Assembly.GetExecutingAssembly().GetName();
+
+            string targetDatabaseLocationApp = Path.Combine(appLocation, DEFAULT_DATA_FOLDER, $"{prgAsm.Name}.db");
+
+            if (!File.Exists(targetDatabaseLocationApp)) {
+                string defaultDatabaseLocation = Path.Combine(appLocation, $"{prgAsm.Name}.db");
+
+                if (!File.Exists(defaultDatabaseLocation)) {
+                    string targetDatabaseLocationLib = Path.Combine(appLocation, DEFAULT_DATA_FOLDER, $"{libAsm.Name}.db");
+
+                    if (!File.Exists(targetDatabaseLocationLib)) {
+                        defaultDatabaseLocation = Path.Combine(appLocation, $"{libAsm.Name}.db");
+
+                        if (!File.Exists(defaultDatabaseLocation)) {
+                            throw new FileNotFoundException("Default Database Not Found!", defaultDatabaseLocation);
+                        }
+                    }
+                }
+
+                if (!File.Exists(targetDatabaseLocationApp)) {
+                    File.Copy(defaultDatabaseLocation, targetDatabaseLocationApp);
+                }
+            }
+
             _ = App.UseMiddleware<AutoCheckKunciKodeMultiDcMiddleware>();
         }
 

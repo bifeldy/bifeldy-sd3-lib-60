@@ -14,7 +14,6 @@
 
 using System.Data;
 using System.Data.Common;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -56,27 +55,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public void InitializeConnection(string dbName = null) {
-            string targetDatabaseLocationApp = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{this._as.AppName}.db");
-            if (!File.Exists(targetDatabaseLocationApp)) {
-                string defaultDatabaseLocation = Path.Combine(this._as.AppLocation, $"{this._as.AppName}.db");
-                if (!File.Exists(defaultDatabaseLocation)) {
-                    AssemblyName libAsm = Assembly.GetExecutingAssembly().GetName();
-                    string targetDatabaseLocationLib = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{libAsm.Name}.db");
-                    if (!File.Exists(targetDatabaseLocationLib)) {
-                        defaultDatabaseLocation = Path.Combine(this._as.AppLocation, $"{libAsm.Name}.db");
-                        if (!File.Exists(defaultDatabaseLocation)) {
-                            throw new FileNotFoundException("Default Database Not Found!", defaultDatabaseLocation);
-                        }
-                    }
-                }
-
-                if (!File.Exists(targetDatabaseLocationApp)) {
-                    File.Copy(defaultDatabaseLocation, targetDatabaseLocationApp);
-                }
-            }
-
-            this.DbName = dbName ?? targetDatabaseLocationApp;
-
+            this.DbName = dbName ?? Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"{this._as.AppName}.db");
             this.DbConnectionString = $"Data Source={this.DbName}";
         }
 
