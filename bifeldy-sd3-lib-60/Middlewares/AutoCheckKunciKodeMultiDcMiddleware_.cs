@@ -37,10 +37,19 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             <html dir=""ltr"" lang=""id"">
 
                 <head>
+
+                    <base href=""./"" />
+
+                    <meta charset=""utf-8"" />
+                    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"" />
+
                     <title>Server Config</title>
+
                     <link rel=""icon"" type=""image/x-icon"" href=""./favicon.ico"" />
                     <link rel=""stylesheet"" href=""./bootstrap.min.css"" />
+
                     <script src=""./bootstrap.bundle.min.js""></script>
+
                 </head>
 
                 <body>
