@@ -50,7 +50,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             string apiPathRequested = request.Path.Value;
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
-            bool isGrpc = Bifeldy.GRPC_ROUTH_PATH.Contains(apiPathRequestedForGrpc);
+            bool isGrpc = Bifeldy.GRPC_ROUTE_PATH.Contains(apiPathRequestedForGrpc);
             bool isSignalr = apiPathRequested.StartsWith(Bifeldy.SIGNALR_PREFIX_HUB, StringComparison.InvariantCultureIgnoreCase);
             bool isApi = apiPathRequested.StartsWith($"/{Bifeldy.API_PREFIX}/", StringComparison.InvariantCultureIgnoreCase);
             bool isSwagger = apiPathRequested.StartsWith($"/{Bifeldy.API_PREFIX}/swagger", StringComparison.InvariantCultureIgnoreCase);

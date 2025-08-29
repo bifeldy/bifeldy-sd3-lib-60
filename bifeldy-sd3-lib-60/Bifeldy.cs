@@ -72,8 +72,8 @@ namespace bifeldy_sd3_lib_60 {
 
         public const string DEFAULT_DATA_FOLDER = "_data";
 
-        public static List<string> GRPC_ROUTH_PATH = new();
-        public static List<string> SIGNALR_ROUTH_PATH = new();
+        public static List<string> GRPC_ROUTE_PATH = new();
+        public static List<string> SIGNALR_ROUTE_PATH = new();
 
         public static string PLUGINS_PROJECT_NAMESPACE = null;
 

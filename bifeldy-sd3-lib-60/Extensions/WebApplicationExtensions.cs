@@ -51,8 +51,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 string name = grpcService.Name.StartsWith("I") ? grpcService.Name[1..] : grpcService.Name;
                 arrFn.Add(name);
                 string grpcRoute = string.Join(".", arrFn);
-                if (!Bifeldy.GRPC_ROUTH_PATH.Contains(grpcRoute)) {
-                    Bifeldy.GRPC_ROUTH_PATH.Add(grpcRoute);
+                if (!Bifeldy.GRPC_ROUTE_PATH.Contains(grpcRoute)) {
+                    Bifeldy.GRPC_ROUTE_PATH.Add(grpcRoute);
                 }
 
                 MethodInfo mapGrpcService = typeof(GrpcEndpointRouteBuilderExtensions).GetMethod(nameof(GrpcEndpointRouteBuilderExtensions.MapGrpcService)).MakeGenericMethod(grpcService);
@@ -63,7 +63,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 File.WriteAllText(Path.Combine(dirPath, $"{grpcService}.proto"), schema);
             }
 
-            return Bifeldy.GRPC_ROUTH_PATH;
+            return Bifeldy.GRPC_ROUTE_PATH;
         }
 
         public static List<string> AutoMapHubService(this WebApplication app, string signalrPrefixHub, Action<HttpConnectionDispatcherOptions> configureOptions = null) {
@@ -110,11 +110,11 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     hubPath = hubPath[1..];
                 }
 
-                Bifeldy.SIGNALR_ROUTH_PATH.Add(hubPath);
+                Bifeldy.SIGNALR_ROUTE_PATH.Add(hubPath);
             }
 
             Bifeldy.SIGNALR_PREFIX_HUB = signalrPrefixHub;
-            return Bifeldy.SIGNALR_ROUTH_PATH;
+            return Bifeldy.SIGNALR_ROUTE_PATH;
         }
 
     }
