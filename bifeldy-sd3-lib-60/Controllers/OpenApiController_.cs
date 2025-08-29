@@ -13,7 +13,6 @@
 
 using System.Reflection;
 
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -40,7 +39,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
     public sealed class OpenApiController : ControllerBase {
 
         private readonly EnvVar _env;
-        private readonly IWebHostEnvironment _environment;
         private readonly ISwaggerProvider _provider;
         private readonly IApplicationService _app;
         private readonly IOraPg _orapg;
@@ -50,7 +48,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         public OpenApiController(
             IOptions<EnvVar> env,
-            IWebHostEnvironment environment,
             ISwaggerProvider provider,
             IApplicationService app,
             IOraPg orapg,
@@ -59,7 +56,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IGeneralRepository generalRepo
         ) {
             this._env = env.Value;
-            this._environment = environment;
             this._provider = provider;
             this._app = app;
             this._orapg = orapg;
@@ -199,7 +195,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
                 }
 
-                string jsonPath = Path.Combine(this._environment.WebRootPath, $"swagger.{kodeDc.ToLower()}");
+                string jsonPath = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, $"swagger.{kodeDc.ToLower()}");
                 using (var streamWriter = new StreamWriter(jsonPath)) {
                     var writer = new OpenApiJsonWriter(streamWriter);
                     swaggerDoc.SerializeAsV3(writer);

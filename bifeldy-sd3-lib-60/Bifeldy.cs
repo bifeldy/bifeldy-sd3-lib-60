@@ -296,7 +296,7 @@ namespace bifeldy_sd3_lib_60 {
                         return new[] { controllerActionDescriptor.ControllerName };
                     }
 
-                    throw new InvalidOperationException("Tidak Ada Tag [ApiExplorerSettings(GroupName = \"...\")]");
+                    return new[] { "_UnCategorized!" };
                 });
 
                 c.DocInclusionPredicate((name, api) => true);

@@ -89,7 +89,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
             if (!string.IsNullOrEmpty(serverTarget)) {
                 var rgxLs = new List<string>() {
-                    "dcg[0-9]{3}",
+                    "g[0-9]{3}",
                     "dcho|whho",
                     "kcbn|pgcbn"
                 };
@@ -118,9 +118,6 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
                 if (kodeDc.ToLower() == "pgcbn") {
                     kodeDc = "kcbn";
-                }
-                else if (kodeDc.ToLower().StartsWith("dcg")) {
-                    kodeDc = kodeDc.Substring(2, 4);
                 }
 
                 _ = this.UseKodeServerKunciDc(kodeDc, null, serverTarget).Result;

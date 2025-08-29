@@ -13,18 +13,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="libwkhtmltox.dll">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-        <Content Include="libwkhtmltox.dylib">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-        <Content Include="libwkhtmltox.so">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="ChoETL.JSON" Version="1.2.1.70" />
         <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
         <PackageReference Include="Costura.Fody" Version="5.7.0">
@@ -70,21 +58,52 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Reference Include="SettingLibb">
-            <HintPath>Libraries\SettingLibb.dll</HintPath>
-        </Reference>
+      <Reference Include="SettingLibb">
+        <HintPath>SettingLibb.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
     <ItemGroup>
         <None Update="bifeldy-sd3-lib-60.db">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="fonts\fre3of9x\fre3of9x.ttf">
+        <None Update="libwkhtmltox.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="libwkhtmltox.dylib">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="libwkhtmltox.so">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="SettingLibb.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="_data\fonts\fre3of9x\fre3of9x.ttf">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="_data\bootstrap.bundle.min.js">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="_data\bootstrap.min.css">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="_data\domar.gif">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="_data\domar.ico">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="_data\indomaret.png">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
         <None Update="_data\protobuf-net\bcl.proto">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-    </ItemGroup>
+        <None Update="_data\server-config.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+
+</ItemGroup>
 
 </Project>
