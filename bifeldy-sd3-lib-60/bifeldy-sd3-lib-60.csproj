@@ -106,8 +106,4 @@
 
 </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="_data\" />
-    </ItemGroup>
-
 </Project>
