@@ -93,9 +93,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             try {
                 _ = await this._locker.SemaphoreGlobalApp("SWAGGER").WaitAsync(-1);
 
-                var prgAsm = Assembly.GetEntryAssembly();
-                string swaggerDocName = prgAsm.GetName().Version.ToString();
-                OpenApiDocument swaggerDoc = this._provider.GetSwagger(swaggerDocName);
+                OpenApiDocument swaggerDoc = this._provider.GetSwagger(this._app.AppVersion);
 
                 var openApiServers = new List<OpenApiServer>();
 

@@ -154,7 +154,7 @@ namespace bifeldy_sd3_lib_60 {
         public static void SetupSerilog() {
             _ = Services.AddSingleton<SerilogKunciKodeDcPropertyEnricher>();
             _ = Builder.Host.UseSerilog((hostContext, services, configuration) => {
-                string appPathDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+                string appPathDir = AppDomain.CurrentDomain.BaseDirectory;
                 SerilogKunciKodeDcPropertyEnricher spe = services.GetRequiredService<SerilogKunciKodeDcPropertyEnricher>();
                 _ = configuration.Enrich.With(spe).WriteTo.File(
                     appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt",
@@ -244,7 +244,7 @@ namespace bifeldy_sd3_lib_60 {
                 string swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
 
                 c.SwaggerDoc(swaggerName, new OpenApiInfo() {
-                    Title = docsTitle ?? Assembly.GetEntryAssembly().GetName().Name,
+                    Title = docsTitle ?? App.Environment.ApplicationName,
                     Description = docsDescription ?? "API Documentation ~"
                 });
 
@@ -392,6 +392,20 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static List<string> AutoMapGrpcService() {
+            string appPathDir = AppDomain.CurrentDomain.BaseDirectory;
+
+            string folderPath = Path.Combine(appPathDir, DEFAULT_DATA_FOLDER, "protobuf-net");
+            if (!Directory.Exists(folderPath)) {
+                _ = Directory.CreateDirectory(folderPath);
+            }
+
+            if (!File.Exists(Path.Combine(folderPath, "bcl.proto"))) {
+                File.Copy(
+                    Path.Combine(appPathDir, "_assets", "protobuf-net", "bcl.proto"),
+                    Path.Combine(folderPath, "bcl.proto")
+                );
+            }
+
             List<string> route = App.AutoMapGrpcService();
             _ = App.MapCodeFirstGrpcReflectionService();
             return route;

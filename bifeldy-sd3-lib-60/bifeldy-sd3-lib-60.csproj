@@ -79,31 +79,35 @@
         <None Update="SettingLibb.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\fonts\fre3of9x\fre3of9x.ttf">
+        <None Update="_assets\fonts\fre3of9x\fre3of9x.ttf">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\bootstrap.bundle.min.js">
+        <None Update="_assets\js\bootstrap.bundle.min.js">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\bootstrap.min.css">
+        <None Update="_assets\css\bootstrap.min.css">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\domar.gif">
+        <None Update="_assets\img\domar.gif">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\domar.ico">
+        <None Update="_assets\img\domar.ico">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\indomaret.png">
+        <None Update="_assets\img\indomaret.png">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\protobuf-net\bcl.proto">
+        <None Update="_assets\protobuf-net\bcl.proto">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="_data\server-config.html">
+        <None Update="_assets\html\server-config.html">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
 
 </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="_data\" />
+    </ItemGroup>
 
 </Project>

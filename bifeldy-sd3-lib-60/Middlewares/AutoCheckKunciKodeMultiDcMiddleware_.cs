@@ -50,49 +50,55 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             try {
-                string defaultDataFolder = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER);
+                string defaultDataFolder = Path.Combine(this._app.AppLocation, "_assets");
 
                 if (context.Request.Path.Value.StartsWith("/server-config.html", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "text/html; charset=utf-8";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "server-config.html"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "html/server-config.html"));
                     return;
                 }
-                else if (context.Request.Path.Value.StartsWith("/bootstrap.min.css", StringComparison.InvariantCultureIgnoreCase)) {
+                else if (context.Request.Path.Value.StartsWith("/css/bootstrap.min.css", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "text/css";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "bootstrap.min.css"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "css/bootstrap.min.css"));
                     return;
                 }
-                else if (context.Request.Path.Value.StartsWith("/bootstrap.bundle.min.js", StringComparison.InvariantCultureIgnoreCase)) {
+                else if (context.Request.Path.Value.StartsWith("/js/bootstrap.bundle.min.js", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "application/javascript";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "bootstrap.bundle.min.js"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "js/bootstrap.bundle.min.js"));
                     return;
                 }
-                else if (context.Request.Path.Value.StartsWith("/domar.gif", StringComparison.InvariantCultureIgnoreCase)) {
+                else if (context.Request.Path.Value.StartsWith("/img/domar.gif", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "image/gif";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "domar.gif"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "img/domar.gif"));
                     return;
                 }
-                else if (context.Request.Path.Value.StartsWith("/domar.ico", StringComparison.InvariantCultureIgnoreCase)) {
+                else if (context.Request.Path.Value.StartsWith("/img/domar.ico", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "image/x-icon";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "domar.ico"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "img/domar.ico"));
                     return;
                 }
-                else if (context.Request.Path.Value.StartsWith("/indomaret.png", StringComparison.InvariantCultureIgnoreCase)) {
+                else if (context.Request.Path.Value.StartsWith("/img/indomaret.png", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "image/png";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "indomaret.png"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "img/indomaret.png"));
+                    return;
+                }
+                else if (context.Request.Path.Value.StartsWith("/api/protobuf-net/bcl.proto", StringComparison.InvariantCultureIgnoreCase)) {
+                    context.Response.StatusCode = StatusCodes.Status200OK;
+                    context.Response.ContentType = "text-plain";
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "protobuf-net/bcl.proto"));
                     return;
                 }
 
                 int shortCircuit = 0;
                 object res = null;
 
-                if (context.Request.Path.Value.Equals("/server-config", StringComparison.InvariantCultureIgnoreCase)) {
+                if (context.Request.Path.Value.Equals("/api/server-config", StringComparison.InvariantCultureIgnoreCase)) {
                     try {
                         if (context.Request.Method == "GET") {
                             List<ServerConfigKunci> config = await scr.GetKodeServerKunciDc();

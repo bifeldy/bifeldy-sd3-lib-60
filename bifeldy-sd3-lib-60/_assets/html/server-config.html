@@ -10,10 +10,10 @@
 
         <title>Server Config</title>
 
-        <link rel="icon" type="image/x-icon" href="./domar.ico" />
-        <link rel="stylesheet" href="./bootstrap.min.css" />
+        <link rel="icon" type="image/x-icon" href="./img/domar.ico" />
+        <link rel="stylesheet" href="./css/bootstrap.min.css" />
 
-        <script src="./bootstrap.bundle.min.js"></script>
+        <script src="./js/bootstrap.bundle.min.js"></script>
 
     </head>
 
@@ -21,7 +21,7 @@
 
         <div class="d-flex justify-content-center align-items-center min-vh-100">
             <div class="text-center">
-                <img src="./indomaret.png" class="p-1" style="width: 384px" />
+                <img src="./img/indomaret.png" class="p-1" style="width: 384px" />
                 <div role="alert" class="alert alert-danger alert-dismissible fade show" id="alertError">
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     <h5 class="p-1 alert-heading">Maaf -- Ada Error Nih 🔥</h5>
@@ -112,6 +112,8 @@
         </style>
 
         <script defer>
+            const apiUrl = './api/server-config';
+
             const queryString = window.location.search;
             const urlParams = new URLSearchParams(queryString);
 
@@ -188,7 +190,7 @@
                 alertInfoEl.style.display = 'block';
                 alertInfoEl.innerHTML = `<string>[API]</string> Memuat Data... 🤣`;
 
-                const xhr = await fetch('./server-config');
+                const xhr = await fetch(apiUrl);
 
                 if (!await checkErrorXhr(xhr)) {
                     return;
@@ -214,7 +216,7 @@
 
                     listDcEl.innerHTML += `
                         <div class="card p-2 m-2 card-glow">
-                            <img class="rounded-circle card-img-top img-thumbnail" src="./domar.gif" />
+                            <img class="rounded-circle card-img-top img-thumbnail" src="./img/domar.gif" />
                             <div class="card-body p-2">
                                 <h5 class="card-title m-0">${key.toUpperCase()}</h5>
                                 <a
@@ -234,7 +236,7 @@
 
                 listDcEl.innerHTML += `
                     <div class="card p-2 m-2 card-glow">
-                        <img class="rounded-circle card-img-top img-thumbnail" src="./domar.ico" />
+                        <img class="rounded-circle card-img-top img-thumbnail" src="./img/domar.ico" />
                         <div class="card-body p-2">
                             <h5 class="card-title m-0">?????</h5>
                             <a
@@ -336,7 +338,7 @@
                 alertInfoEl.innerHTML = `<string>[API]</string> Menghapus Data ... 🤐`;
 
                 const xhr = await fetch(
-                    './server-config',
+                    apiUrl,
                     {
                         method: 'POST',
                         headers: {
@@ -369,7 +371,7 @@
                 alertInfoEl.innerHTML = `<string>[API]</string> Menyimpan Data ... 🥰`;
 
                 const xhr = await fetch(
-                    './server-config',
+                    apiUrl,
                     {
                         method: 'POST',
                         headers: {

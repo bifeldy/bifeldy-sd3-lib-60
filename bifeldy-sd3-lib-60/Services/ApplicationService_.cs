@@ -57,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public string AppName => Bifeldy.App.Environment.ApplicationName;
         public string AppLocation => AppDomain.CurrentDomain.BaseDirectory;
-        public string AppVersion => string.Join("", this._prgAsm.GetName().Version.ToString().Split('.'));
+        public string AppVersion => this._prgAsm.GetName().Version.ToString();
 
         private readonly SettingLibb.Class1 _SettingLibb;
 

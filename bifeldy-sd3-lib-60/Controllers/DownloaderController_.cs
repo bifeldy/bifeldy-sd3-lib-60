@@ -92,7 +92,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                         IEnumerable<FileInfo> fileInfos = Directory.GetFiles(this._as.AppLocation, "*", SearchOption.AllDirectories)
                             .Where(p => {
-                                string dataPath = Path.Combine(this._as.AppLocation, "_data");
+                                string dataPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER);
                                 return !p.Contains("appsettings.json") && !p.Contains(dataPath);
                             })
                             .Select(p => new FileInfo(p));

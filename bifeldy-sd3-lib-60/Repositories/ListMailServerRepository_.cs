@@ -152,7 +152,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public MailAddress GetDefaultBotSenderFromAddress() {
-            return this.CreateEmailAddress("sd3@indomaret.co.id", $"[SD3_BOT] 📧 {this._as.AppName} v{this._as.AppVersion}");
+            string version = string.Join("", this._as.AppVersion);
+            return this.CreateEmailAddress("sd3@indomaret.co.id", $"[SD3_BOT] 📧 {this._as.AppName} v{version}");
         }
 
         public MailMessage CreateEmailMessage(
