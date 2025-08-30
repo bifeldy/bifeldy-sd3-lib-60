@@ -108,7 +108,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<KAFKA_SERVER_T> GetKafkaServerInfo(bool isPg, IDatabase db, string topicName) {
-            return await db.Set<KAFKA_SERVER_T>().Where(k => k.TOPIC.ToUpper() == topicName.ToUpper()).FirstOrDefaultAsync();
+            return await db.Set<KAFKA_SERVER_T>().Where(k => k.TOPIC.ToUpper() == topicName.ToUpper()).AsNoTracking().FirstOrDefaultAsync();
         }
 
         /* ** */
@@ -183,7 +183,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             CDatabase dbSqlDc = null;
 
             if (dbConHo != null) {
-                DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).SingleOrDefault();
+                DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).AsNoTracking().SingleOrDefault();
                 if (dbi != null) {
                     dbIsUsingPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                     if (dbIsUsingPostgre) {

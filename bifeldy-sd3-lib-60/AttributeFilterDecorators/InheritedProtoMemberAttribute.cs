@@ -18,7 +18,7 @@ using ProtoBuf.Meta;
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
-    [AttributeUsage(AttributeTargets.Property)] //  | AttributeTargets.Field)]
+    [AttributeUsage(AttributeTargets.Property)] // | AttributeTargets.Field)]
     public class InheritedProtoMemberAttribute : ProtoMemberAttribute {
 
         public InheritedProtoMemberAttribute(int tag, DataFormat dataFormat = default) : base(tag) {

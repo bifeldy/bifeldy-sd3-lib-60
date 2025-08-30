@@ -50,11 +50,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
             DbSet<DC_TABEL_DC_T> _db = db.Set<DC_TABEL_DC_T>();
             if (string.IsNullOrEmpty(kodeDc)) {
-                res = await _db.SingleOrDefaultAsync();
+                res = await _db.AsNoTracking().SingleOrDefaultAsync();
             }
             else {
                 IQueryable<DC_TABEL_DC_T> sql = _db.Where(d => d.TBL_DC_KODE.ToUpper() == kodeDc.ToUpper());
-                res = await sql.SingleOrDefaultAsync();
+                res = await sql.AsNoTracking().SingleOrDefaultAsync();
             }
 
             return res.TBL_JENIS_DC.ToUpper();
@@ -109,7 +109,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     this.KodeDc = "WHHO";
                 }
                 else {
-                    this.KodeDc = (await db.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_KODE?.ToUpper();
+                    this.KodeDc = (await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync()).TBL_DC_KODE?.ToUpper();
                 }
             }
 
@@ -135,7 +135,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     this.NamaDc = "WH HEAD OFFICE";
                 }
                 else {
-                    this.NamaDc = (await db.Set<DC_TABEL_DC_T>().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
+                    this.NamaDc = (await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
                 }
             }
 
