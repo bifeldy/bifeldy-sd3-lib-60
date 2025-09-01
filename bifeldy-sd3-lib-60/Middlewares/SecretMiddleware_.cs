@@ -12,12 +12,12 @@
  */
 
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Grpc.Core;
+
 using bifeldy_sd3_lib_60.Databases;
-using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.Repositories;
@@ -31,7 +31,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly RequestDelegate _next;
         private readonly ILogger<SecretMiddleware> _logger;
         private readonly IApplicationService _app;
-        private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
 
         public string SessionKey { get; } = "user-session";
@@ -41,14 +40,12 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             IOptions<EnvVar> env,
             ILogger<SecretMiddleware> logger,
             IApplicationService app,
-            IGlobalService gs,
             IChiperService chiper
         ) {
             this._next = next;
             this._env = env.Value;
             this._logger = logger;
             this._app = app;
-            this._gs = gs;
             this._chiper = chiper;
         }
 
@@ -58,6 +55,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             string apiPathRequested = request.Path.Value;
+            if (string.IsNullOrEmpty(apiPathRequested)) {
+                await this._next(context);
+                return;
+            }
+
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
             bool isGrpc = Bifeldy.GRPC_ROUTE_PATH.Contains(apiPathRequestedForGrpc);
@@ -70,73 +72,62 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 return;
             }
 
-            RequestJson reqBody = await this._gs.GetHttpRequestBody<RequestJson>(request);
-            string secret = this._gs.GetSecretData(request, reqBody);
+            string secret = context.Items["secret"]?.ToString();
 
-            context.Items["secret"] = secret;
             this._logger.LogInformation("[SECRET_MIDDLEWARE] 🗝 {secret}", secret);
 
             if (!string.IsNullOrEmpty(secret)) {
                 bool allowed = false;
-                string hashText = this._chiper.HashText(this._app.AppName);
 
+                // Khusus Bypass ~ Case Sensitive
+                string hashText = this._chiper.HashText(this._app.AppName);
                 if (secret == hashText || await _akRepo.SecretLogin(this._env.IS_USING_POSTGRES, _orapg, secret) != null) {
                     allowed = true;
                 }
 
-                try {
-                    if (!allowed) {
-                        throw new Exception("Secret Salah / Tidak Dikenali!");
+                if (!allowed) {
+                    string errMsg = "Secret salah / tidak dikenali!";
+
+                    if (isGrpc) {
+                        throw new RpcException(
+                            new Status(
+                                StatusCode.PermissionDenied,
+                                errMsg
+                            )
+                        );
                     }
 
-                    string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
-                        ? this._gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true)
-                        : this._chiper.DecryptText(request.Query["mask_ip"], hashText);
-
-                    string token = this._chiper.EncodeJWT(new UserApiSession() {
-                        name = maskIp,
-                        role = UserSessionRole.PROGRAM_SERVICE
-                    });
-
-                    request.Headers.Authorization = $"Bearer {token}";
-                    request.Headers["x-access-token"] = token;
-                    request.Headers["x-secret"] = secret;
-
-                    var queryitems = request.Query.SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value)).ToList();
-                    var queryparameters = new List<KeyValuePair<string, string>>();
-                    foreach (KeyValuePair<string, string> item in queryitems) {
-                        if (item.Key.ToLower() == "token") {
-                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, token));
-                        }
-                        else if (item.Key.ToLower() == "secret") {
-                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, secret));
-                        }
-                        else {
-                            queryparameters.Add(new KeyValuePair<string, string>(item.Key, item.Value));
-                        }
-                    }
-
-                    if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "token") == -1) {
-                        queryparameters.Add(new KeyValuePair<string, string>("token", token));
-                    }
-
-                    if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "secret") == -1) {
-                        queryparameters.Add(new KeyValuePair<string, string>("secret", secret));
-                    }
-
-                    request.QueryString = new QueryBuilder(queryparameters).ToQueryString();
-                }
-                catch {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
+
                     await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                         info = "401 - Secret :: Tidak Dapat Digunakan",
                         result = new ResponseJsonMessage() {
-                            message = "Secret salah / tidak dikenali!"
+                            message = errMsg
                         }
                     });
 
                     return;
+                }
+
+                string token = context.Items["token"]?.ToString();
+                if (string.IsNullOrEmpty(token)) {
+                    string addrIp = context.Items["address_ip"]?.ToString();
+
+                    if (request.Query.ContainsKey("mask_ip")) {
+                        addrIp = this._chiper.DecryptText(request.Query["mask_ip"], hashText);
+                    }
+
+                    string addrOrigin = context.Items["address_origin"]?.ToString();
+                    string ipOrigin = addrOrigin == addrIp ? addrOrigin : $"{addrOrigin}@{addrIp}";
+                    context.Items["ip_origin"] = ipOrigin;
+
+                    token = this._chiper.EncodeJWT(new UserApiSession() {
+                        name = addrIp,
+                        role = UserSessionRole.PROGRAM_SERVICE
+                    });
+
+                    context.Items["token"] = token;
                 }
             }
 

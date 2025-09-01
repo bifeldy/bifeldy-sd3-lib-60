@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
+using Grpc.Core;
+
 using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Repositories;
@@ -24,7 +26,7 @@ using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Middlewares {
 
-    public sealed class AutoCheckKunciKodeMultiDcMiddleware {
+    public sealed class AutoCheckMultiDcMiddleware {
 
         private readonly EnvVar _env;
 
@@ -32,7 +34,7 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         private readonly IApplicationService _app;
         private readonly IGlobalService _gs;
 
-        public AutoCheckKunciKodeMultiDcMiddleware(
+        public AutoCheckMultiDcMiddleware(
             RequestDelegate next,
             IOptions<EnvVar> env,
             IApplicationService app,
@@ -204,11 +206,24 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     }
                 }
 
-                context.Items["KunciKodeDc"] = scr.CurrentLoadedKodeServerKunciDc();
+                context.Items["kunci_gxxx"] = scr.CurrentLoadedKodeServerKunciDc();
 
                 await this._next(context);
             }
             catch (KunciServerTidakTersediaException ex) {
+                string apiPathRequested = request.Path.Value;
+                string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
+
+                bool isGrpc = Bifeldy.GRPC_ROUTE_PATH.Contains(apiPathRequestedForGrpc);
+                if (isGrpc) {
+                    throw new RpcException(
+                        new Status(
+                            StatusCode.Unavailable,
+                            ex.Message
+                        )
+                    );
+                }
+
                 string redirectUrl = "/server-config.html";
                 string encodedString = WebUtility.UrlEncode(ex.Message);
 

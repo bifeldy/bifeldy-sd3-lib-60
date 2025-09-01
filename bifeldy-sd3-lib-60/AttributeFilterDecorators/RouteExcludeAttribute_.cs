@@ -6,62 +6,67 @@
  * Department   :: IT SD 03
  * Mail         :: bias@indomaret.co.id
  * 
- * Catatan      :: Menolak API Di DC Tertentu
+ * Catatan      :: ApiHide Hanya Menyembunyikan Dari Halaman Dokumentasi
+ *              :: DenyAccess Menolak API Request Tertentu (Sudah Termasuk Disembunyikan)
  *              :: Tidak Untuk Didaftarkan Ke DI Container
  * 
  */
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
-    public class RouteExcludeCompleteAttribute : Attribute {
+    public abstract class RouteExcludeAttribute : Attribute {
         //
     }
 
-    public class RouteExcludeKonsolidasiCbnAttribute : RouteExcludeCompleteAttribute {
+    /* ** */
+
+    public class ApiHideKonsolidasiCbnAttribute : RouteExcludeAttribute {
         //
     }
 
-    public class RouteExcludeDcHoAttribute : RouteExcludeCompleteAttribute {
+    public class ApiHideDcHoAttribute : RouteExcludeAttribute {
         //
     }
 
-    public class RouteExcludeWhHoAttribute : RouteExcludeCompleteAttribute {
+    public class ApiHideWhHoAttribute : RouteExcludeAttribute {
         //
     }
 
-    public class RouteExcludeAllDcAttribute : RouteExcludeCompleteAttribute {
+    public class ApiHideAllDcAttribute : RouteExcludeAttribute {
         //
     }
 
-    public class RouteExcludeIndukAttribute : RouteExcludeAllDcAttribute {
+    /* ** */
+
+    public class DenyAccessIndukAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludeDepoAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessDepoAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludeKonvinienceAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessKonvinienceAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludeIplazaAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessIplazaAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludeFrozenAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessFrozenAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludePerishableAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessPerishableAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludeLpgAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessLpgAttribute : ApiHideAllDcAttribute {
         //
     }
 
-    public class RouteExcludeSewaAttribute : RouteExcludeAllDcAttribute {
+    public class DenyAccessSewaAttribute : ApiHideAllDcAttribute {
         //
     }
 

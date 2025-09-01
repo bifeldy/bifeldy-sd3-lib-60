@@ -14,7 +14,6 @@
 using System.Security.Claims;
 
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,23 +36,6 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
         public CGRpcServerInterceptor(ILoggerFactory loggerFactory) {
             this._logger = loggerFactory.CreateLogger<CGRpcServerInterceptor>();
-        }
-
-        public void LoadServerKunciDc(ServerCallContext context) {
-            HttpContext http = context.GetHttpContext();
-
-            try {
-                IServerConfigRepository scr = http.RequestServices.GetRequiredService<IServerConfigRepository>();
-                http.Items["KunciKodeDc"] ??= scr.CurrentLoadedKodeServerKunciDc(http);
-            }
-            catch (Exception ex) {
-                throw new RpcException(
-                    new Status(
-                        StatusCode.Unavailable,
-                        ex.Message
-                    )
-                );
-            }
         }
 
         public async Task CheckUserLogin<TRequest>(ServerCallContext context, TRequest body = default) {
@@ -87,10 +69,13 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
                         // -- Secret
 
-                        if (!string.IsNullOrEmpty(secret)) {
-                            bool allowed = false;
-                            string hashText = chiper.HashText(app.AppName);
+                        if (Bifeldy.IS_USING_SECRET && !string.IsNullOrEmpty(secret)) {
+                            http.Items["secret"] = secret;
 
+                            bool allowed = false;
+
+                            // Khusus Bypass ~ Case Sensitive
+                            string hashText = chiper.HashText(app.AppName);
                             if (secret == hashText || await akRepo.SecretLogin(env.IS_USING_POSTGRES, orapg, secret) != null) {
                                 allowed = true;
                             }
@@ -98,53 +83,35 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             if (!allowed) {
                                 throw new RpcException(
                                     new Status(
-                                        StatusCode.Unauthenticated,
-                                        "Silahkan Login Terlebih Dahulu Menggunakan API Lalu Gunakan Token Seperti Biasa!"
+                                        StatusCode.PermissionDenied,
+                                        "Secret salah / tidak dikenali!"
                                     )
                                 );
                             }
 
-                            string maskIp = string.IsNullOrEmpty(request.Query["mask_ip"])
-                                ? gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true)
-                                : chiper.DecryptText(request.Query["mask_ip"], hashText);
+                            if (string.IsNullOrEmpty(token)) {
+                                string addrIp = http.Items["address_ip"]?.ToString();
 
-                            token = chiper.EncodeJWT(new UserApiSession() {
-                                name = maskIp,
-                                role = UserSessionRole.PROGRAM_SERVICE
-                            });
-
-                            request.Headers.Authorization = $"Bearer {token}";
-                            request.Headers["x-access-token"] = token;
-                            request.Headers["x-secret"] = secret;
-
-                            var queryitems = request.Query.SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value)).ToList();
-                            var queryparameters = new List<KeyValuePair<string, string>>();
-                            foreach (KeyValuePair<string, string> item in queryitems) {
-                                if (item.Key.ToLower() == "token") {
-                                    queryparameters.Add(new KeyValuePair<string, string>(item.Key, token));
+                                if (request.Query.ContainsKey("mask_ip")) {
+                                    addrIp = chiper.DecryptText(request.Query["mask_ip"], hashText);
                                 }
-                                else if (item.Key.ToLower() == "secret") {
-                                    queryparameters.Add(new KeyValuePair<string, string>(item.Key, secret));
-                                }
-                                else {
-                                    queryparameters.Add(new KeyValuePair<string, string>(item.Key, item.Value));
-                                }
-                            }
 
-                            if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "token") == -1) {
-                                queryparameters.Add(new KeyValuePair<string, string>("token", token));
-                            }
+                                string addrOrigin = http.Items["address_origin"]?.ToString();
+                                string ipOrigin = addrOrigin == addrIp ? addrOrigin : $"{addrOrigin}@{addrIp}";
+                                http.Items["ip_origin"] = ipOrigin;
 
-                            if (queryparameters.FindIndex(qp => qp.Key.ToLower() == "secret") == -1) {
-                                queryparameters.Add(new KeyValuePair<string, string>("secret", secret));
+                                token = chiper.EncodeJWT(new UserApiSession() {
+                                    name = addrIp,
+                                    role = UserSessionRole.PROGRAM_SERVICE
+                                });
                             }
-
-                            request.QueryString = new QueryBuilder(queryparameters).ToQueryString();
                         }
 
                         // -- ApiKey
 
                         if (Bifeldy.IS_USING_API_KEY && !string.IsNullOrEmpty(apiKey)) {
+                            http.Items["api_key"] = apiKey;
+
                             string[] serverIps = app.GetAllIpAddress();
                             foreach (string ip in serverIps) {
                                 if (!gs.AllowedIpOrigin.Contains(ip)) {
@@ -162,10 +129,9 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                                 gs.AllowedIpOrigin.Add(ipDomainProxy);
                             }
 
-                            http.Items["api_key"] = apiKey;
-                            string ipOrigin = gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true);
-                            http.Items["ip_origin"] = ipOrigin;
-                        
+                            string ipOrigin = http.Items["ip_origin"]?.ToString();
+
+                            // Khusus Bypass ~ Case Sensitive
                             string hashText = chiper.HashText(app.AppName);
                             if (apiKey != hashText && !await akRepo.CheckKeyOrigin(env.IS_USING_POSTGRES, orapg, ipOrigin, apiKey)) {
                                 throw new RpcException(
@@ -179,7 +145,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
                         // -- JWT
 
-                        if (!string.IsNullOrEmpty(token)) {
+                        if (Bifeldy.IS_USING_JWT && !string.IsNullOrEmpty(token)) {
                             if (token.StartsWith("Bearer ")) {
                                 token = token[7..];
                             }
@@ -188,17 +154,22 @@ namespace bifeldy_sd3_lib_60.Grpcs {
 
                             try {
                                 IEnumerable<Claim> userClaim = chiper.DecodeJWT(token);
+
                                 var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
                                 http.User = new ClaimsPrincipal(userClaimIdentity);
 
                                 Claim _claimName = userClaim.Where(c => c.Type == ClaimTypes.Name).First();
                                 Claim _claimRole = userClaim.Where(c => c.Type == ClaimTypes.Role).First();
-                                http.Items["user"] = new UserApiSession() {
+                                if (_claimName == null || _claimRole == null) {
+                                    throw new Exception("Format Token Salah / Expired!");
+                                }
+
+                                var userInfo = new UserApiSession() {
                                     name = _claimName.Value,
                                     role = (UserSessionRole)Enum.Parse(typeof(UserSessionRole), _claimRole.Value)
                                 };
 
-                                return;
+                                http.Items["user"] = userInfo;
                             }
                             catch {
                                 throw new RpcException(
@@ -210,13 +181,6 @@ namespace bifeldy_sd3_lib_60.Grpcs {
                             }
                         }
                     }
-
-                    throw new RpcException(
-                        new Status(
-                            StatusCode.Unauthenticated,
-                            "Silahkan Login Terlebih Dahulu Menggunakan API Lalu Gunakan Token Pada Header 'Authorization' Bearer Atau 'x-access-token'!"
-                        )
-                    );
                 }
             }
         }
@@ -233,7 +197,6 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
-                this.LoadServerKunciDc(context);
                 await this.CheckUserLogin(context, request);
 
                 TResponse result = await continuation(request, context);
@@ -259,7 +222,6 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
-                this.LoadServerKunciDc(context);
                 await this.CheckUserLogin<TRequest>(context);
 
                 TResponse result = await continuation(requestStream, context);
@@ -286,7 +248,6 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
-                this.LoadServerKunciDc(context);
                 await this.CheckUserLogin(context, request);
 
                 await continuation(request, responseStream, context);
@@ -311,7 +272,6 @@ namespace bifeldy_sd3_lib_60.Grpcs {
             this._logger.LogInformation("[GRPC_INTERCEPTOR] ⚙ Receiving {nameOp} ... {targetServer}", nameOp, targetServer);
 
             try {
-                this.LoadServerKunciDc(context);
                 await this.CheckUserLogin<TRequest>(context);
 
                 await continuation(requestStream, responseStream, context);

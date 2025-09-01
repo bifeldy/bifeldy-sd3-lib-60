@@ -57,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 res = await sql.AsNoTracking().SingleOrDefaultAsync();
             }
 
-            return res.TBL_JENIS_DC.ToUpper();
+            return res?.TBL_JENIS_DC?.ToUpper();
         }
 
         public async Task<EJenisDc> GetJenisDc(bool isPg, IDatabase db) {
@@ -113,7 +113,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 }
             }
 
-            return this.KodeDc;
+            return this.KodeDc?.ToUpper();
         }
 
         public async Task<string> GetNamaDc(bool isPg, IDatabase db) {
@@ -139,7 +139,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 }
             }
 
-            return this.NamaDc;
+            return this.NamaDc?.ToUpper();
         }
 
         public async Task<bool> IsKonsolidasiCbn(bool isPg, IDatabase db) {

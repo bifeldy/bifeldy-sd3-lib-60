@@ -63,7 +63,6 @@ using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Plugins;
-using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.UserAuth;
 
 namespace bifeldy_sd3_lib_60 {
@@ -77,7 +76,6 @@ namespace bifeldy_sd3_lib_60 {
 
         public static string PLUGINS_PROJECT_NAMESPACE = null;
 
-        public static bool IS_USING_REQUEST_LOGGER = false;
         public static bool IS_USING_SECRET = false;
         public static bool IS_USING_API_KEY = false;
         public static bool IS_USING_JWT = false;
@@ -152,14 +150,14 @@ namespace bifeldy_sd3_lib_60 {
         /* ** */
 
         public static void SetupSerilog() {
-            _ = Services.AddSingleton<SerilogKunciKodeDcPropertyEnricher>();
+            _ = Services.AddSingleton<SerilogKunciGxxxPropertyEnricher>();
             _ = Builder.Host.UseSerilog((hostContext, services, configuration) => {
                 string appPathDir = AppDomain.CurrentDomain.BaseDirectory;
-                SerilogKunciKodeDcPropertyEnricher spe = services.GetRequiredService<SerilogKunciKodeDcPropertyEnricher>();
+                SerilogKunciGxxxPropertyEnricher spe = services.GetRequiredService<SerilogKunciGxxxPropertyEnricher>();
                 _ = configuration.Enrich.With(spe).WriteTo.File(
                     appPathDir + $"/{DEFAULT_DATA_FOLDER}/logs/error_.txt",
                     LogEventLevel.Error,
-                    "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {KunciKodeDc} | {Message:lj}{NewLine}{Exception}",
+                    "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {KunciGxxx} | {Message:lj}{NewLine}{Exception}",
                     rollingInterval: RollingInterval.Day
                 );
             });
@@ -171,11 +169,7 @@ namespace bifeldy_sd3_lib_60 {
                 // o.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Error;
                 o.EnrichDiagnosticContext = (diagnosticContext, httpContext) => {
                     diagnosticContext.Set("TraceId", Activity.Current?.Id ?? httpContext?.TraceIdentifier);
-
-                    IGlobalService gs = httpContext.RequestServices.GetRequiredService<IGlobalService>();
-                    string ipAddr = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, true, true);
-                    string origin = gs.GetIpOriginData(httpContext.Connection, httpContext.Request, removeReverseProxyRoute: true);
-                    diagnosticContext.Set("RemoteOriginIpAddress", origin == ipAddr ? origin : $"{origin}@{ipAddr}");
+                    diagnosticContext.Set("RemoteOriginIpAddress", httpContext?.Items["ip_origin"]);
                 };
             });
         }
@@ -583,7 +577,7 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         /* ** */
-        public static void AutoCheckKunciKodeMultiDc() {
+        public static void AutoCheckMultiDc() {
             string appLocation = AppDomain.CurrentDomain.BaseDirectory;
 
             AssemblyName prgAsm = Assembly.GetEntryAssembly().GetName();
@@ -611,7 +605,7 @@ namespace bifeldy_sd3_lib_60 {
                 }
             }
 
-            _ = App.UseMiddleware<AutoCheckKunciKodeMultiDcMiddleware>();
+            _ = App.UseMiddleware<AutoCheckMultiDcMiddleware>();
         }
 
         public static void UseNginxProxyPathSegment() {
@@ -709,16 +703,14 @@ namespace bifeldy_sd3_lib_60 {
                             ie = ie.InnerException;
                         }
 
-                        string errDtl = errMsg + Environment.NewLine + Environment.NewLine + ex.StackTrace;
+                        string errDtl = errMsg + Environment.NewLine + ex.StackTrace;
 
                         _logger.LogError(
                             "[GLOBAL_ERROR_HANDLER] {TraceId} {xRequestTraceProxy} 💣 {Message}",
                             xRequestTraceActivity, xRequestTraceProxy, errDtl
                         );
 
-                        if (IS_USING_REQUEST_LOGGER) {
-                            // TODO :: Update Log With Error
-                        }
+                        context.Items["error_detail"] = errDtl;
 
                         bool showErrorDetail = App.Environment.IsDevelopment() || user?.role <= UserSessionRole.USER_SD_SSD_3;
                         await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
@@ -808,9 +800,8 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void UseRequestLoggerMiddleware() {
-            _ = App.UseMiddleware<RequestLoggerMiddleware>();
-            IS_USING_REQUEST_LOGGER = true;
+        public static void UseRequestVariableInitializerMiddleware() {
+            _ = App.UseMiddleware<RequestVariableInitializerMiddleware>();
         }
 
         public static void UseSecretMiddleware() {

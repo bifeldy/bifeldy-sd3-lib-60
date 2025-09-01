@@ -33,6 +33,11 @@ namespace bifeldy_sd3_lib_60.Models {
     }
 
     [ProtoContract]
+    public sealed class ResponseRedirect : ResponseJson {
+        [ProtoMember(2)][InheritedProtoMember(2)][JsonPropertyOrder(2)] public string url { get; set; }
+    }
+
+    [ProtoContract]
     public sealed class ResponseJsonSingle<T> : ResponseJson {
         [ProtoMember(2)][JsonPropertyOrder(2)] public T result { get; set; }
     }

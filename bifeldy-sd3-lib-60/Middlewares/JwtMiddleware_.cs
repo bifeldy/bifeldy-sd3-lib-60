@@ -16,6 +16,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+using Grpc.Core;
+
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 
@@ -25,7 +27,6 @@ namespace bifeldy_sd3_lib_60.Middlewares {
 
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
-        private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
 
         public string SessionKey { get; } = "user-session";
@@ -33,12 +34,10 @@ namespace bifeldy_sd3_lib_60.Middlewares {
         public JwtMiddleware(
             RequestDelegate next,
             ILogger<JwtMiddleware> logger,
-            IGlobalService gs,
             IChiperService chiper
         ) {
             this._next = next;
             this._logger = logger;
-            this._gs = gs;
             this._chiper = chiper;
         }
 
@@ -48,6 +47,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             string apiPathRequested = request.Path.Value;
+            if (string.IsNullOrEmpty(apiPathRequested)) {
+                await this._next(context);
+                return;
+            }
+
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
             bool isGrpc = Bifeldy.GRPC_ROUTE_PATH.Contains(apiPathRequestedForGrpc);
@@ -60,42 +64,51 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 return;
             }
 
-            RequestJson reqBody = await this._gs.GetHttpRequestBody<RequestJson>(request);
+            string token = context.Items["token"]?.ToString();
 
-            string token = this._gs.GetTokenData(request, reqBody);
-            if (token.StartsWith("Bearer ")) {
-                token = token[7..];
-            }
-
-            context.Items["token"] = token;
             this._logger.LogInformation("[JWT_MIDDLEWARE] 🔐 {token}", token);
 
-            try {
-                IEnumerable<Claim> userClaim = this._chiper.DecodeJWT(token);
-                var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
-                context.User = new ClaimsPrincipal(userClaimIdentity);
+            context.Items["user"] = null;
 
-                Claim _claimName = userClaim.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault();
-                Claim _claimRole = userClaim.Where(c => c.Type == ClaimTypes.Role).FirstOrDefault();
-                if (_claimName == null || _claimRole == null) {
-                    throw new Exception("Format Token Salah / Expired!");
+            if (!string.IsNullOrEmpty(token)) {
+                try {
+                    IEnumerable<Claim> userClaim = this._chiper.DecodeJWT(token);
+
+                    var userClaimIdentity = new ClaimsIdentity(userClaim, this.SessionKey);
+                    context.User = new ClaimsPrincipal(userClaimIdentity);
+
+                    Claim _claimName = userClaim.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault();
+                    Claim _claimRole = userClaim.Where(c => c.Type == ClaimTypes.Role).FirstOrDefault();
+                    if (_claimName == null || _claimRole == null) {
+                        throw new Exception("Format Token Salah / Expired!");
+                    }
+
+                    var userInfo = new UserApiSession() {
+                        name = _claimName.Value,
+                        role = (UserSessionRole)Enum.Parse(typeof(UserSessionRole), _claimRole.Value)
+                    };
+
+                    context.Items["user"] = userInfo;
                 }
+                catch {
+                    string errMsg = "Format Token Salah / Expired!";
 
-                context.Items["user"] = new UserApiSession() {
-                    name = _claimName.Value,
-                    role = (UserSessionRole) Enum.Parse(typeof(UserSessionRole), _claimRole.Value)
-                };
-            }
-            catch {
-                context.Items["user"] = null;
+                    if (isGrpc) {
+                        throw new RpcException(
+                            new Status(
+                                StatusCode.PermissionDenied,
+                                errMsg
+                            )
+                        );
+                    }
 
-                if (!string.IsNullOrEmpty(token)) {
                     response.Clear();
                     response.StatusCode = StatusCodes.Status401Unauthorized;
+
                     await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                         info = "401 - JWT :: Tidak Dapat Digunakan",
                         result = new ResponseJsonMessage() {
-                            message = "Format Token Salah / Expired!"
+                            message = errMsg
                         }
                     });
 

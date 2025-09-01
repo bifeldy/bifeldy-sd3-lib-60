@@ -44,7 +44,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly EnvVar _envVar;
 
         private readonly IApplicationService _app;
-        private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
         private readonly IApiKeyRepository _apiKeyRepo;
         private readonly IApiTokenRepository _apiTokenRepo;
@@ -57,7 +56,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IServer server,
             IOptions<EnvVar> envVar,
             IApplicationService app,
-            IGlobalService gs,
             IChiperService chiper,
             IApiKeyRepository apiKeyRepo,
             IApiTokenRepository apiTokenRepo,
@@ -67,7 +65,6 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._server = server;
             this._envVar = envVar.Value;
             this._app = app;
-            this._gs = gs;
             this._chiper = chiper;
             this._apiKeyRepo = apiKeyRepo;
             this._apiTokenRepo = apiTokenRepo;
@@ -132,7 +129,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 }
                 else {
                     userSession = new UserApiSession {
-                        name = this._gs.GetIpOriginData(this.HttpContext.Connection, this.HttpContext.Request, true, true),
+                        name = this.HttpContext.Items["address_ip"].ToString(),
                         role = UserSessionRole.PROGRAM_SERVICE
                     };
                 }
@@ -228,7 +225,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
         [HttpGet("all-dc")]
         [SwaggerOperation(Summary = "Informasi Daftar Kode & Nama DC")]
-        [RouteExcludeAllDc]
+        [ApiHideAllDc]
         public async Task<IActionResult> GetAllDc() {
             List<DC_TABEL_DC_T> ls = await this._orapg.GetListAsync<DC_TABEL_DC_T>($@"
                 SELECT

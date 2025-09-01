@@ -21,10 +21,10 @@ using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-    public class RolesDecoratorAttribute : Attribute, IAuthorizationFilter {
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Interface, AllowMultiple = true)]
+    public abstract class RolesDecoratorAttribute : Attribute, IAuthorizationFilter {
 
-        protected readonly IList<UserSessionRole> _roles = new List<UserSessionRole>() { 0 };
+        public readonly IList<UserSessionRole> _roles = new List<UserSessionRole>() { 0 };
 
         protected UserApiSession user = null;
 
@@ -39,31 +39,35 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         }
 
         public virtual void OnAuthorization(AuthorizationFilterContext context) {
-            this.user = (UserApiSession) context.HttpContext.Items["user"];
+            this.user = (UserApiSession)context.HttpContext.Items["user"];
 
             if (this._roles == null || this.user == null) {
-                throw new NotImplementedException();
+                throw new Exception("Data Tidak Lengkap!");
             }
         }
 
         public static void Failed(AuthorizationFilterContext context) {
-            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonMessage>() {
+            var res = new ResponseJsonSingle<ResponseJsonMessage>() {
                 info = "401 - API Authorization :: Gagal Authentikasi Pengguna",
                 result = new ResponseJsonMessage() {
                     message = "Silahkan Login Terlebih Dahulu!"
                 }
-            }) {
+            };
+
+            context.Result = new JsonResult(res) {
                 StatusCode = StatusCodes.Status401Unauthorized
             };
         }
 
         public static void RejectRole(AuthorizationFilterContext context, string message) {
-            context.Result = new JsonResult(new ResponseJsonSingle<ResponseJsonMessage>() {
+            var res = new ResponseJsonSingle<ResponseJsonMessage>() {
                 info = "403 - API Authorization :: Whoops, Akses Ditolak",
                 result = new ResponseJsonMessage() {
                     message = message
                 }
-            }) {
+            };
+
+            context.Result = new JsonResult(res) {
                 StatusCode = StatusCodes.Status403Forbidden
             };
         }
@@ -71,10 +75,9 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
     }
 
     // [MinRole(UserSessionRole.ADMIN)] attribute @ classes / functions controllers
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
-    public sealed class MinRole : RolesDecoratorAttribute {
+    public sealed class MinRoleAttribute : RolesDecoratorAttribute {
 
-        public MinRole(UserSessionRole role) : base(new UserSessionRole[] { role }) { }
+        public MinRoleAttribute(UserSessionRole role) : base(new UserSessionRole[] { role }) { }
 
         public override void OnAuthorization(AuthorizationFilterContext context) {
             try {
@@ -92,10 +95,9 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
     }
 
     // [AllowedRoles(..., UserSessionRole.ADMIN, ...)] attribute @ classes / functions controllers
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
-    public sealed class AllowedRoles : RolesDecoratorAttribute {
+    public sealed class AllowedRolesAttribute : RolesDecoratorAttribute {
 
-        public AllowedRoles(params UserSessionRole[] roles) : base(roles) { }
+        public AllowedRolesAttribute(params UserSessionRole[] roles) : base(roles) { }
 
         public override void OnAuthorization(AuthorizationFilterContext context) {
             try {

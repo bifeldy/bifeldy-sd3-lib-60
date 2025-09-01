@@ -5,22 +5,22 @@ using Serilog.Events;
 
 namespace bifeldy_sd3_lib_60.Libraries {
 
-    public class SerilogKunciKodeDcPropertyEnricher : ILogEventEnricher {
+    public class SerilogKunciGxxxPropertyEnricher : ILogEventEnricher {
 
         private readonly IHttpContextAccessor _hca;
 
-        public SerilogKunciKodeDcPropertyEnricher(IHttpContextAccessor hca) {
+        public SerilogKunciGxxxPropertyEnricher(IHttpContextAccessor hca) {
             this._hca = hca;
         }
 
         public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory) {
-            string kunciKodeDc = null;
+            string kunciGxxx = null;
 
             if (this._hca.HttpContext != null) {
-                kunciKodeDc = this._hca.HttpContext.Items["KunciKodeDc"]?.ToString();
+                kunciGxxx = this._hca.HttpContext.Items["kunci_gxxx"]?.ToString();
             }
 
-            LogEventProperty prop = propertyFactory.CreateProperty("KunciKodeDc", kunciKodeDc);
+            LogEventProperty prop = propertyFactory.CreateProperty("KunciGxxx", kunciGxxx);
             logEvent.AddPropertyIfAbsent(prop);
         }
 

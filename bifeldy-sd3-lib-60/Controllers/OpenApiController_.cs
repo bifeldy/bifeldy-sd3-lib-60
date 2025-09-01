@@ -41,6 +41,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly EnvVar _env;
         private readonly ISwaggerProvider _provider;
         private readonly IApplicationService _app;
+        private readonly IGlobalService _gs;
         private readonly IOraPg _orapg;
         private readonly ILockerService _locker;
         private readonly IConverterService _cs;
@@ -50,6 +51,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IOptions<EnvVar> env,
             ISwaggerProvider provider,
             IApplicationService app,
+            IGlobalService gs,
             IOraPg orapg,
             ILockerService locker,
             IConverterService cs,
@@ -58,33 +60,11 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._env = env.Value;
             this._provider = provider;
             this._app = app;
+            this._gs = gs;
             this._orapg = orapg;
             this._locker = locker;
             this._cs = cs;
             this._generalRepo = generalRepo;
-        }
-
-        private bool IsVisible(Type hideType, string kodeDc, EJenisDc jenisDc) {
-            bool IsVisible = true;
-
-            if (
-                (hideType == typeof(RouteExcludeDcHoAttribute) && kodeDc == "DCHO") ||
-                (hideType == typeof(RouteExcludeKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
-                (hideType == typeof(RouteExcludeWhHoAttribute) && kodeDc == "WHHO") ||
-                (hideType == typeof(RouteExcludeAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "KCBN" && kodeDc != "WHHO") ||
-                (hideType == typeof(RouteExcludeIndukAttribute) && jenisDc == EJenisDc.INDUK) ||
-                (hideType == typeof(RouteExcludeDepoAttribute) && jenisDc == EJenisDc.DEPO) ||
-                (hideType == typeof(RouteExcludeKonvinienceAttribute) && jenisDc == EJenisDc.KONVINIENCE) ||
-                (hideType == typeof(RouteExcludeIplazaAttribute) && jenisDc == EJenisDc.IPLAZA) ||
-                (hideType == typeof(RouteExcludeFrozenAttribute) && jenisDc == EJenisDc.FROZEN) ||
-                (hideType == typeof(RouteExcludePerishableAttribute) && jenisDc == EJenisDc.PERISHABLE) ||
-                (hideType == typeof(RouteExcludeLpgAttribute) && jenisDc == EJenisDc.LPG) ||
-                (hideType == typeof(RouteExcludeSewaAttribute) && jenisDc == EJenisDc.SEWA)
-            ) {
-                IsVisible = false;
-            }
-
-            return IsVisible;
         }
 
         [HttpGet]
@@ -141,11 +121,13 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             controllerRoutePath = $"/{ra.Template}";
                         }
 
-                        IEnumerable<Attribute> attribs = controllerType.GetCustomAttributes()
-                            .Where(t => typeof(RouteExcludeCompleteAttribute).IsAssignableFrom(t.GetType()));
+                        bool isVisible = true;
 
-                        foreach (Attribute attrib in attribs) {
-                            bool isVisible = this.IsVisible(attrib.GetType(), kodeDc, jenisDc);
+                        IEnumerable<Attribute> attribs = controllerType.GetCustomAttributes()
+                            .Where(t => typeof(RouteExcludeAttribute).IsAssignableFrom(t.GetType()));
+
+                        foreach (RouteExcludeAttribute attrib in attribs) {
+                            isVisible = this._gs.IsAllowedRoutingTarget(attrib.GetType(), kodeDc, jenisDc, true);
 
                             if (!isVisible) {
                                 string httpMethod = "ALL";
@@ -153,37 +135,40 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                                 if (!excludeApiPath.Any(p => p.Key.ToLower() == ctrlPth.ToLower() && p.Value.ToLower() == httpMethod.ToLower())) {
                                     excludeApiPath.Add(new(ctrlPth, httpMethod));
+                                    break;
                                 }
                             }
                         }
 
-                        MethodInfo[] methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-                        foreach (MethodInfo method in methods) {
-                            string actionRoutePath = "/";
+                        if (isVisible) {
+                            MethodInfo[] methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+                            foreach (MethodInfo method in methods) {
+                                string actionRoutePath = "/";
 
-                            attribs = method.GetCustomAttributes()
-                                .Where(t => typeof(RouteExcludeCompleteAttribute).IsAssignableFrom(t.GetType()));
+                                attribs = method.GetCustomAttributes()
+                                    .Where(t => typeof(RouteExcludeAttribute).IsAssignableFrom(t.GetType()));
 
-                            foreach (Attribute attrib in attribs) {
-                                bool isVisible = this.IsVisible(attrib.GetType(), kodeDc, jenisDc);
+                                foreach (RouteExcludeAttribute attrib in attribs) {
+                                    isVisible = this._gs.IsAllowedRoutingTarget(attrib.GetType(), kodeDc, jenisDc, true);
 
-                                if (!isVisible) {
-                                    IEnumerable<HttpMethodAttribute> hma = method.GetCustomAttributes()
-                                        .Where(t => typeof(HttpMethodAttribute).IsAssignableFrom(t.GetType()))
-                                        .Select(t => (HttpMethodAttribute)t);
+                                    if (!isVisible) {
+                                        IEnumerable<HttpMethodAttribute> hma = method.GetCustomAttributes()
+                                            .Where(t => typeof(HttpMethodAttribute).IsAssignableFrom(t.GetType()))
+                                            .Select(t => (HttpMethodAttribute)t);
 
-                                    foreach (HttpMethodAttribute h in hma) {
+                                        foreach (HttpMethodAttribute h in hma) {
 
-                                        if (!string.IsNullOrEmpty(h.Template)) {
-                                            actionRoutePath = $"/{h.Template}";
-                                        }
+                                            if (!string.IsNullOrEmpty(h.Template)) {
+                                                actionRoutePath = $"/{h.Template}";
+                                            }
 
-                                        foreach (string hm in h.HttpMethods) {
-                                            string controllerActionRoutePath = controllerRoutePath + actionRoutePath;
-                                            string actnPth = "/" + Bifeldy.API_PREFIX + controllerActionRoutePath.Replace("//", "/");
+                                            foreach (string hm in h.HttpMethods) {
+                                                string controllerActionRoutePath = controllerRoutePath + actionRoutePath;
+                                                string actnPth = "/" + Bifeldy.API_PREFIX + controllerActionRoutePath.Replace("//", "/");
 
-                                            if (!excludeApiPath.Any(p => p.Key.ToLower() == actnPth.ToLower() && p.Value.ToLower() == hm.ToLower())) {
-                                                excludeApiPath.Add(new(actnPth, hm));
+                                                if (!excludeApiPath.Any(p => p.Key.ToLower() == actnPth.ToLower() && p.Value.ToLower() == hm.ToLower())) {
+                                                    excludeApiPath.Add(new(actnPth, hm));
+                                                }
                                             }
                                         }
                                     }
@@ -205,7 +190,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 }
 
                 Dictionary<string, object> dict = this._cs.JsonToObject<Dictionary<string, object>>(jsonData);
-                if (dict != null && !this._app.DebugMode) {
+                if (!this._app.DebugMode && dict != null) {
                     if (dict.ContainsKey("paths")) {
                         var route = (Dictionary<string, object>)dict["paths"];
                         if (route != null) {

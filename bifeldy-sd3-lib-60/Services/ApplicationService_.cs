@@ -14,6 +14,7 @@
 using System.Net.NetworkInformation;
 using System.Reflection;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -39,6 +40,7 @@ namespace bifeldy_sd3_lib_60.Services {
     public sealed class CApplicationService : IApplicationService {
 
         private readonly IDistributedCache _cache;
+        private readonly IHttpContextAccessor _hca;
 
         private readonly Assembly _prgAsm = Assembly.GetEntryAssembly();
         private readonly Assembly _libAsm = Assembly.GetExecutingAssembly();
@@ -61,8 +63,12 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly SettingLibb.Class1 _SettingLibb;
 
-        public CApplicationService(IDistributedCache cache) {
+        public CApplicationService(
+            IDistributedCache cache,
+            IHttpContextAccessor hca
+        ) {
             this._cache = cache;
+            this._hca = hca;
             this._SettingLibb = new SettingLibb.Class1();
         }
 
@@ -79,25 +85,29 @@ namespace bifeldy_sd3_lib_60.Services {
                 result = this._SettingLibb.GetVariabel(key, kunci);
                 result = result?.Trim();
 
-                string errorEmpty = $"Terjadi Kesalahan Saat Mendapatkan Kunci {key} @ {kunci} ::";
-                if (string.IsNullOrEmpty(result)) {
-                    throw new KunciServerTidakTersediaException($"{errorEmpty} [#1] Kosong / Tidak Tersedia");
+                if (!string.IsNullOrEmpty(result)) {
+                    if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
+                        if (this._hca.HttpContext != null) {
+                            string reqPath = this._hca.HttpContext.Request.Path.Value;
+                            if (!string.IsNullOrEmpty(reqPath)) {
+                                if (reqPath.StartsWith($"/{Bifeldy.API_PREFIX}/", StringComparison.InvariantCultureIgnoreCase)) {
+                                    return null;
+                                }
+                            }
+                        }
+
+                        throw new KunciServerTidakTersediaException($"Terjadi Kesalahan Saat Mendapatkan Kunci {key} @ {kunci} :: {result}");
+                    }
                 }
 
-                if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
-                    throw new KunciServerTidakTersediaException($"{errorEmpty} {result}");
-                }
-
-                result = result.Split(';').FirstOrDefault();
+                result = result?.Split(';').FirstOrDefault();
                 result = result?.Trim();
 
-                if (string.IsNullOrEmpty(result)) {
-                    throw new KunciServerTidakTersediaException($"{errorEmpty} [#2] Kosong / Tidak Tersedia");
+                if (!string.IsNullOrEmpty(result)) {
+                    this._cache.SetString(cacheKey, result, new DistributedCacheEntryOptions() {
+                        SlidingExpiration = TimeSpan.FromMinutes(15)
+                    });
                 }
-
-                this._cache.SetString(cacheKey, result, new DistributedCacheEntryOptions() {
-                    SlidingExpiration = TimeSpan.FromMinutes(15)
-                });
 
                 return result;
             }
@@ -109,12 +119,13 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public CIpMacAddress[] GetIpMacAddress() {
             var IpMacAddress = new List<CIpMacAddress>();
+
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
             foreach (NetworkInterface nic in nics) {
                 if (nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback) {
-                    PhysicalAddress mac = nic.GetPhysicalAddress();
                     string iv4 = null;
                     string iv6 = null;
+
                     IPInterfaceProperties ipInterface = nic.GetIPProperties();
                     foreach (UnicastIPAddressInformation ua in ipInterface.UnicastAddresses) {
                         if (!ua.Address.IsIPv4MappedToIPv6 && !ua.Address.IsIPv6LinkLocal && !ua.Address.IsIPv6Teredo && !ua.Address.IsIPv6SiteLocal) {
@@ -127,10 +138,13 @@ namespace bifeldy_sd3_lib_60.Services {
                         }
                     }
 
+                    PhysicalAddress mac = nic.GetPhysicalAddress();
+                    string macAddr = mac?.ToString();
+
                     IpMacAddress.Add(new CIpMacAddress() {
                         NAME = nic.Name,
                         DESCRIPTION = nic.Description,
-                        MAC_ADDRESS = string.IsNullOrEmpty(mac.ToString()) ? null : mac.ToString(),
+                        MAC_ADDRESS = string.IsNullOrEmpty(macAddr) ? null : macAddr,
                         IP_V4_ADDRESS = iv4,
                         IP_V6_ADDRESS = iv6
                     });

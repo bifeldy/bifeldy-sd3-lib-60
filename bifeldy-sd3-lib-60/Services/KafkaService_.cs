@@ -172,7 +172,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async Task CreateKafkaProducerListener(string hostPort, string topicName, string suffixKodeDc, string pubSubName = null, CancellationToken stoppingToken = default) {
             topicName = this.GetTopicNameProducerListener(topicName, suffixKodeDc);
-            await this.CreateTopicIfNotExist(hostPort, topicName); ;
+            await this.CreateTopicIfNotExist(hostPort, topicName);
             string key = this.GetKeyProducerListener(hostPort, topicName, pubSubName);
             if (!this.keyValuePairs.ContainsKey(key)) {
                 this.keyValuePairs.Add(key, this.CreateKafkaProducerInstance<string, string>(hostPort));

@@ -71,7 +71,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             string kunciGxxx = null;
 
             if (this._hca.HttpContext != null) {
-                kunciGxxx = this._hca.HttpContext.Items["KunciKodeDc"]?.ToString();
+                kunciGxxx = this._hca.HttpContext.Items["kunci_gxxx"]?.ToString();
             }
 
             kunciGxxx ??= this._scr.CurrentLoadedKodeServerKunciDc();

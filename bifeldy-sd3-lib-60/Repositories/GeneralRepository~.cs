@@ -22,6 +22,8 @@ using Microsoft.Extensions.Options;
 
 using Confluent.Kafka;
 
+using Grpc.Core;
+
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
@@ -37,10 +39,11 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<bool> SaveKafkaToTable(bool isPg, IDatabase db, string topic, decimal offset, decimal partition, Message<string, string> msg, string logTableName);
         Task<KAFKA_SERVER_T> GetKafkaServerInfo(bool isPg, IDatabase db, string topicName);
         Task<List<DC_TABEL_V>> GetListBranchDbInformation(bool isPg, IDatabase db, string kodeDcInduk);
-        Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk, IServiceProvider sp);
-        Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp);
+        Task<IDictionary<string, (bool, IDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk, IServiceProvider sp);
+        Task<(bool, IDatabase, IDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp);
         Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> Callback);
         Task<string> GetAppHoApiUrlBase(bool isPg, IDatabase db, string apiPath);
+        Task CheckKoordinatorHO(bool isPg, IDatabase db, InputJsonDc f, bool isGrpc = false);
     }
 
     [ScopedServiceRegistration]
@@ -49,32 +52,29 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private readonly EnvVar _envVar;
 
         private readonly IApplicationService _as;
-        private readonly IGlobalService _gs;
         private readonly IHttpService _http;
         private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
 
         private IDictionary<
             string, IDictionary<
-                string, (bool, CDatabase)
+                string, (bool, IDatabase)
             >
         > BranchConnectionInfo { get; } = new Dictionary<
             string, IDictionary<
-                string, (bool, CDatabase)
+                string, (bool, IDatabase)
             >
         >(StringComparer.InvariantCultureIgnoreCase);
 
         public CGeneralRepository(
             IOptions<EnvVar> envVar,
             IApplicationService @as,
-            IGlobalService gs,
             IHttpService http,
             IChiperService chiper,
             IConverterService converter
         ) {
             this._envVar = envVar.Value;
             this._as = @as;
-            this._gs = gs;
             this._http = http;
             this._chiper = chiper;
             this._converter = converter;
@@ -129,30 +129,30 @@ namespace bifeldy_sd3_lib_60.Repositories {
         // Atur URL Di `appsettings.json` -> ws_syncho
         //
         // Item1 => bool :: Apakah Menggunakan Postgre
-        // Item2 => CDatabase :: Koneksi Ke Database Oracle / Postgre (Tidak Ada SqlServer)
+        // Item2 => IDatabase :: Koneksi Ke Database Oracle / Postgre (Tidak Ada SqlServer)
         //
-        // IDictionary<string, (bool, CDatabase)> dbCon = await GetListBranchDbConnection(..., "G001", ...);
-        // var res = dbCon["G055"].Item2.ExecScalarAsync<...>(...);
+        // IDictionary<string, (bool, IDatabase)> dbOraPgBranch = await GetListBranchDbConnection(..., "G001", ...);
+        // var res = dbOraPgBranch["G055"].Item2.ExecScalarAsync<...>(...);
         //
-        public async Task<IDictionary<string, (bool, CDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk, IServiceProvider sp) {
-            IOracle oracle = sp.GetRequiredService<IOracle>();
-            IPostgres postgres = sp.GetRequiredService<IPostgres>();
-
+        public async Task<IDictionary<string, (bool, IDatabase)>> GetListBranchDbConnection(bool isPg, IDatabase db, string kodeDcInduk, IServiceProvider sp) {
             if (!this.BranchConnectionInfo.ContainsKey(kodeDcInduk)) {
-                IDictionary<string, (bool, CDatabase)> dbCons = new Dictionary<string, (bool, CDatabase)>(StringComparer.InvariantCultureIgnoreCase);
+                IDictionary<string, (bool, IDatabase)> dbCons = new Dictionary<string, (bool, IDatabase)>(StringComparer.InvariantCultureIgnoreCase);
 
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(isPg, db, kodeDcInduk);
                 foreach (DC_TABEL_V dbi in dbInfo) {
-                    CDatabase dbCon;
+                    IDatabase dbOraPgBranch = null;
+
                     bool isPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
                     if (isPostgre) {
-                        dbCon = postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
+                        IPostgres postgres = sp.GetRequiredService<IPostgres>();
+                        dbOraPgBranch = postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                     }
                     else {
-                        dbCon = oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
+                        IOracle oracle = sp.GetRequiredService<IOracle>();
+                        dbOraPgBranch = oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
-                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbCon));
+                    dbCons.Add(dbi.TBL_DC_KODE.ToUpper(), (isPostgre, dbOraPgBranch));
                 }
 
                 this.BranchConnectionInfo[kodeDcInduk] = dbCons;
@@ -161,31 +161,42 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return this.BranchConnectionInfo[kodeDcInduk];
         }
 
-        public async Task<(bool, CDatabase, CDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp) {
+        public async Task<(bool, IDatabase, IDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp) {
             IOracle oracle = sp.GetRequiredService<IOracle>();
             IPostgres postgres = sp.GetRequiredService<IPostgres>();
             IMsSQL mssql = sp.GetRequiredService<IMsSQL>();
 
             IDatabase dbConHo = db;
-
-            string kodeDcSekarang = await this.GetKodeDc(isPg, db);
             bool isHo = await this.IsHo(isPg, db);
             if (!isHo) {
                 List<DC_TABEL_V> dbInfo = await this.GetListBranchDbInformation(isPg, db, "DCHO");
+
                 DC_TABEL_V dcho = dbInfo.FirstOrDefault();
                 if (dcho != null) {
-                    dbConHo = oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
+
+                    bool isHoPg = dcho.FLAG_DBPG?.ToUpper() == "Y";
+                    if (isHoPg) {
+                        dbConHo = postgres.NewExternalConnection(dcho.DBPG_IP, dcho.DBPG_PORT, dcho.DBPG_USER, dcho.DBPG_PASS, dcho.DBPG_NAME);
+                    }
+                    else {
+                        dbConHo = oracle.NewExternalConnection(dcho.IP_DB, dcho.DB_PORT.ToString(), dcho.DB_USER_NAME, dcho.DB_PASSWORD, dcho.DB_SID);
+                    }
                 }
             }
 
             bool dbIsUsingPostgre = false;
-            CDatabase dbOraPgDc = null;
-            CDatabase dbSqlDc = null;
+            IDatabase dbOraPgDc = null;
+            IDatabase dbSqlDc = null;
 
             if (dbConHo != null) {
-                DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>().Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper()).AsNoTracking().SingleOrDefault();
+                DC_TABEL_IP_T dbi = dbConHo.Set<DC_TABEL_IP_T>()
+                    .Where(d => d.DC_KODE.ToUpper() == kodeDcTarget.ToUpper())
+                    .AsNoTracking()
+                    .SingleOrDefault();
+
                 if (dbi != null) {
                     dbIsUsingPostgre = dbi.FLAG_DBPG?.ToUpper() == "Y";
+
                     if (dbIsUsingPostgre) {
                         dbOraPgDc = postgres.NewExternalConnection(dbi.DBPG_IP, dbi.DBPG_PORT, dbi.DBPG_USER, dbi.DBPG_PASS, dbi.DBPG_NAME);
                     }
@@ -193,14 +204,21 @@ namespace bifeldy_sd3_lib_60.Repositories {
                         dbOraPgDc = oracle.NewExternalConnection(dbi.IP_DB, dbi.DB_PORT.ToString(), dbi.DB_USER_NAME, dbi.DB_PASSWORD, dbi.DB_SID);
                     }
 
-                    dbSqlDc = mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
+                    if (
+                        !string.IsNullOrEmpty(dbi.DB_IP_SQL) &&
+                        !string.IsNullOrEmpty(dbi.DB_USER_SQL) &&
+                        !string.IsNullOrEmpty(dbi.DB_PWD_SQL) &&
+                        !string.IsNullOrEmpty(dbi.SCHEMA_DPD)
+                    ) {
+                        dbSqlDc = mssql.NewExternalConnection(dbi.DB_IP_SQL, dbi.DB_USER_SQL, dbi.DB_PWD_SQL, dbi.SCHEMA_DPD);
+                    }
                 }
             }
 
             return (dbIsUsingPostgre, dbOraPgDc, dbSqlDc);
         }
 
-        public async Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> Callback) {
+        public async Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> callback) {
             bool isHo = await this.IsHo(isPg, db);
             if (!isHo) {
                 throw new TidakMemenuhiException("Khusus HO!");
@@ -228,7 +246,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             ListApiDc dbi = listApiDcs.FirstOrDefault();
             string hostApiDc = string.IsNullOrEmpty(dbi?.API_HOST) ? dbi?.IP_NGINX : dbi?.API_HOST;
             if (dbi == null || string.IsNullOrEmpty(hostApiDc)) {
-                Callback($"Kode gudang ({dcKode.ToUpper()}) tidak tersedia!", null);
+                callback($"Kode DC {dcKode.ToUpper()} tidak tersedia!", null);
             }
             else {
                 string separator = $"/{Bifeldy.API_PREFIX}/";
@@ -261,24 +279,33 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 string pathApiDc = string.IsNullOrEmpty(dbi.API_PATH) ? currentPath : $"{dbi.API_PATH}{currentPath?.Split(separator).Last()}";
                 var urlApiDc = new Uri($"http://{hostApiDc}{pathApiDc}{request.QueryString.Value}");
 
-                string hashText = this._chiper.HashText(this._as.AppName);
-                request.Headers["x-api-key"] = hashText;
-
                 // API Khusus Bypass ~ Case Sensitive
                 NameValueCollection queryApiDc = HttpUtility.ParseQueryString(urlApiDc.Query);
+                string hashText = this._chiper.HashText(this._as.AppName);
 
+                request.Headers["x-secret"] = hashText;
                 queryApiDc.Set("secret", hashText);
-                queryApiDc.Set("key", hashText);
-                queryApiDc.Set("token", request.HttpContext.Items["token"]?.ToString());
 
-                string ipOrigin = this._gs.GetIpOriginData(request.HttpContext.Connection, request.HttpContext.Request, true, true);
-                queryApiDc.Set("mask_ip", this._chiper.EncryptText(ipOrigin));
+                request.Headers["x-api-key"] = hashText;
+                queryApiDc.Set("key", hashText);
+
+                if (request.HttpContext.Items["token"] != null) {
+                    string token = request.HttpContext.Items["token"].ToString();
+                    request.Headers.Authorization = token;
+                    request.Headers["x-access-token"] = token;
+                    queryApiDc.Set("token", token);
+                }
+
+                if (request.HttpContext.Items["address_ip"] != null) {
+                    string addrIp = request.HttpContext.Items["address_ip"].ToString();
+                    queryApiDc.Set("mask_ip", this._chiper.EncryptText(addrIp));
+                }
 
                 var uriBuilder = new UriBuilder(urlApiDc) {
                     Query = queryApiDc.ToString()
                 };
 
-                Callback(null, uriBuilder.Uri);
+                callback(null, uriBuilder.Uri);
             }
         }
 
@@ -318,6 +345,31 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 Query = apiQuery.ToString()
             };
             return uriBuilder.ToString();
+        }
+
+        public async Task CheckKoordinatorHO(bool isPg, IDatabase db, InputJsonDc fd, bool isGrpc = false) {
+            string targetJenisDc = await this.GetJenisDc(isPg, db, fd.kode_dc.ToUpper());
+
+            if (Enum.TryParse(targetJenisDc.ToUpper(), true, out EJenisDc _eJenisDc)) {
+                bool isDcHo = await this.IsDcHo(isPg, db);
+                bool isWhHo = await this.IsWhHo(isPg, db);
+
+                string exception = null;
+                if (isDcHo && _eJenisDc == EJenisDc.IPLAZA) {
+                    exception = "Silahkan Gunakan WH HO Untuk Akses Ke DC IPLAZA WHK";
+                }
+                else if (isWhHo && _eJenisDc != EJenisDc.IPLAZA) {
+                    exception = "Silahkan Gunakan DC HO Untuk Akses Ke DC Selain IPLAZA WHK";
+                }
+
+                if (!string.IsNullOrEmpty(exception)) {
+                    if (isGrpc) {
+                        throw new RpcException(new Status(StatusCode.Unavailable, exception));
+                    }
+
+                    throw new TidakMemenuhiException(exception);
+                }
+            }
         }
 
     }

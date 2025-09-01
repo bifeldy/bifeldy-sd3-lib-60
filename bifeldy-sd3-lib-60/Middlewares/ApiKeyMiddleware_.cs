@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Grpc.Core;
+
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
@@ -54,6 +56,11 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             string apiPathRequested = request.Path.Value;
+            if (string.IsNullOrEmpty(apiPathRequested)) {
+                await this._next(context);
+                return;
+            }
+
             string apiPathRequestedForGrpc = apiPathRequested.Split('/').Where(u => !string.IsNullOrEmpty(u)).FirstOrDefault();
 
             bool isGrpc = Bifeldy.GRPC_ROUTE_PATH.Contains(apiPathRequestedForGrpc);
@@ -85,26 +92,35 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                 this._gs.AllowedIpOrigin.Add(ipDomainProxy);
             }
 
-            RequestJson reqBody = await this._gs.GetHttpRequestBody<RequestJson>(request);
-            string apiKey = this._gs.GetApiKeyData(request, reqBody);
-            context.Items["api_key"] = apiKey;
-            string ipOrigin = this._gs.GetIpOriginData(connection, request, removeReverseProxyRoute: true);
-            context.Items["ip_origin"] = ipOrigin;
+            string apiKey = context.Items["api_key"]?.ToString();
+            string ipOrigin = context.Items["ip_origin"]?.ToString();
 
             this._logger.LogInformation("[KEY_IP_ORIGIN] 🌸 {apiKey} @ {ipOrigin}", apiKey, ipOrigin);
 
-            // API Khusus Bypass ~ Case Sensitive
+            // Khusus Bypass ~ Case Sensitive
             string hashText = this._chiper.HashText(this._app.AppName);
             if (apiKey == hashText || await _akRepo.CheckKeyOrigin(this._env.IS_USING_POSTGRES, _orapg, ipOrigin, apiKey)) {
                 await this._next(context);
             }
             else {
+                string errMsg = "Api Key Salah / Tidak Terdaftar!";
+
+                if (isGrpc) {
+                    throw new RpcException(
+                        new Status(
+                            StatusCode.PermissionDenied,
+                            errMsg
+                        )
+                    );
+                }
+
                 response.Clear();
                 response.StatusCode = StatusCodes.Status401Unauthorized;
+
                 await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonErrorApiKeyIpOrigin>() {
                     info = "401 - API Key :: Tidak Dapat Digunakan",
                     result = new ResponseJsonErrorApiKeyIpOrigin() {
-                        message = "Api Key Salah / Tidak Terdaftar!",
+                        message = errMsg,
                         api_key = apiKey,
                         ip_origin = ipOrigin
                     }

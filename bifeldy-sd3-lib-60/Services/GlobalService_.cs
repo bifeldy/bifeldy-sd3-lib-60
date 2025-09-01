@@ -36,6 +36,7 @@ namespace bifeldy_sd3_lib_60.Services {
         string GetTokenData(HttpRequest request, RequestJson reqBody);
         Task<(string, string)> ParseHttpRequestBodyJsonString(HttpRequest request);
         Task<T> GetHttpRequestBody<T>(HttpRequest request);
+        bool IsAllowedRoutingTarget(Type hideType, string kodeDc, EJenisDc jenisDc, bool isSwaggerApiDocs = false);
     }
 
     [SingletonServiceRegistration]
@@ -258,6 +259,36 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return reqBody;
+        }
+
+        public bool IsAllowedRoutingTarget(Type hideType, string kodeDc, EJenisDc jenisDc, bool isSwaggerApiDocs = false) {
+            bool isVisibleAllowed = true;
+
+            if (isSwaggerApiDocs) {
+                if (
+                    (hideType == typeof(ApiHideDcHoAttribute) && kodeDc == "DCHO") ||
+                    (hideType == typeof(ApiHideKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
+                    (hideType == typeof(ApiHideWhHoAttribute) && kodeDc == "WHHO") ||
+                    (hideType == typeof(ApiHideAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "KCBN" && kodeDc != "WHHO")
+                ) {
+                    isVisibleAllowed = false;
+                }
+            }
+
+            if (
+                (hideType == typeof(DenyAccessIndukAttribute) && jenisDc == EJenisDc.INDUK) ||
+                (hideType == typeof(DenyAccessDepoAttribute) && jenisDc == EJenisDc.DEPO) ||
+                (hideType == typeof(DenyAccessKonvinienceAttribute) && jenisDc == EJenisDc.KONVINIENCE) ||
+                (hideType == typeof(DenyAccessIplazaAttribute) && jenisDc == EJenisDc.IPLAZA) ||
+                (hideType == typeof(DenyAccessFrozenAttribute) && jenisDc == EJenisDc.FROZEN) ||
+                (hideType == typeof(DenyAccessPerishableAttribute) && jenisDc == EJenisDc.PERISHABLE) ||
+                (hideType == typeof(DenyAccessLpgAttribute) && jenisDc == EJenisDc.LPG) ||
+                (hideType == typeof(DenyAccessSewaAttribute) && jenisDc == EJenisDc.SEWA)
+            ) {
+                isVisibleAllowed = false;
+            }
+
+            return isVisibleAllowed;
         }
 
     }

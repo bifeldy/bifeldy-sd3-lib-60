@@ -26,7 +26,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
     [ApiController]
     [Route("downloader")]
-    [RouteExcludeAllDc]
+    [ApiHideAllDc]
     [MinRole(UserSessionRole.EXTERNAL_BOT)]
     [ApiExplorerSettings(GroupName = "_", IgnoreApi = true)]
     public sealed class DownloaderController : ControllerBase {
