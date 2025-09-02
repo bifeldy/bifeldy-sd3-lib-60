@@ -13,10 +13,8 @@
 
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Drawing;
 using System.Net.Mime;
 using System.Reflection;
-using System.Runtime.Versioning;
 using System.Xml.Linq;
 
 using DinkToPdf;
@@ -24,6 +22,8 @@ using DinkToPdf.Contracts;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
+using SixLabors.ImageSharp;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Libraries;
@@ -55,11 +55,16 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public byte[] HtmlToPdf(HtmlToPdfDocument htmlToPdfDocument) => this._converter.Convert(htmlToPdfDocument);
 
-        [SupportedOSPlatform("windows")]
-        public byte[] ImageToByte(Image image) => (byte[]) new ImageConverter().ConvertTo(image, typeof(byte[]));
+        public byte[] ImageToByte(Image image) {
+            using (var ms = new MemoryStream()) {
+                image.SaveAsPng(ms);
+                return ms.ToArray();
+            }
+        }
 
-        [SupportedOSPlatform("windows")]
-        public Image ByteToImage(byte[] byteArray) => (Bitmap) new ImageConverter().ConvertFrom(byteArray);
+        public Image ByteToImage(byte[] byteArray) {
+            return Image.Load(byteArray);
+        }
 
         private List<object> JArrayToList(JArray jsonArray) {
             var result = new List<object>();

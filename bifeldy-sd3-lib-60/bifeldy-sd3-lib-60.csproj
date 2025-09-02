@@ -42,9 +42,11 @@
         </PackageReference>
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
+        <PackageReference Include="QRCoder" Version="1.6.0" />
         <PackageReference Include="Quartz.Extensions.Hosting" Version="3.8.0" />
         <PackageReference Include="ReportViewerCore.NETCore" Version="15.1.19" />
         <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
+        <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
         <PackageReference Include="SSH.NET" Version="2023.0.1" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.5.0" />
@@ -55,6 +57,7 @@
         <PackageReference Include="System.ServiceModel.Http" Version="4.10.*" />
         <PackageReference Include="System.ServiceModel.NetTcp" Version="4.10.*" />
         <PackageReference Include="System.ServiceModel.Security" Version="4.10.*" />
+        <PackageReference Include="ZXing.Net.Bindings.ImageSharp.V2" Version="0.16.17" />
     </ItemGroup>
 
     <ItemGroup>
