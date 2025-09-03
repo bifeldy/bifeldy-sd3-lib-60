@@ -205,11 +205,13 @@ namespace bifeldy_sd3_lib_60.Repositories {
             };
 
             if (string.IsNullOrEmpty(sc.kunci_gxxx)) {
-                ServerConfigKunci _sc = (await this.GetKodeServerKunciDc(sc.kode_dc)).FirstOrDefault();
+                List<ServerConfigKunci> __sc = await this.GetKodeServerKunciDc(sc.kode_dc);
+                ServerConfigKunci _sc = __sc.FirstOrDefault();
 
                 if (_sc == null) {
                     _ = await this.AddKodeServerKunciDc(sc.kode_dc, $"kunci{kodeDc}".ToLower(), serverTarget);
-                    _sc = (await this.GetKodeServerKunciDc(sc.kode_dc)).First();
+                    __sc = await this.GetKodeServerKunciDc(sc.kode_dc);
+                    _sc = __sc.First();
                 }
 
                 sc = _sc;

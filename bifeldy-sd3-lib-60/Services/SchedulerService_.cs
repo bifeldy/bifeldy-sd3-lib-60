@@ -74,7 +74,8 @@ namespace bifeldy_sd3_lib_60.Services {
         public async Task<bool> CheckJobIsNeedToCreateNew(string jobName, IDatabase db, Func<Task<bool>> forceCreateNew = null) {
             bool needToCreateNewJob = false;
 
-            JobKey jk = (await this.GetJobs(jobName)).FirstOrDefault();
+            IEnumerable<JobKey> _jk = await this.GetJobs(jobName);
+            JobKey jk = _jk.FirstOrDefault();
 
             IJobDetail jd = null;
             if (jk != null) {
@@ -160,7 +161,8 @@ namespace bifeldy_sd3_lib_60.Services {
         public async Task<bool> CheckJobIsCompleted(string jobName, IDatabase db, Func<Task<bool>> additionalAndCheck = null) {
             bool isJobCompleted = false;
 
-            JobKey jk = (await this.GetJobs(jobName)).FirstOrDefault();
+            IEnumerable<JobKey> _jk = await this.GetJobs(jobName);
+            JobKey jk = _jk.FirstOrDefault();
 
             IJobDetail jd = null;
             if (jk != null) {

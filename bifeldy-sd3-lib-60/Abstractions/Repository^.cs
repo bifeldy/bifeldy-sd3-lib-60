@@ -109,7 +109,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     this.KodeDc = "WHHO";
                 }
                 else {
-                    this.KodeDc = (await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync()).TBL_DC_KODE?.ToUpper();
+                    DC_TABEL_DC_T _kodeDc = await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync();
+                    this.KodeDc = _kodeDc?.TBL_DC_KODE?.ToUpper();
                 }
             }
 
@@ -135,7 +136,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     this.NamaDc = "WH HEAD OFFICE";
                 }
                 else {
-                    this.NamaDc = (await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync()).TBL_DC_NAMA.ToUpper();
+                    DC_TABEL_DC_T _namaDc = await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync();
+                    this.NamaDc = _namaDc?.TBL_DC_NAMA?.ToUpper();
                 }
             }
 
