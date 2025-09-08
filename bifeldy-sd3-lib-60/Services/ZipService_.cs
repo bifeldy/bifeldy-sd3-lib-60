@@ -45,23 +45,27 @@ namespace bifeldy_sd3_lib_60.Services {
                     File.Delete(tempPath);
                 }
 
-                var zip = new ZipFile();
-                if (!string.IsNullOrEmpty(password)) {
-                    zip.Password = password;
+                using (var zip = new ZipFile()) {
+                    zip.ParallelDeflateThreshold = -1;
                     zip.CompressionLevel = CompressionLevel.BestCompression;
-                }
 
-                foreach (string targetFileName in listFileForZip) {
-                    string filePath = Path.Combine(folderPath, targetFileName);
-                    ZipEntry zipEntry = zip.AddFile(filePath, "");
-                    if (zipEntry != null) {
-                        totalFileInZip++;
+                    if (!string.IsNullOrEmpty(password)) {
+                        zip.Password = password;
                     }
 
-                    this._logger.LogInformation("[ZIP_LIST_FILE_IN_FOLDER] {status} @ {filePath}", zipEntry == null ? "Fail" : "Ok", filePath);
-                }
+                    foreach (string targetFileName in listFileForZip) {
+                        string filePath = Path.Combine(folderPath, targetFileName);
 
-                zip.Save(tempPath);
+                        ZipEntry zipEntry = zip.AddFile(filePath, "");
+                        if (zipEntry != null) {
+                            totalFileInZip++;
+                        }
+
+                        this._logger.LogInformation("[ZIP_LIST_FILE_IN_FOLDER] {status} @ {filePath}", zipEntry == null ? "Fail" : "Ok", filePath);
+                    }
+
+                    zip.Save(tempPath);
+                }
 
                 string realPath = Path.Combine(outputFolderPath ?? this._gs.ZipFolderPath, zipFileName);
                 if (File.Exists(realPath)) {
@@ -89,26 +93,27 @@ namespace bifeldy_sd3_lib_60.Services {
                     File.Delete(tempPath);
                 }
 
-                var zip = new ZipFile {
-                    CompressionLevel = CompressionLevel.BestCompression
-                };
-                if (!string.IsNullOrEmpty(password)) {
-                    zip.Password = password;
-                    zip.Encryption = EncryptionAlgorithm.PkzipWeak;
-                }
+                using (var zip = new ZipFile()) {
+                    zip.ParallelDeflateThreshold = -1;
+                    zip.CompressionLevel = CompressionLevel.BestCompression;
 
-                var directoryInfo = new DirectoryInfo(folderPath);
-                FileInfo[] fileInfos = directoryInfo.GetFiles();
-                foreach (FileInfo fileInfo in fileInfos) {
-                    ZipEntry zipEntry = zip.AddFile(fileInfo.FullName, "");
-                    if (zipEntry != null) {
-                        totalFileInZip++;
+                    if (!string.IsNullOrEmpty(password)) {
+                        zip.Password = password;
                     }
 
-                    this._logger.LogInformation("[ZIP_ALL_FILE_IN_FOLDER] {status} @ {FullName}", zipEntry == null ? "Fail" : "Ok", fileInfo.FullName);
-                }
+                    var directoryInfo = new DirectoryInfo(folderPath);
+                    FileInfo[] fileInfos = directoryInfo.GetFiles();
+                    foreach (FileInfo fileInfo in fileInfos) {
+                        ZipEntry zipEntry = zip.AddFile(fileInfo.FullName, "");
+                        if (zipEntry != null) {
+                            totalFileInZip++;
+                        }
 
-                zip.Save(tempPath);
+                        this._logger.LogInformation("[ZIP_ALL_FILE_IN_FOLDER] {status} @ {FullName}", zipEntry == null ? "Fail" : "Ok", fileInfo.FullName);
+                    }
+
+                    zip.Save(tempPath);
+                }
 
                 string realPath = Path.Combine(outputFolderPath ?? this._gs.ZipFolderPath, zipFileName);
                 if (File.Exists(realPath)) {
