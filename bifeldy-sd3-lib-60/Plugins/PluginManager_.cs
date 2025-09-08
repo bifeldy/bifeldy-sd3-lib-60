@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                         .ToArray();
 
                     var duplicates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    var existingAssemblies = new List<Assembly> {
+                    var existingAssemblies = new List<Assembly>() {
                         Assembly.GetExecutingAssembly(),
                         Assembly.GetEntryAssembly()
                     };
@@ -118,7 +118,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
 
                     this._logger.LogInformation("[PLUGIN] Loaded All Required Dependencies 💉 {name}", name);
 
-                    var notAllowedDuplicateNamespace = new List<string> {
+                    var notAllowedDuplicateNamespace = new List<string>() {
                         this.GetType().Namespace
                     };
 

@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             IServiceProvider sourceServiceProvider
         ) {
             Type genericOptions = typeof(IOptions<>);
-            var genericOpenType = new HashSet<Type> {
+            var genericOpenType = new HashSet<Type>() {
                 typeof(ILogger<>)
             };
 
@@ -208,7 +208,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
         // 
         //     // // Optionally skip IHostedService, IHttpClientFactory, etc.
         //     // // You can add more filters based on your app
-        //     // var notAllowedType = new HashSet<Type> {
+        //     // var notAllowedType = new HashSet<Type>() {
         //     //     typeof(IHostedService),
         //     //     typeof(IHttpClientFactory),
         //     //     typeof(IHttpContextAccessor),

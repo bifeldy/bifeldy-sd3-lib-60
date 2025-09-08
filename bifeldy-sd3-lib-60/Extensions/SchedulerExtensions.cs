@@ -35,7 +35,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
         }
 
         public static Task<DateTimeOffset> ScheduleJobRunNow(this IScheduler scheduler, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action) {
-            var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> {
+            var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>>() {
                 { jobName, action }
             };
 
@@ -57,7 +57,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
         }
 
         public static Task<DateTimeOffset> ScheduleJobRunNowWithDelay(this IScheduler scheduler, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay) {
-            var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> {
+            var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>>() {
                 { jobName, action }
             };
 
@@ -83,7 +83,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
         }
 
         public static Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(this IScheduler scheduler, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval) {
-            var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> {
+            var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>>() {
                 { jobName, action }
             };
 

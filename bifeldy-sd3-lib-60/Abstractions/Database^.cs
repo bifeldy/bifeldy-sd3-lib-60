@@ -96,7 +96,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);
 
-            var existingAssemblies = new List<Assembly> {
+            var existingAssemblies = new List<Assembly>() {
                 Assembly.GetExecutingAssembly(),
                 Assembly.GetEntryAssembly()
             };
@@ -124,7 +124,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         public DbSet<TEntity> Set<TEntity>(string name = null, [CallerMemberName] string callerMemberName = null) where TEntity : EntityTableView {
-            var existingAssemblies = new List<Assembly> {
+            var existingAssemblies = new List<Assembly>() {
                 Assembly.GetExecutingAssembly(),
                 Assembly.GetEntryAssembly()
             };

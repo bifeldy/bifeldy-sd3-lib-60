@@ -101,7 +101,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 List<KeyValuePair<string, string>> excludeApiPath = new();
 
                 if (!this._app.DebugMode) {
-                    var existingAssemblies = new List<Assembly> {
+                    var existingAssemblies = new List<Assembly>() {
                         Assembly.GetExecutingAssembly(),
                         Assembly.GetEntryAssembly()
                     };
