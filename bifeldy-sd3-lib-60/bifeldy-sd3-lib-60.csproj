@@ -82,6 +82,9 @@
         <None Update="_assets\fonts\fre3of9x\fre3of9x.ttf">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="_assets\img\idmr.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Update="_assets\js\bootstrap.bundle.min.js">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
