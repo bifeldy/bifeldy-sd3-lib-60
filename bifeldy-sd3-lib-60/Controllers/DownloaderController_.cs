@@ -144,7 +144,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             break;
                         case "ZIP":
                             dirPath = this._gs.ZipFolderPath;
-                            mimeType = "application/zip";
+                            mimeType = "application/x-zip";
                             break;
                         default:
                             bool isFound = false;
