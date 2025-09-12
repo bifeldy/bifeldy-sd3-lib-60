@@ -34,19 +34,19 @@ namespace bifeldy_sd3_lib_60.Services {
         Image AddCaptionBar(Image qrImage, string caption, Color textColor, Color textBackgroundColor);
         Image AddCaptionQr(Image qrImage, string caption, Color textColor, Color textBackgroundColor);
         Image AddLogo(Image qrImage, Image logoImg, double logoScale, bool drawCircleBg = true);
-        Image GenerateBarCode(string content, int widthPx = 512, int heightPx = 192, bool withPadding = true);
+        Image GenerateBarCode(string content, int minWidthPx = 512, int heightPx = 192, bool withPadding = true);
         string ReadTextFromQrAndBarCode(Image bitmapImage);
-        Image GenerateQrCode(string content, int version = -1, int outputPx = 512);
+        Image GenerateQrCode(string content, int version = -1, int minSizePx = 512);
     }
 
     [SingletonServiceRegistration]
     public sealed class CQrBarService : IQrBarService {
 
+        private static readonly int MAX_RETRY = 5;
+
         public CQrBarService() {
             //
         }
-
-
 
         private void DrawCaption(Image<Rgba32> img, string caption, int fontSize, int fontPadding, Color textColor, Color textBackgroundColor) {
             Font font = SystemFonts.CreateFont("Arial", fontSize);
@@ -328,30 +328,44 @@ namespace bifeldy_sd3_lib_60.Services {
 
         /* ** */
 
-        public Image GenerateBarCode(string content, int widthPx = 512, int heightPx = 192, bool withPadding = true) {
-            var writer = new BarcodeWriter<Rgba32>() {
-                Format = ZXing.BarcodeFormat.CODE_128,
-                Options = new EncodingOptions() {
-                    PureBarcode = false,
-                    NoPadding = true,
-                    Margin = 0
+        public Image GenerateBarCode(string content, int minWidthPx = 512, int heightPx = 192, bool withPadding = true) {
+            int retry = 0;
+            int sizeLimit = minWidthPx;
+
+            while (retry <= MAX_RETRY) {
+                var writer = new BarcodeWriter<Rgba32>() {
+                    Format = ZXing.BarcodeFormat.CODE_128,
+                    Options = new EncodingOptions() {
+                        PureBarcode = false,
+                        NoPadding = true,
+                        Margin = 0
+                    }
+                };
+
+                int padding = withPadding ? 10 : 0;
+                var res = new Image<Rgba32>(sizeLimit, heightPx, Color.White);
+
+                using (Image<Rgba32> img = writer.Write(content)) {
+                    img.Mutate(x => {
+                        _ = x.Resize(new Size(sizeLimit - (padding * 2), heightPx - (padding * 2)));
+                    });
+
+                    res.Mutate(x => {
+                        _ = x.DrawImage(img, new Point(padding, padding), 1.0f);
+                    });
                 }
-            };
 
-            int padding = withPadding ? 10 : 0;
-            var res = new Image<Rgba32>(widthPx, heightPx, Color.White);
+                string qrText = this.ReadTextFromQrAndBarCode(res);
+                if (content == qrText) {
+                    return res;
+                }
 
-            using (Image<Rgba32> img = writer.Write(content)) {
-                img.Mutate(x => {
-                    _ = x.Resize(new Size(widthPx - (padding * 2), heightPx - (padding * 2)));
-                });
-
-                res.Mutate(x => {
-                    _ = x.DrawImage(img, new Point(padding, padding), 1.0f);
-                });
+                res.Dispose();
+                retry++;
+                sizeLimit = minWidthPx + (minWidthPx * retry / 2);
             }
 
-            return res;
+            throw new Exception("Hasil Bar Code Tidak Terbaca, Mohon Perbesar Resolusi");
         }
 
         public string ReadTextFromQrAndBarCode(Image bitmapImage) {
@@ -375,22 +389,36 @@ namespace bifeldy_sd3_lib_60.Services {
             return null;
         }
 
-        public Image GenerateQrCode(string content, int version = -1, int outputPx = 512) {
-            using (var qrGenerator = new QRCodeGenerator()) {
-                using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.L, requestedVersion: version)) {
-                    using (var qrCode = new PngByteQRCode(qrCodeData)) {
-                        byte[] img = qrCode.GetGraphic(20);
+        public Image GenerateQrCode(string content, int version = -1, int minSizePx = 512) {
+            int retry = 0;
+            int sizeLimit = minSizePx;
 
-                        var res = Image.Load(img);
+            while (retry <= MAX_RETRY) {
+                using (var qrGenerator = new QRCodeGenerator()) {
+                    using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.L, requestedVersion: version)) {
+                        using (var qrCode = new PngByteQRCode(qrCodeData)) {
+                            byte[] img = qrCode.GetGraphic(10);
 
-                        res.Mutate(x => {
-                            _ = x.Resize(new Size(outputPx, outputPx));
-                        });
+                            var res = Image.Load(img);
 
-                        return res;
+                            res.Mutate(x => {
+                                _ = x.Resize(new Size(sizeLimit, sizeLimit));
+                            });
+
+                            string qrText = this.ReadTextFromQrAndBarCode(res);
+                            if (content == qrText) {
+                                return res;
+                            }
+
+                            res.Dispose();
+                            retry++;
+                            sizeLimit = minSizePx + (minSizePx * retry / 2);
+                        }
                     }
                 }
             }
+
+            throw new Exception("Hasil QR Code Tidak Terbaca, Mohon Perbesar Resolusi");
         }
 
     }
