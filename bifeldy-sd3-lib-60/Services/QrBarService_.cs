@@ -361,12 +361,12 @@ namespace bifeldy_sd3_lib_60.Services {
                             return res;
                         }
 
-                        res.Dispose();
                         retry++;
                         sizeLimit = minWidthPx + (minWidthPx * retry / 2);
                     }
                 }
 
+                res.Dispose();
                 throw new Exception("Hasil Bar Code Tidak Terbaca, Mohon Perbesar Resolusi");
             }
         }
@@ -413,9 +413,10 @@ namespace bifeldy_sd3_lib_60.Services {
                                 return res;
                             }
 
-                            res.Dispose();
                             retry++;
                             sizeLimit = minSizePx + (minSizePx * retry / 2);
+
+                            res.Dispose();
                         }
 
                         throw new Exception("Hasil QR Code Tidak Terbaca, Mohon Perbesar Resolusi");
