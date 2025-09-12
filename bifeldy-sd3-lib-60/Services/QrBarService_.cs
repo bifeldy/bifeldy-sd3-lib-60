@@ -329,43 +329,46 @@ namespace bifeldy_sd3_lib_60.Services {
         /* ** */
 
         public Image GenerateBarCode(string content, int minWidthPx = 512, int heightPx = 192, bool withPadding = true) {
-            int retry = 0;
-            int sizeLimit = minWidthPx;
+            var writer = new BarcodeWriter<Rgba32>() {
+                Format = ZXing.BarcodeFormat.CODE_128,
+                Options = new EncodingOptions() {
+                    PureBarcode = false,
+                    NoPadding = true,
+                    Margin = 0
+                }
+            };
 
-            while (retry <= MAX_RETRY) {
-                var writer = new BarcodeWriter<Rgba32>() {
-                    Format = ZXing.BarcodeFormat.CODE_128,
-                    Options = new EncodingOptions() {
-                        PureBarcode = false,
-                        NoPadding = true,
-                        Margin = 0
-                    }
-                };
+            using (Image<Rgba32> generatedImage = writer.Write(content)) {
+                int retry = 0;
+                int sizeLimit = minWidthPx;
 
                 int padding = withPadding ? 10 : 0;
+                var drawLocation = new Point(padding, padding);
                 var res = new Image<Rgba32>(sizeLimit, heightPx, Color.White);
 
-                using (Image<Rgba32> img = writer.Write(content)) {
-                    img.Mutate(x => {
-                        _ = x.Resize(new Size(sizeLimit - (padding * 2), heightPx - (padding * 2)));
-                    });
+                while (retry <= MAX_RETRY) {
+                    using (Image<Rgba32> img = generatedImage.Clone()) {
+                        img.Mutate(x => {
+                            _ = x.Resize(new Size(sizeLimit - (padding * 2), heightPx - (padding * 2)));
+                        });
 
-                    res.Mutate(x => {
-                        _ = x.DrawImage(img, new Point(padding, padding), 1.0f);
-                    });
+                        res.Mutate(x => {
+                            _ = x.DrawImage(img, drawLocation, 1.0f);
+                        });
+
+                        string qrText = this.ReadTextFromQrAndBarCode(res);
+                        if (content == qrText) {
+                            return res;
+                        }
+
+                        res.Dispose();
+                        retry++;
+                        sizeLimit = minWidthPx + (minWidthPx * retry / 2);
+                    }
                 }
 
-                string qrText = this.ReadTextFromQrAndBarCode(res);
-                if (content == qrText) {
-                    return res;
-                }
-
-                res.Dispose();
-                retry++;
-                sizeLimit = minWidthPx + (minWidthPx * retry / 2);
+                throw new Exception("Hasil Bar Code Tidak Terbaca, Mohon Perbesar Resolusi");
             }
-
-            throw new Exception("Hasil Bar Code Tidak Terbaca, Mohon Perbesar Resolusi");
         }
 
         public string ReadTextFromQrAndBarCode(Image bitmapImage) {
@@ -390,15 +393,15 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public Image GenerateQrCode(string content, int version = -1, int minSizePx = 512) {
-            int retry = 0;
-            int sizeLimit = minSizePx;
+            using (var qrGenerator = new QRCodeGenerator()) {
+                using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.L, requestedVersion: version)) {
+                    using (var qrCode = new PngByteQRCode(qrCodeData)) {
+                        byte[] img = qrCode.GetGraphic(10);
 
-            while (retry <= MAX_RETRY) {
-                using (var qrGenerator = new QRCodeGenerator()) {
-                    using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.L, requestedVersion: version)) {
-                        using (var qrCode = new PngByteQRCode(qrCodeData)) {
-                            byte[] img = qrCode.GetGraphic(10);
+                        int retry = 0;
+                        int sizeLimit = minSizePx;
 
+                        while (retry <= MAX_RETRY) {
                             var res = Image.Load(img);
 
                             res.Mutate(x => {
@@ -414,11 +417,11 @@ namespace bifeldy_sd3_lib_60.Services {
                             retry++;
                             sizeLimit = minSizePx + (minSizePx * retry / 2);
                         }
+
+                        throw new Exception("Hasil QR Code Tidak Terbaca, Mohon Perbesar Resolusi");
                     }
                 }
             }
-
-            throw new Exception("Hasil QR Code Tidak Terbaca, Mohon Perbesar Resolusi");
         }
 
     }
