@@ -344,9 +344,10 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 int padding = withPadding ? 10 : 0;
                 var drawLocation = new Point(padding, padding);
-                var res = new Image<Rgba32>(sizeLimit, heightPx, Color.White);
 
                 while (retry <= MAX_RETRY) {
+                    var res = new Image<Rgba32>(sizeLimit, heightPx, Color.White);
+
                     using (Image<Rgba32> img = generatedImage.Clone()) {
                         img.Mutate(x => {
                             _ = x.Resize(new Size(sizeLimit - (padding * 2), heightPx - (padding * 2)));
@@ -364,9 +365,10 @@ namespace bifeldy_sd3_lib_60.Services {
                         retry++;
                         sizeLimit = minWidthPx + (minWidthPx * retry / 2);
                     }
+
+                    res.Dispose();
                 }
 
-                res.Dispose();
                 throw new Exception("Hasil Bar Code Tidak Terbaca, Mohon Perbesar Resolusi");
             }
         }
