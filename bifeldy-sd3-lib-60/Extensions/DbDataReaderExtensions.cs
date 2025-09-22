@@ -10,6 +10,7 @@
  * 
  */
 
+using Confluent.Kafka;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
@@ -106,7 +107,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return text;
                     }));
 
-                    await streamWriter.WriteAsync(header.AsMemory(), token);
+                    await streamWriter.WriteLineAsync(header.AsMemory(), token);
                 }
 
                 while (await dr.ReadAsync(token)) {
@@ -129,7 +130,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return text;
                     }));
 
-                    await streamWriter.WriteAsync(line.AsMemory(), token);
+                    await streamWriter.WriteLineAsync(line.AsMemory(), token);
                 }
             }
         }

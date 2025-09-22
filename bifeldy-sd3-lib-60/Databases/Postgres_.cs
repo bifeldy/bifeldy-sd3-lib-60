@@ -391,7 +391,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                 using (TextReader reader = await ((NpgsqlConnection)this.GetConnection()).BeginTextExportAsync(sqlQuery, token)) {
                     using (var writer = new StreamWriter(tempPath, true, encoding)) {
                         string line = string.Empty;
-                        while ((line = reader.ReadLine()) != null && !token.IsCancellationRequested) {
+                        while ((line = await reader.ReadLineAsync()) != null && !token.IsCancellationRequested) {
                             if (allUppercase) {
                                 line = line.ToUpper();
                             }
@@ -402,7 +402,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                                 }
                             }
 
-                            writer.WriteLine(line);
+                            await writer.WriteLineAsync(line.AsMemory(), token);
                         }
                     }
                 }

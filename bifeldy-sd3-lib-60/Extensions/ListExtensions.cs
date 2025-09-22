@@ -113,7 +113,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         return text;
                     }));
 
-                    await streamWriter.WriteAsync(line.AsMemory(), token);
+                    await streamWriter.WriteLineAsync(line.AsMemory(), token);
                 }
             }
         }
