@@ -34,7 +34,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 int index = value.IndexOf(BUILD_VERSION_METADATA_PREFIX);
                 if (index > 0) {
                     value = value[(index + BUILD_VERSION_METADATA_PREFIX.Length)..];
-                    return DateTime.ParseExact(value, "yyyy-MM-ddTHH:mm:ss:fffZ", CultureInfo.InvariantCulture);
+                    try {
+                        return DateTime.ParseExact(value, "yyyy-MM-ddTHH:mm:ss:fffZ", CultureInfo.InvariantCulture);
+                    }
+                    catch {
+                        return null;
+                    }
                 }
             }
 
