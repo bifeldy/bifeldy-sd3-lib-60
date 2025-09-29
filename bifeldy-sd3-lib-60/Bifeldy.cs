@@ -180,9 +180,7 @@ namespace bifeldy_sd3_lib_60 {
             PLUGINS_PROJECT_NAMESPACE = projectNamespace;
 
             string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
-            if (!Directory.Exists(pluginFolderPath)) {
-                _ = Directory.CreateDirectory(pluginFolderPath);
-            }
+            _ = Directory.CreateDirectory(pluginFolderPath);
 
             _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
             _ = Services.AddSingleton<IActionDescriptorChangeProvider>(CDynamicActionDescriptorChangeProvider.Instance);
@@ -389,9 +387,7 @@ namespace bifeldy_sd3_lib_60 {
             string appPathDir = AppDomain.CurrentDomain.BaseDirectory;
 
             string folderPath = Path.Combine(appPathDir, DEFAULT_DATA_FOLDER, "protobuf-net");
-            if (!Directory.Exists(folderPath)) {
-                _ = Directory.CreateDirectory(folderPath);
-            }
+            _ = Directory.CreateDirectory(folderPath);
 
             if (!File.Exists(Path.Combine(folderPath, "bcl.proto"))) {
                 File.Copy(

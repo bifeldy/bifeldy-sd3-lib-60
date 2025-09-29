@@ -74,29 +74,19 @@ namespace bifeldy_sd3_lib_60.Services {
             // --
 
             this.BackupFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.BACKUP_FOLDER_PATH);
-            if (!Directory.Exists(this.BackupFolderPath)) {
-                _ = Directory.CreateDirectory(this.BackupFolderPath);
-            }
+            _ = Directory.CreateDirectory(this.BackupFolderPath);
 
             this.TempFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.TEMP_FOLDER_PATH);
-            if (!Directory.Exists(this.TempFolderPath)) {
-                _ = Directory.CreateDirectory(this.TempFolderPath);
-            }
+            _ = Directory.CreateDirectory(this.TempFolderPath);
 
             this.DownloadFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.DOWNLOAD_FOLDER_PATH);
-            if (!Directory.Exists(this.DownloadFolderPath)) {
-                _ = Directory.CreateDirectory(this.DownloadFolderPath);
-            }
+            _ = Directory.CreateDirectory(this.DownloadFolderPath);
 
             this.CsvFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.CSV_FOLDER_PATH);
-            if (!Directory.Exists(this.CsvFolderPath)) {
-                _ = Directory.CreateDirectory(this.CsvFolderPath);
-            }
+            _ = Directory.CreateDirectory(this.CsvFolderPath);
 
             this.ZipFolderPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.ZIP_FOLDER_PATH);
-            if (!Directory.Exists(this.ZipFolderPath)) {
-                _ = Directory.CreateDirectory(this.ZipFolderPath);
-            }
+            _ = Directory.CreateDirectory(this.ZipFolderPath);
         }
 
         public string GetSecretData(HttpRequest request, RequestJson reqBody) {

@@ -25,7 +25,7 @@ namespace bifeldy_sd3_lib_60.Services {
     public interface IBerkasService {
         void DeleteSingleFileInFolder(string fileName, string folderPath = null);
         void DeleteOldFilesInFolder(string folderPath, int maxOldHours, bool isInRecursive = false);
-        void CleanUp(bool clearWorkingFileDirectories = true);
+        void CleanUp(bool clearWorkingFileDirectories = true, int? maxOldHours = null);
         void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false);
         void BackupAllFilesInFolder(string folderPath);
         bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true, Encoding encoding = null);
@@ -92,15 +92,15 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public void CleanUp(bool clearWorkingFileDirectories = true) {
+        public void CleanUp(bool clearWorkingFileDirectories = true, int? maxOldHours = null) {
             int daysFromHours = this._envVar.MAX_RETENTIONS_DAYS * 24; // Pakainya Jam
             this.DeleteOldFilesInFolder(Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "logs"), daysFromHours);
             this.DeleteOldFilesInFolder(this._gs.BackupFolderPath, daysFromHours);
             if (clearWorkingFileDirectories) {
-                this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, daysFromHours);
-                this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, daysFromHours);
-                this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, daysFromHours);
-                this.DeleteOldFilesInFolder(this._gs.TempFolderPath, daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.CsvFolderPath, maxOldHours ?? daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.ZipFolderPath, maxOldHours ?? daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.DownloadFolderPath, maxOldHours ?? daysFromHours);
+                this.DeleteOldFilesInFolder(this._gs.TempFolderPath, maxOldHours ?? daysFromHours);
             }
         }
 

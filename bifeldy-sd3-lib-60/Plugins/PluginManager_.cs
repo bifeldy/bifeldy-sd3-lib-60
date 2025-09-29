@@ -318,9 +318,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             for (int i = 0; i < maxRetries; i++) {
                 try {
                     string tempFolderPath = Path.GetDirectoryName(destinationPath);
-                    if (!Directory.Exists(tempFolderPath)) {
-                        _ = Directory.CreateDirectory(tempFolderPath);
-                    }
+                    _ = Directory.CreateDirectory(tempFolderPath);
 
                     File.Copy(sourcePath, destinationPath, overwrite: true);
                     return true;

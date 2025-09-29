@@ -94,7 +94,8 @@ namespace bifeldy_sd3_lib_60.Controllers {
                                 string dataPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER);
                                 return !p.Contains("appsettings.json") && !p.Contains(dataPath);
                             })
-                            .Select(p => new FileInfo(p));
+                            .Select(p => new FileInfo(p))
+                            .OrderBy(fi => fi.Name);
                             // .OrderByDescending(fi => fi.LastWriteTime);
 
                         foreach (FileInfo fi in fileInfos) {
@@ -148,10 +149,12 @@ namespace bifeldy_sd3_lib_60.Controllers {
                         default:
                             bool isFound = false;
 
-                            if (this._rdlc.FileType.ContainsKey(fileType)) {
-                                isFound = true;
-                                dirPath = this._gs.TempFolderPath;
-                                mimeType = this._rdlc.FileType[fileType].contentType;
+                            if (!string.IsNullOrEmpty(fileType)) {
+                                if (this._rdlc.FileType.ContainsKey(fileType)) {
+                                    isFound = true;
+                                    dirPath = this._gs.TempFolderPath;
+                                    mimeType = this._rdlc.FileType[fileType].contentType;
+                                }
                             }
 
                             if (!isFound) {
@@ -221,7 +224,15 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     this.Response.Headers.Add("md5", checksum);
 
                     if (string.IsNullOrEmpty(mimeType)) {
-                        mimeType = this._chiper.GetMimeFile(fi.FullName);
+                        string tempPath = Path.GetTempPath();
+                        string tempFileName = Path.GetTempFileName();
+
+                        string destinationFilePath = Path.Combine(tempPath, Path.GetFileName(tempFileName));
+                        System.IO.File.Copy(fi.FullName, destinationFilePath, true);
+
+                        mimeType = this._chiper.GetMimeFile(destinationFilePath);
+
+                        System.IO.File.Delete(destinationFilePath);
                     }
 
                     if (!string.IsNullOrEmpty(compareMd5)) {
