@@ -11,7 +11,14 @@
  * 
  */
 
+using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Web;
+
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -37,6 +44,7 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<(string, string)> ParseHttpRequestBodyJsonString(HttpRequest request);
         Task<T> GetHttpRequestBody<T>(HttpRequest request);
         bool IsAllowedRoutingTarget(Type hideType, string kodeDc, EJenisDc jenisDc, bool isSwaggerApiDocs = false);
+        Task CheckDownloadUpdate(string apiUpdaterUrl, Dictionary<string, object> HashFileFromServer);
     }
 
     [SingletonServiceRegistration]
@@ -47,6 +55,9 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly ILogger<CGlobalService> _logger;
         private readonly IApplicationService _as;
         private readonly IConverterService _cs;
+        private readonly IChiperService _chiper;
+        private readonly IHostApplicationLifetime _host;
+        private readonly IHttpService _http;
 
         public string BackupFolderPath { get; set; }
         public string TempFolderPath { get; set; }
@@ -64,12 +75,18 @@ namespace bifeldy_sd3_lib_60.Services {
             IOptions<EnvVar> envVar,
             ILogger<CGlobalService> logger,
             IApplicationService @as,
-            IConverterService cs
+            IConverterService cs,
+            IChiperService chiper,
+            IHostApplicationLifetime host,
+            IHttpService http
         ) {
             this._envVar = envVar.Value;
             this._logger = logger;
             this._as = @as;
             this._cs = cs;
+            this._chiper = chiper;
+            this._host = host;
+            this._http = http;
 
             // --
 
@@ -279,6 +296,166 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return isVisibleAllowed;
+        }
+
+
+
+        public async Task CheckDownloadUpdate(string apiUpdaterUrl, Dictionary<string, object> HashFileFromServer) {
+            string updaterFolder = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "updater");
+            if (Directory.Exists(updaterFolder)) {
+                Directory.Delete(updaterFolder, true);
+            }
+
+            _ = Directory.CreateDirectory(updaterFolder);
+
+            bool needUpdate = false;
+            foreach (KeyValuePair<string, object> hashFile in HashFileFromServer) {
+                string remoteFileName = hashFile.Key;
+                string remoteFileHash = hashFile.Value.ToString();
+
+                string localFilePath = Path.Combine(this._as.AppLocation, remoteFileName);
+                string localFileHash = File.Exists(localFilePath) ? this._chiper.CalculateCRC32File(localFilePath) : null;
+
+                if (localFileHash != remoteFileHash) {
+                    var uriBuilder = new UriBuilder(apiUpdaterUrl);
+                    NameValueCollection queryParams = HttpUtility.ParseQueryString(uriBuilder.Query);
+                    queryParams["fileName"] = remoteFileName;
+                    uriBuilder.Query = queryParams.ToString();
+
+                    HttpResponseMessage fileResponse = await this._http.GetData(uriBuilder.ToString(), timeoutSeconds: 10, maxRetry: 3);
+                    if (!fileResponse.IsSuccessStatusCode) {
+                        throw new Exception($"Gagal download {remoteFileName}");
+                    }
+
+                    string downloadedFilePath = Path.Combine(updaterFolder, remoteFileName);
+                    _ = Directory.CreateDirectory(Path.GetDirectoryName(downloadedFilePath)!);
+                    await File.WriteAllBytesAsync(downloadedFilePath, await fileResponse.Content.ReadAsByteArrayAsync());
+
+                    needUpdate = true;
+                }
+            }
+
+            if (!needUpdate) {
+                return;
+            }
+
+            string logPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "updater.log");
+            int pid = Process.GetCurrentProcess().Id;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                string scriptPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "updater.sh");
+                string scriptContent = $@"
+#!/bin/bash
+updaterFolder='{updaterFolder}'
+appLocation='{this._as.AppLocation.TrimEnd('\\', '/')}'
+
+copied=false
+tries=0
+while [ $tries -lt 10 ]; do
+    cp -r ""$updaterFolder""/* ""$appLocation"" 2>""{logPath}"" && copied=true && break
+    tries=$((tries+1))
+    sleep 2
+done
+
+if [ ""$copied"" = true ]; then
+    rm -rf ""$updaterFolder""
+else
+    echo ""Failed to copy after $tries attempts"" >> ""{logPath}""
+fi
+
+# self-delete
+rm -- ""$0""
+                                ";
+
+                File.WriteAllText(scriptPath, scriptContent.Replace("\r\n", "\n"), new UTF8Encoding(false));
+
+                var chmod = Process.Start(new ProcessStartInfo("chmod", $"+x \"{scriptPath}\"") {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+
+                await chmod.WaitForExitAsync();
+
+                var proc = Process.Start(new ProcessStartInfo("/bin/bash", $"-c \"nohup '{scriptPath}' >/dev/null 2>&1 & disown\"") {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+
+                await proc.WaitForExitAsync();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                bool isIIS = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_IIS_HTTPAUTH")) ||
+                             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_PORT"));
+
+                string scriptPath = Path.Combine(Path.GetTempPath(), $"updater_{pid}.cmd");
+                string appOffline = Path.Combine(this._as.AppLocation, "app_offline.htm");
+
+                string scriptContent;
+                if (isIIS) {
+                    scriptContent = $@"
+@echo off
+echo Updating... > ""{appOffline}""
+
+:waitproc
+tasklist /fi ""PID eq {pid}"" | findstr {pid} >nul
+if %errorlevel%==0 (timeout /t 1 /nobreak >nul & goto waitproc)
+
+set copied=false
+set /a tries=0
+
+:retrycopy
+set /a tries+=1
+xcopy ""{updaterFolder}\*"" ""{this._as.AppLocation}"" /Y /E /I > ""{logPath}"" 2>&1
+if %errorlevel% LEQ 1 (set copied=true & goto copydone)
+
+if %tries% GEQ 10 goto copyfail
+timeout /t 2 /nobreak >nul
+goto retrycopy
+
+:copydone
+rmdir /s /q ""{updaterFolder}""
+del /f /q ""{appOffline}""
+del /f /q ""%~f0""
+exit /b 0
+
+:copyfail
+echo Failed to copy after %tries% attempts >> ""{logPath}""
+del /f /q ""{appOffline}""
+del /f /q ""%~f0""
+exit /b 1
+                                    ";
+                }
+                else {
+                    scriptContent = $@"
+@echo off
+:waitproc
+tasklist /fi ""PID eq {pid}"" | findstr {pid} >nul
+if %errorlevel%==0 (timeout /t 1 /nobreak >nul & goto waitproc)
+
+xcopy ""{updaterFolder}\*"" ""{this._as.AppLocation}"" /Y /E /I > ""{logPath}"" 2>&1
+rmdir /s /q ""{updaterFolder}""
+del /f /q ""%~f0""
+exit /b 0
+";
+                }
+
+                File.WriteAllText(scriptPath, scriptContent, new UTF8Encoding(false));
+
+                var proc = Process.Start(new ProcessStartInfo("cmd.exe", $"/c \"{scriptPath}\"") {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+
+                proc.EnableRaisingEvents = true;
+                proc.Exited += (s, e) => {
+                    File.Delete(scriptPath);
+                };
+            }
+            else {
+                throw new Exception("Platform not supported for auto update");
+            }
+
+            this._host.StopApplication();
         }
 
     }
