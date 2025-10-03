@@ -141,7 +141,14 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 throw new Exception("Belum Mendukung Fitur Entity-Framework Database Table Untuk Digunakan Plug-&-Play Saat Run-Time Di Luar Project (Misal Plugin)");
             }
 
-            return string.IsNullOrEmpty(name) ? base.Set<TEntity>(name) : base.Set<TEntity>();
+            DbSet<TEntity> db = string.IsNullOrEmpty(name) ? base.Set<TEntity>(name) : base.Set<TEntity>();
+
+            KeylessAttribute keyless = typeof(TEntity).GetCustomAttribute<KeylessAttribute>();
+            if (keyless != null) {
+                _ = db.AsNoTracking();
+            }
+
+            return db;
         }
 
         public object Clone() => this.MemberwiseClone();
