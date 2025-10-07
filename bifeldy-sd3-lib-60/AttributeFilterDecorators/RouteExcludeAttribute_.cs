@@ -18,6 +18,10 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
         //
     }
 
+    public abstract class SwaggerDefinitionsAttribute : RouteExcludeAttribute {
+        //
+    }
+
     /* ** */
 
     public class ApiHideKonsolidasiCbnAttribute : RouteExcludeAttribute {
@@ -67,6 +71,36 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
     }
 
     public class DenyAccessSewaAttribute : ApiHideAllDcAttribute {
+        //
+    }
+
+    /* ** */
+
+    public class ApiDocsSD1Attribute : SwaggerDefinitionsAttribute {
+        //
+    }
+
+    public class ApiDocsSD2Attribute : SwaggerDefinitionsAttribute {
+        //
+    }
+
+    public class ApiDocsSD3Attribute : SwaggerDefinitionsAttribute {
+        //
+    }
+
+    public class ApiDocsSD4Attribute : SwaggerDefinitionsAttribute {
+        //
+    }
+
+    public class ApiDocsSD5Attribute : SwaggerDefinitionsAttribute {
+        //
+    }
+
+    public class ApiDocsSD6Attribute : SwaggerDefinitionsAttribute {
+        //
+    }
+
+    public class ApiDocsSD7Attribute : SwaggerDefinitionsAttribute {
         //
     }
 

@@ -67,17 +67,31 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._generalRepo = generalRepo;
         }
 
+        private bool CheckApiEdition(IEnumerable<Attribute> attribs, string edition) {
+            bool isVisible = true;
+
+            if (attribs.Any()) {
+                IEnumerable<Attribute> selectedCategory = attribs.Where(a => a.GetType().Name == edition);
+                isVisible = selectedCategory.Any();
+            }
+
+            return isVisible;
+        }
+
         [HttpGet]
         [SwaggerOperation(Summary = "Untuk Ambil Docs Swagger saja")]
-        public async Task<IActionResult> SwaggerData() {
+        public async Task<IActionResult> SwaggerData(
+            [FromQuery, SwaggerParameter("Edisi Tampilan Dokumentasi API", Required = false)] string e = null
+        ) {
             try {
                 _ = await this._locker.SemaphoreGlobalApp("SWAGGER").WaitAsync(-1);
 
-                OpenApiDocument swaggerDoc = this._provider.GetSwagger(this._app.AppVersion);
+                e ??= this._app.AppVersion;
+                OpenApiDocument swaggerDoc = this._provider.GetSwagger(e);
 
                 var openApiServers = new List<OpenApiServer>();
 
-                if (!this._app.DebugMode && this.HttpContext.Request.Headers.TryGetValue(Bifeldy.NGINX_PATH_NAME, out StringValues pathBase)) {
+                if (!this._app.DebugMode &&this.HttpContext.Request.Headers.TryGetValue(Bifeldy.NGINX_PATH_NAME, out StringValues pathBase)) {
                     string proxyPath = pathBase.Last();
 
                     if (!string.IsNullOrEmpty(proxyPath)) {
@@ -123,11 +137,18 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                         bool isVisible = true;
 
-                        IEnumerable<Attribute> attribs = controllerType.GetCustomAttributes()
+                        IEnumerable<Attribute> attribsRouting = controllerType.GetCustomAttributes()
                             .Where(t => typeof(RouteExcludeAttribute).IsAssignableFrom(t.GetType()));
 
-                        foreach (RouteExcludeAttribute attrib in attribs) {
+                        foreach (RouteExcludeAttribute attrib in attribsRouting) {
                             isVisible = this._gs.IsAllowedRoutingTarget(attrib.GetType(), kodeDc, jenisDc, true);
+
+                            if (isVisible && e != this._app.AppVersion) {
+                                IEnumerable<Attribute> attribsOtherDepartmentCategory = controllerType.GetCustomAttributes()
+                                    .Where(t => typeof(SwaggerDefinitionsAttribute).IsAssignableFrom(t.GetType()));
+
+                                isVisible = this.CheckApiEdition(attribsOtherDepartmentCategory, e);
+                            }
 
                             if (!isVisible) {
                                 string httpMethod = "ALL";
@@ -145,11 +166,18 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             foreach (MethodInfo method in methods) {
                                 string actionRoutePath = "/";
 
-                                attribs = method.GetCustomAttributes()
+                                attribsRouting = method.GetCustomAttributes()
                                     .Where(t => typeof(RouteExcludeAttribute).IsAssignableFrom(t.GetType()));
 
-                                foreach (RouteExcludeAttribute attrib in attribs) {
+                                foreach (RouteExcludeAttribute attrib in attribsRouting) {
                                     isVisible = this._gs.IsAllowedRoutingTarget(attrib.GetType(), kodeDc, jenisDc, true);
+
+                                    if (isVisible && e != this._app.AppVersion) {
+                                        IEnumerable<Attribute> attribsOtherDepartmentCategory = method.GetCustomAttributes()
+                                            .Where(t => typeof(SwaggerDefinitionsAttribute).IsAssignableFrom(t.GetType()));
+
+                                        isVisible = this.CheckApiEdition(attribsOtherDepartmentCategory, e);
+                                    }
 
                                     if (!isVisible) {
                                         IEnumerable<HttpMethodAttribute> hma = method.GetCustomAttributes()

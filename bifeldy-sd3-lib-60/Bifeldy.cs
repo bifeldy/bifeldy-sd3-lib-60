@@ -224,7 +224,8 @@ namespace bifeldy_sd3_lib_60 {
             string docsTitle = null,
             string docsDescription = null,
             bool enableApiKey = true,
-            bool enableJwt = false
+            bool enableJwt = false,
+            IDictionary<string, OpenApiInfo> oaDef = null
         ) {
             API_PREFIX = swaggerPrefix;
 
@@ -239,6 +240,12 @@ namespace bifeldy_sd3_lib_60 {
                     Title = docsTitle ?? App.Environment.ApplicationName,
                     Description = docsDescription ?? "API Documentation ~"
                 });
+
+                if (oaDef != null) {
+                    foreach (KeyValuePair<string, OpenApiInfo> oa in oaDef) {
+                        c.SwaggerDoc(oa.Key, oa.Value);
+                    }
+                }
 
                 if (enableApiKey) {
                     var apiKey = new OpenApiSecurityScheme() {
@@ -296,7 +303,8 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         public static void UseSwagger(
-            string proxyHeaderName = "x-forwarded-prefix"
+            string proxyHeaderName = "x-forwarded-prefix",
+            IDictionary<string, OpenApiInfo> oaDef = null
         ) {
             NGINX_PATH_NAME = proxyHeaderName;
 
@@ -309,6 +317,12 @@ namespace bifeldy_sd3_lib_60 {
                 string swaggerName = Assembly.GetEntryAssembly().GetName().Version.ToString();
 
                 c.SwaggerEndpoint(swaggerUrl, swaggerName);
+
+                if (oaDef != null) {
+                    foreach (KeyValuePair<string, OpenApiInfo> oa in oaDef) {
+                        c.SwaggerEndpoint($"{swaggerUrl}?e={oa.Key}", oa.Value.Title);
+                    }
+                }
 
                 c.DefaultModelsExpandDepth(-1);
             });
