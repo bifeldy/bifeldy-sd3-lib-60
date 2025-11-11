@@ -74,7 +74,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
                     }
                 }
 
-                this.UnloadPlugin(name);
+                this.UnloadPlugin(name, false, reloadDynamicApiPluginRouteEndpoint);
 
                 string tempPath = Path.Combine(
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Bifeldy.DEFAULT_DATA_FOLDER, this._envVar.TEMP_FOLDER_PATH),
@@ -210,7 +210,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
             }
             catch (Exception ex) {
                 this._logger.LogError("[PLUGIN] Error '{pluginName}' 💉 {name}", name, ex.Message);
-                this.UnloadPlugin(name);
+                this.UnloadPlugin(name, false, reloadDynamicApiPluginRouteEndpoint);
                 throw;
             }
         }
@@ -281,7 +281,7 @@ namespace bifeldy_sd3_lib_60.Plugins {
         public void UnloadAll(bool skipGC = false) {
             foreach (string key in LOADED_PLUGIN.Keys.ToArray()) {
                 try {
-                    this.UnloadPlugin(key, skipGC);
+                    this.UnloadPlugin(key, skipGC, false);
                 }
                 catch {
                     this._logger.LogError("[PLUGIN] Failed to Unload 💉 {key}", key);

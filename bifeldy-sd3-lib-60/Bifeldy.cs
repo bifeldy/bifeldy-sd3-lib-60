@@ -750,24 +750,33 @@ namespace bifeldy_sd3_lib_60 {
                                 CPluginWatcherCoordinator pwc = context.RequestServices.GetRequiredService<CPluginWatcherCoordinator>();
 
                                 if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
-                                    pwc.Context.Manager.LoadPlugin(pluginName);
+                                    pwc.Context.Manager.LoadPlugin(pluginName, true);
+
+                                    await Task.Delay(1500);
+
+                                    context.Response.Clear();
+                                    context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
+                                    await context.Response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                                        info = $"408 - Whoops :: API Plugin `{pluginName}` Loaded",
+                                        result = new ResponseJsonMessage() {
+                                            message = "Silahkan Ulang Kembali Permintaan Anda"
+                                        }
+                                    });
                                 }
+                                else {
+                                    IServiceProvider hostServiceProvider = App.Services;
+                                    IServiceProvider pluginServiceProvider = pwc.Context.Manager.GetServiceProvider(pluginName);
 
-                                if (!pwc.Context.Manager.IsPluginLoaded(pluginName)) {
-                                    throw new Exception($"Tidak Dapat Memuat Plugin '{pluginName}'");
+                                    var pluginServiceScopeFactory = new PluginServiceScopeFactory(
+                                        pluginServiceProvider,
+                                        hostServiceProvider
+                                    );
+
+                                    IServiceScope scopedPluginServiceProvider = pluginServiceScopeFactory.CreateScope();
+                                    context.RequestServices = scopedPluginServiceProvider.ServiceProvider;
+
+                                    await next();
                                 }
-
-                                IServiceProvider hostServiceProvider = App.Services;
-                                IServiceProvider pluginServiceProvider = pwc.Context.Manager.GetServiceProvider(pluginName);
-
-                                var pluginServiceScopeFactory = new PluginServiceScopeFactory(
-                                    pluginServiceProvider,
-                                    hostServiceProvider
-                                );
-
-                                IServiceScope scopedPluginServiceProvider = pluginServiceScopeFactory.CreateScope();
-                                context.RequestServices = scopedPluginServiceProvider.ServiceProvider;
-                                await next();
                             }
                             catch (Exception ex) {
                                 context.Response.Clear();
