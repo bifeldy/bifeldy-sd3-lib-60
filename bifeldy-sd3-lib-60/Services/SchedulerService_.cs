@@ -19,6 +19,7 @@ using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -28,9 +29,9 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<int> JumlahJobYangSedangBerjalan(string jobName);
         Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, Func<Task<bool>> forceCreateNew = null);
         Task<bool> CheckJobIsCompleted(string jobName, IDatabase db, Func<Task<bool>> additionalAndCheck = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
         Task CancelAndDeleteJob(JobKey[] jobKeys, IDatabase db, string reason = "Job Dibatalkan");
     }
 
@@ -39,13 +40,16 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IScheduler _scheduler;
         private readonly IApplicationService _app;
+        private readonly IGeneralRepository _generalRepo;
 
         public CSchedulerService(
             IScheduler scheduler,
-            IApplicationService app
+            IApplicationService app,
+            IGeneralRepository _generalRepo
         ) {
             this._scheduler = scheduler;
             this._app = app;
+            this._generalRepo = _generalRepo;
         }
 
         public async Task<JobExecutionException> CreateThrowRetry(string jobName, IJobExecutionContext ctx, Exception ex, int delaySecond = 1) {
@@ -212,16 +216,37 @@ namespace bifeldy_sd3_lib_60.Services {
             return isJobCompleted;
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null) {
-            return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNow(jobName, action) : null;
+        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null) {
+            bool isNeedToCreateNew = await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew);
+            if (isNeedToCreateNew) {
+                string kodeDc = await this._generalRepo.GetKodeDc(isPg, db);
+                return await this._scheduler.ScheduleJobRunNow(kodeDc, jobName, action);
+            }
+            else {
+                return null;
+            }
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
-            return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelay(jobName, action, initialDelay) : null;
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
+            bool isNeedToCreateNew = await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew);
+            if (isNeedToCreateNew) {
+                string kodeDc = await this._generalRepo.GetKodeDc(isPg, db);
+                return await this._scheduler.ScheduleJobRunNowWithDelay(kodeDc, jobName, action, initialDelay);
+            }
+            else {
+                return null;
+            }
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
-            return await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew) ? await this._scheduler.ScheduleJobRunNowWithDelayInterval(jobName, action, initialDelay, interval) : null;
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
+            bool isNeedToCreateNew = await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew);
+            if (isNeedToCreateNew) {
+                string kodeDc = await this._generalRepo.GetKodeDc(isPg, db);
+                return await this._scheduler.ScheduleJobRunNowWithDelayInterval(kodeDc, jobName, action, initialDelay, interval);
+            }
+            else {
+                return null;
+            }
         }
 
         public async Task CancelAndDeleteJob(JobKey[] jobKeys, IDatabase db, string reason = "Job Dibatalkan") {

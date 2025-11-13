@@ -20,7 +20,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         private const string SCHEDULER_HIT_AND_RUN_GROUP = "HIT_AND_RUN";
 
-        public static Task<DateTimeOffset> ScheduleJobRunNow(this IScheduler scheduler, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action) {
+        public static Task<DateTimeOffset> ScheduleJobRunNow(this IScheduler scheduler, string serverKunciDc, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action) {
             string jobName = string.Join("___", action.Select(a => a.Key));
             var jobData = new JobDataMap();
 
@@ -28,21 +28,21 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 jobData.Add(kvp.Key, kvp.Value);
             }
 
-            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).Build();
+            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).WithDescription(serverKunciDc).Build();
             ITrigger trigger = TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(1))).Build();
 
             return scheduler.ScheduleJob(jobDetail, trigger);
         }
 
-        public static Task<DateTimeOffset> ScheduleJobRunNow(this IScheduler scheduler, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action) {
+        public static Task<DateTimeOffset> ScheduleJobRunNow(this IScheduler scheduler, string serverKunciDc, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action) {
             var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>>() {
                 { jobName, action }
             };
 
-            return scheduler.ScheduleJobRunNow(jobData);
+            return scheduler.ScheduleJobRunNow(serverKunciDc, jobData);
         }
 
-        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelay(this IScheduler scheduler, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay) {
+        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelay(this IScheduler scheduler, string serverKunciDc, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay) {
             string jobName = string.Join("___", action.Select(a => a.Key));
             var jobData = new JobDataMap();
 
@@ -50,21 +50,21 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 jobData.Add(kvp.Key, kvp.Value);
             }
 
-            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).Build();
+            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).WithDescription(serverKunciDc).Build();
             ITrigger trigger = TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow.Add(initialDelay)).Build();
 
             return scheduler.ScheduleJob(jobDetail, trigger);
         }
 
-        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelay(this IScheduler scheduler, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay) {
+        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelay(this IScheduler scheduler, string serverKunciDc, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay) {
             var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>>() {
                 { jobName, action }
             };
 
-            return scheduler.ScheduleJobRunNowWithDelay(jobData, initialDelay);
+            return scheduler.ScheduleJobRunNowWithDelay(serverKunciDc, jobData, initialDelay);
         }
 
-        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(this IScheduler scheduler, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay, TimeSpan interval) {
+        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(this IScheduler scheduler, string serverKunciDc, IDictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>> action, TimeSpan initialDelay, TimeSpan interval) {
             string jobName = string.Join("___", action.Select(a => a.Key));
             var jobData = new JobDataMap();
 
@@ -72,7 +72,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 jobData.Add(kvp.Key, kvp.Value);
             }
 
-            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).Build();
+            IJobDetail jobDetail = JobBuilder.Create<GenericJob>().WithIdentity(jobName, SCHEDULER_HIT_AND_RUN_GROUP).UsingJobData(jobData).WithDescription(serverKunciDc).Build();
 
             ITrigger trigger = TriggerBuilder.Create()
                 .StartAt(DateTimeOffset.UtcNow.Add(initialDelay))
@@ -82,12 +82,12 @@ namespace bifeldy_sd3_lib_60.Extensions {
             return scheduler.ScheduleJob(jobDetail, trigger);
         }
 
-        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(this IScheduler scheduler, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval) {
+        public static Task<DateTimeOffset> ScheduleJobRunNowWithDelayInterval(this IScheduler scheduler, string serverKunciDc, string jobName, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval) {
             var jobData = new Dictionary<string, Func<IJobExecutionContext, IServiceProvider, Task>>() {
                 { jobName, action }
             };
 
-            return scheduler.ScheduleJobRunNowWithDelayInterval(jobData, initialDelay, interval);
+            return scheduler.ScheduleJobRunNowWithDelayInterval(serverKunciDc, jobData, initialDelay, interval);
         }
 
     }

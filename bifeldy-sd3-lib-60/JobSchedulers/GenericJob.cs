@@ -17,6 +17,7 @@ using Quartz;
 
 using bifeldy_sd3_lib_60.Databases;
 using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
 using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.JobSchedulers {
@@ -38,33 +39,38 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
         }
 
         public async Task Execute(IJobExecutionContext context) {
-            IOraPg ___orapg = this._serviceProvider.GetRequiredService<IOraPg>();
+            try {
+                IServerConfigRepository ___scr = this._serviceProvider.GetRequiredService<IServerConfigRepository>();
 
-            foreach (KeyValuePair<string, object> jdm in context.JobDetail.JobDataMap) {
-                try {
-                    string errorMessage = null;
+                _ = await ___scr.UseKodeServerKunciDc(context.JobDetail.Description);
 
-                    _ = await ___orapg.ExecQueryAsync(
-                        $@"
+                IOraPg ___orapg = this._serviceProvider.GetRequiredService<IOraPg>();
+
+                foreach (KeyValuePair<string, object> jdm in context.JobDetail.JobDataMap) {
+                    try {
+                        string errorMessage = null;
+
+                        _ = await ___orapg.ExecQueryAsync(
+                            $@"
                             INSERT INTO api_quartz_job_queue (app_name, job_name, start_at, completed_at, error_message)
                             VALUES (:app_name, :job_name, CURRENT_TIMESTAMP, NULL, NULL)
                         ",
-                        new List<CDbQueryParamBind>() {
+                            new List<CDbQueryParamBind>() {
                             new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                             new() { NAME = "job_name", VALUE = jdm.Key }
+                            }
+                        );
+
+                        try {
+                            var func = (Func<IJobExecutionContext, IServiceProvider, Task>)jdm.Value;
+                            await func(context, this._serviceProvider);
                         }
-                    );
+                        catch (Exception ex) {
+                            errorMessage = ex.Message;
+                        }
 
-                    try {
-                        var func = (Func<IJobExecutionContext, IServiceProvider, Task>)jdm.Value;
-                        await func(context, this._serviceProvider);
-                    }
-                    catch (Exception ex) {
-                        errorMessage = ex.Message;
-                    }
-
-                    _ = await ___orapg.ExecQueryAsync(
-                        $@"
+                        _ = await ___orapg.ExecQueryAsync(
+                            $@"
                             UPDATE
                                 api_quartz_job_queue
                             SET
@@ -73,20 +79,24 @@ namespace bifeldy_sd3_lib_60.JobSchedulers {
                                 app_name = :app_name
                                 AND job_name = :job_name
                         ",
-                        new List<CDbQueryParamBind>() {
+                            new List<CDbQueryParamBind>() {
                             new() { NAME = "error_message", VALUE = errorMessage },
                             new() { NAME = "app_name", VALUE = this._as.AppName.ToUpper() },
                             new() { NAME = "job_name", VALUE = jdm.Key }
-                        }
-                    );
+                            }
+                        );
+                    }
+                    catch (JobExecutionException e) {
+                        this._logger.LogError("[{name}_ERROR] ⌚ {ex}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
+                        throw;
+                    }
+                    catch (Exception e) {
+                        this._logger.LogError("[{name}_ERROR] ⌚ {ex}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
+                    }
                 }
-                catch (JobExecutionException e) {
-                    this._logger.LogError("[{name}_ERROR] ⌚ {ex}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
-                    throw;
-                }
-                catch (Exception e) {
-                    this._logger.LogError("[{name}_ERROR] ⌚ {ex}", $"{this.GetType().Name}_{jdm.Key}", e.Message);
-                }
+            }
+            catch (Exception exception) {
+                this._logger.LogError("[{name}_ERROR] ⌚ {ex}", context.JobDetail.Key, exception.Message);
             }
         }
 

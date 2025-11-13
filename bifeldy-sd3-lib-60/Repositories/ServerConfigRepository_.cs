@@ -205,6 +205,10 @@ namespace bifeldy_sd3_lib_60.Repositories {
             };
 
             if (string.IsNullOrEmpty(sc.kunci_gxxx)) {
+                if (string.IsNullOrEmpty(sc.kode_dc)) {
+                    throw new Exception("Kode DC Tidak Boleh Kosong!");
+                }
+
                 List<ServerConfigKunci> __sc = await this.GetKodeServerKunciDc(sc.kode_dc);
                 ServerConfigKunci _sc = __sc.FirstOrDefault();
 
