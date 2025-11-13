@@ -29,9 +29,9 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<int> JumlahJobYangSedangBerjalan(string jobName);
         Task<bool> CheckJobIsNeedToCreateNew(string fileName, IDatabase db, Func<Task<bool>> forceCreateNew = null);
         Task<bool> CheckJobIsCompleted(string jobName, IDatabase db, Func<Task<bool>> additionalAndCheck = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
-        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, bool isPg, IDatabase db, IGeneralRepository gr, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, bool isPg, IDatabase db, IGeneralRepository gr, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null);
+        public Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, bool isPg, IDatabase db, IGeneralRepository gr, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null);
         Task CancelAndDeleteJob(JobKey[] jobKeys, IDatabase db, string reason = "Job Dibatalkan");
     }
 
@@ -40,16 +40,13 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IScheduler _scheduler;
         private readonly IApplicationService _app;
-        private readonly IGeneralRepository _generalRepo;
 
         public CSchedulerService(
             IScheduler scheduler,
-            IApplicationService app,
-            IGeneralRepository _generalRepo
+            IApplicationService app
         ) {
             this._scheduler = scheduler;
             this._app = app;
-            this._generalRepo = _generalRepo;
         }
 
         public async Task<JobExecutionException> CreateThrowRetry(string jobName, IJobExecutionContext ctx, Exception ex, int delaySecond = 1) {
@@ -216,10 +213,10 @@ namespace bifeldy_sd3_lib_60.Services {
             return isJobCompleted;
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null) {
+        public async Task<DateTimeOffset?> ScheduleJobRunNow(string jobName, bool isPg, IDatabase db, IGeneralRepository gr, Func<IJobExecutionContext, IServiceProvider, Task> action, Func<Task<bool>> forceCreateNew = null) {
             bool isNeedToCreateNew = await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew);
             if (isNeedToCreateNew) {
-                string kodeDc = await this._generalRepo.GetKodeDc(isPg, db);
+                string kodeDc = await gr.GetKodeDc(isPg, db);
                 return await this._scheduler.ScheduleJobRunNow(kodeDc, jobName, action);
             }
             else {
@@ -227,10 +224,10 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelay(string jobName, bool isPg, IDatabase db, IGeneralRepository gr, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, Func<Task<bool>> forceCreateNew = null) {
             bool isNeedToCreateNew = await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew);
             if (isNeedToCreateNew) {
-                string kodeDc = await this._generalRepo.GetKodeDc(isPg, db);
+                string kodeDc = await gr.GetKodeDc(isPg, db);
                 return await this._scheduler.ScheduleJobRunNowWithDelay(kodeDc, jobName, action, initialDelay);
             }
             else {
@@ -238,10 +235,10 @@ namespace bifeldy_sd3_lib_60.Services {
             }
         }
 
-        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, bool isPg, IDatabase db, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
+        public async Task<DateTimeOffset?> ScheduleJobRunNowWithDelayInterval(string jobName, bool isPg, IDatabase db, IGeneralRepository gr, Func<IJobExecutionContext, IServiceProvider, Task> action, TimeSpan initialDelay, TimeSpan interval, Func<Task<bool>> forceCreateNew = null) {
             bool isNeedToCreateNew = await this.CheckJobIsNeedToCreateNew(jobName, db, forceCreateNew);
             if (isNeedToCreateNew) {
-                string kodeDc = await this._generalRepo.GetKodeDc(isPg, db);
+                string kodeDc = await gr.GetKodeDc(isPg, db);
                 return await this._scheduler.ScheduleJobRunNowWithDelayInterval(kodeDc, jobName, action, initialDelay, interval);
             }
             else {
