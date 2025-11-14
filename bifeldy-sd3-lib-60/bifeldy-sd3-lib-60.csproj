@@ -12,6 +12,16 @@
         -->
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <WarningsAsErrors>$(WarningsAsErrors);NU1605;CS1998</WarningsAsErrors>
+        <NoWarn>1701;1702;PBN0013;PBN0014;IDE0078;IDE0059;IDE0060</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <WarningsAsErrors>$(WarningsAsErrors);NU1605;CS1998</WarningsAsErrors>
+        <NoWarn>1701;1702;PBN0013;PBN0014;IDE0078;IDE0059;IDE0060</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="ChoETL.JSON" Version="1.2.1.70" />
         <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
