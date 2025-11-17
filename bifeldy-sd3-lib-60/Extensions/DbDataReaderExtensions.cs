@@ -116,7 +116,11 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             return "";
                         }
 
-                        string text = dr.GetValue(i).ToString();
+                        object value = dr.GetValue(i);
+                        string text = value.ToString();
+                        if (value is DateTime dt) {
+                            text = dt.ToString("O");
+                        }
 
                         if (allUppercase) {
                             text = text.ToUpper();

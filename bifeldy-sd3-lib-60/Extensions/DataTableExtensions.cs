@@ -89,6 +89,9 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         }
 
                         string text = value.ToString();
+                        if (value is DateTime dt) {
+                            text = dt.ToString("O");
+                        }
 
                         if (allUppercase) {
                             text = text.ToUpper();
