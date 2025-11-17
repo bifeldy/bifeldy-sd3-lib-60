@@ -99,7 +99,8 @@ namespace bifeldy_sd3_lib_60.Databases {
 
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
-                    if (pValType.IsArray) {
+
+                    if (pValType.IsArray || (pValType.IsGenericType && pValType.GetGenericTypeDefinition() == typeof(List<>))) {
                         string bindStr = string.Empty;
                         int id = 1;
                         foreach (dynamic data in pVal) {
