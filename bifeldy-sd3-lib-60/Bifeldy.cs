@@ -336,7 +336,11 @@ namespace bifeldy_sd3_lib_60 {
 
         public static void AddDependencyInjection(bool isBlazorWebApp = true) {
             _ = Services.AddHttpContextAccessor();
-            _ = Services.AddHttpClient();
+            _ = Services.AddHttpClient(Options.DefaultName).ConfigurePrimaryHttpMessageHandler(() => {
+                return new SocketsHttpHandler() {
+                    PooledConnectionLifetime = TimeSpan.FromSeconds(420)
+                };
+            });
 
             // --
             // Transient Selalu Dapat Object Baru ~

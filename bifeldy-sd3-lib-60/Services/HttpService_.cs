@@ -17,6 +17,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -229,7 +230,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public HttpClient CreateHttpClient(uint timeoutSeconds = 60) {
-            HttpClient httpClient = this._httpClientFactory.CreateClient();
+            HttpClient httpClient = this._httpClientFactory.CreateClient(Options.DefaultName);
             httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
             return httpClient;
         }
