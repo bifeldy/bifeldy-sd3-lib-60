@@ -77,7 +77,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
             try {
                 string result = this._cache.GetString(cacheKey);
-                if (!string.IsNullOrEmpty(result)) {
+                if (!string.IsNullOrEmpty(result?.Trim())) {
                     return result;
                 }
 

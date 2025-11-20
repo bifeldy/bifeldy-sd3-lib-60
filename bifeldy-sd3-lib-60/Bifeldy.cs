@@ -176,10 +176,10 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddDynamicApiPluginRouteEndpoint(string projectNamespace, string dataFolderName = "plugins") {
+        public static void AddDynamicApiPluginRouteEndpoint(string projectNamespace, string pluginFolderName = "plugins") {
             PLUGINS_PROJECT_NAMESPACE = projectNamespace;
 
-            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
+            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, pluginFolderName);
             _ = Directory.CreateDirectory(pluginFolderPath);
 
             _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
@@ -195,7 +195,7 @@ namespace bifeldy_sd3_lib_60 {
 
             _ = Services.AddSingleton(sp => {
                 IPluginContext pluginContext = sp.GetRequiredService<IPluginContext>();
-                return new CPluginWatcherCoordinator(dataFolderName, pluginContext);
+                return new CPluginWatcherCoordinator(pluginFolderName, pluginContext);
             });
         }
 

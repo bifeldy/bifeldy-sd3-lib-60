@@ -37,6 +37,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly IGlobalService _gs;
         private readonly IChiperService _chiper;
         private readonly IConverterService _converter;
+        private readonly ILockerService _locker;
         private readonly IOraPg _orapg;
         private readonly IRdlcService _rdlc;
 
@@ -47,6 +48,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IGlobalService gs,
             IChiperService chiper,
             IConverterService converter,
+            ILockerService locker,
             IOraPg orapg,
             IRdlcService rdlc
         ) {
@@ -56,6 +58,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             this._gs = gs;
             this._chiper = chiper;
             this._converter = converter;
+            this._locker = locker;
             this._orapg = orapg;
             this._rdlc = rdlc;
         }
@@ -85,33 +88,46 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     Dictionary<string, string> fileHash = null;
 
-                    string cache = await this._cache.GetStringAsync(cacheKey);
-                    if (string.IsNullOrEmpty(cache)) {
-                        fileHash = new Dictionary<string, string>();
+                    try {
+                        _ = await this._locker.SemaphoreGlobalApp("DOWNLOADER").WaitAsync(-1);
 
-                        IEnumerable<FileInfo> fileInfos = Directory.GetFiles(this._as.AppLocation, "*", SearchOption.AllDirectories)
-                            .Where(p => {
-                                string dataPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER);
-                                return !p.Contains("appsettings.json") && !p.Contains(dataPath);
-                            })
-                            .Select(p => new FileInfo(p))
-                            .OrderBy(fi => fi.Name);
-                            // .OrderByDescending(fi => fi.LastWriteTime);
+                        string result = await this._cache.GetStringAsync(cacheKey);
+                        if (string.IsNullOrEmpty(result?.Trim())) {
+                            fileHash = new Dictionary<string, string>();
 
-                        foreach (FileInfo fi in fileInfos) {
-                            string crc32 = this._chiper.CalculateCRC32File(fi.FullName);
-                            if (crc32 != null) {
-                                string key = fi.FullName.Replace(this._as.AppLocation, string.Empty);
-                                fileHash[key] = crc32;
+                            IEnumerable<FileInfo> fileInfos = Directory.GetFiles(this._as.AppLocation, "*", SearchOption.AllDirectories)
+                                .Where(p => {
+                                    string dataPath = Path.Combine(this._as.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER);
+                                    return !p.Contains("appsettings.json") && !p.Contains(dataPath);
+                                })
+                                .Select(p => new FileInfo(p))
+                                .OrderBy(fi => fi.Name);
+                                // .OrderByDescending(fi => fi.LastWriteTime);
+
+                            foreach (FileInfo fi in fileInfos) {
+                                string crc32 = this._chiper.CalculateCRC32File(fi.FullName);
+                                if (crc32 != null) {
+                                    string key = fi.FullName.Replace(this._as.AppLocation, string.Empty);
+                                    fileHash[key] = crc32;
+                                }
+                            }
+
+                            result = this._converter.ObjectToJson(fileHash);
+                            result = result?.Trim();
+
+                            if (!string.IsNullOrEmpty(result)) {
+                                await this._cache.SetStringAsync(cacheKey, result, new DistributedCacheEntryOptions() {
+                                    SlidingExpiration = TimeSpan.FromMinutes(10),
+                                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60)
+                                });
                             }
                         }
-
-                        await this._cache.SetStringAsync(cacheKey, this._converter.ObjectToJson(fileHash), new DistributedCacheEntryOptions() {
-                            SlidingExpiration = TimeSpan.FromMinutes(30)
-                        });
+                        else {
+                            fileHash = this._converter.JsonToObject<Dictionary<string, string>>(result);
+                        }
                     }
-                    else {
-                        fileHash = this._converter.JsonToObject<Dictionary<string, string>>(cache);
+                    finally {
+                        _ = this._locker.SemaphoreGlobalApp("DOWNLOADER").Release();
                     }
 
                     if (fileHash.Count <= 0) {
