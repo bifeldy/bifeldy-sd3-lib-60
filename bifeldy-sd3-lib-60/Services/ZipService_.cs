@@ -51,6 +51,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
                     if (!string.IsNullOrEmpty(password)) {
                         zip.Password = password;
+                        zip.Encryption = EncryptionAlgorithm.WinZipAes128;
                     }
 
                     foreach (string targetFileName in listFileForZip) {
@@ -99,6 +100,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
                     if (!string.IsNullOrEmpty(password)) {
                         zip.Password = password;
+                        zip.Encryption = EncryptionAlgorithm.WinZipAes128;
                     }
 
                     var directoryInfo = new DirectoryInfo(folderPath);
