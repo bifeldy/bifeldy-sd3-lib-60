@@ -176,10 +176,10 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void AddDynamicApiPluginRouteEndpoint(string projectNamespace, string pluginFolderName = "plugins") {
+        public static void AddDynamicApiPluginRouteEndpoint(string projectNamespace, string dataFolderName = "plugins") {
             PLUGINS_PROJECT_NAMESPACE = projectNamespace;
 
-            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, pluginFolderName);
+            string pluginFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DEFAULT_DATA_FOLDER, dataFolderName);
             _ = Directory.CreateDirectory(pluginFolderPath);
 
             _ = Services.AddSingleton(CDynamicActionDescriptorChangeProvider.Instance);
@@ -195,7 +195,7 @@ namespace bifeldy_sd3_lib_60 {
 
             _ = Services.AddSingleton(sp => {
                 IPluginContext pluginContext = sp.GetRequiredService<IPluginContext>();
-                return new CPluginWatcherCoordinator(pluginFolderName, pluginContext);
+                return new CPluginWatcherCoordinator(dataFolderName, pluginContext);
             });
         }
 
@@ -478,21 +478,26 @@ namespace bifeldy_sd3_lib_60 {
 
         /* ** */
 
-        public static void UseInvariantCulture() {
+        public static void SetInvariantCulture() {
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
-        }
 
-        public static void UseCultureLocalization() {
-            CultureInfo[] supportedCultures = new[] {
-                CultureInfo.InvariantCulture,
-                new CultureInfo("en-US"),
-                new CultureInfo("id-ID")
-            };
-            _ = App.UseRequestLocalization(new RequestLocalizationOptions() {
-                DefaultRequestCulture = new RequestCulture("en-US"),
-                SupportedCultures = supportedCultures,
-                SupportedUICultures = supportedCultures
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+
+            _ = Services.Configure<RequestLocalizationOptions>(options => {
+                var supportedCultures = new List<CultureInfo>() {
+                    CultureInfo.InvariantCulture,
+                    // new("en-US"),
+                    // new("id-ID")
+                };
+
+                options.DefaultRequestCulture = new RequestCulture(supportedCultures[0]);
+
+                options.SupportedCultures = supportedCultures;
+                options.SupportedUICultures = supportedCultures;
+
+                options.ApplyCurrentCultureToResponseHeaders = true;
             });
         }
 
