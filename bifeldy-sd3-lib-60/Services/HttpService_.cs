@@ -240,7 +240,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 List<string> lsJson = this._cs.JsonToObject<List<string>>(json);
                 var pinnedPublicKeys = new HashSet<string>(lsJson, StringComparer.OrdinalIgnoreCase);
 
-                var httpMessageHandler = new HttpClientHandler {
+                var httpMessageHandler = new HttpClientHandler() {
                     ServerCertificateCustomValidationCallback = (httpRequestMessage, x509Certificate2, x509Chain, sslPolicyErrors) => {
                         if (sslPolicyErrors == SslPolicyErrors.None) {
                             byte[] serverPublicKey = x509Certificate2.GetPublicKey();
