@@ -20,7 +20,6 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -47,7 +46,6 @@ namespace bifeldy_sd3_lib_60.Services {
     public sealed class CHttpService : IHttpService {
 
         private readonly ILogger<CHttpService> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConverterService _cs;
 
         private string[] ProhibitedHeaders { get; } = new string[] {
@@ -67,9 +65,8 @@ namespace bifeldy_sd3_lib_60.Services {
             "content-encoding", "set-cookie"
         };
 
-        public CHttpService(ILogger<CHttpService> logger, IHttpClientFactory httpClientFactory, IConverterService cs) {
+        public CHttpService(ILogger<CHttpService> logger, IConverterService cs) {
             this._logger = logger;
-            this._httpClientFactory = httpClientFactory;
             this._cs = cs;
         }
 
@@ -234,52 +231,48 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public HttpClient CreateHttpClient(uint timeoutSeconds = 60, string publicKeysBase64HashJsonFilePath = null) {
+            var httpMessageHandler = new HttpClientHandler();
+
             if (!string.IsNullOrEmpty(publicKeysBase64HashJsonFilePath)) {
                 string json = File.ReadAllText(publicKeysBase64HashJsonFilePath);
 
                 List<string> lsJson = this._cs.JsonToObject<List<string>>(json);
                 var pinnedPublicKeys = new HashSet<string>(lsJson, StringComparer.OrdinalIgnoreCase);
 
-                var httpMessageHandler = new HttpClientHandler() {
-                    ServerCertificateCustomValidationCallback = (httpRequestMessage, x509Certificate2, x509Chain, sslPolicyErrors) => {
-                        if (sslPolicyErrors == SslPolicyErrors.None) {
-                            byte[] serverPublicKey = x509Certificate2.GetPublicKey();
+                httpMessageHandler.ServerCertificateCustomValidationCallback = (httpRequestMessage, x509Certificate2, x509Chain, sslPolicyErrors) => {
+                    if (sslPolicyErrors == SslPolicyErrors.None) {
+                        byte[] serverPublicKey = x509Certificate2.GetPublicKey();
+
+                        using (var sha256 = SHA256.Create()) {
+                            byte[] hash = sha256.ComputeHash(serverPublicKey);
+                            string base64Hash = Convert.ToBase64String(hash);
+
+                            if (pinnedPublicKeys.Contains(base64Hash)) {
+                                return true;
+                            }
+                        }
+
+                        foreach (X509ChainElement element in x509Chain.ChainElements) {
+                            byte[] chainServerPublicKey = element.Certificate.GetPublicKey();
 
                             using (var sha256 = SHA256.Create()) {
-                                byte[] hash = sha256.ComputeHash(serverPublicKey);
+                                byte[] hash = sha256.ComputeHash(chainServerPublicKey);
                                 string base64Hash = Convert.ToBase64String(hash);
 
                                 if (pinnedPublicKeys.Contains(base64Hash)) {
                                     return true;
                                 }
                             }
-
-                            foreach (X509ChainElement element in x509Chain.ChainElements) {
-                                byte[] chainServerPublicKey = element.Certificate.GetPublicKey();
-
-                                using (var sha256 = SHA256.Create()) {
-                                    byte[] hash = sha256.ComputeHash(chainServerPublicKey);
-                                    string base64Hash = Convert.ToBase64String(hash);
-
-                                    if (pinnedPublicKeys.Contains(base64Hash)) {
-                                        return true;
-                                    }
-                                }
-                            }
                         }
-
-                        return false;
                     }
-                };
 
-                return new HttpClient(httpMessageHandler) {
-                    Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+                    return false;
                 };
             }
 
-            HttpClient httpClient = this._httpClientFactory.CreateClient(Options.DefaultName);
-            httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-            return httpClient;
+            return new HttpClient(httpMessageHandler) {
+                Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+            };
         }
 
         public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null) {
