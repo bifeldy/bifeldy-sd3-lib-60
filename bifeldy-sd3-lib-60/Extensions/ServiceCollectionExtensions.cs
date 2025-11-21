@@ -91,8 +91,6 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         /** */
 
-
-
         public static IServiceCollection SetupConfigOptions(
             this IServiceCollection isolatedServiceCollection,
             IServiceProvider sourceServiceProvider
@@ -165,7 +163,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
             IServiceCollection sourceServiceCollection,
             IServiceProvider sourceServiceProvider
         ) {
-            IEnumerable<ServiceDescriptor> descriptors = sourceServiceCollection; // .Where(descriptor => IsSafeForForwarding(descriptor));
+            IEnumerable<ServiceDescriptor> descriptors = sourceServiceCollection;
+                // .Where(descriptor => IsSafeForForwarding(descriptor));
 
             foreach (ServiceDescriptor descriptor in descriptors) {
                 Type serviceType = descriptor.ServiceType;
