@@ -68,8 +68,7 @@ namespace bifeldy_sd3_lib_60.UserAuth {
             }
 
             var authState = new AuthenticationState(userClaimPrincipal);
-            var authStateTask = Task.FromResult(authState);
-            this.NotifyAuthenticationStateChanged(authStateTask);
+            this.NotifyAuthenticationStateChanged(Task.FromResult(authState));
         }
 
     }

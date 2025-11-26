@@ -70,7 +70,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             // Masih object / class
             PropertyInfo[] properties = propertyType.GetProperties(bf);
             if (properties.Any()) {
-                var resultDictionary = properties.ToDictionary(
+                Dictionary<string, object> resultDictionary = properties.ToDictionary(
                   subtypePropertyInfo => subtypePropertyInfo.Name,
                   subtypePropertyInfo => propertyValue == null ? null : ConvertPropertyToDictionary(subtypePropertyInfo, propertyValue)
                 );
