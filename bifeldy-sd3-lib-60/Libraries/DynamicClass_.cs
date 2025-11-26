@@ -28,7 +28,7 @@ namespace bifeldy_sd3_lib_60.Libraries {
             _fields = new Dictionary<string, (Type, object)>(StringComparer.InvariantCultureIgnoreCase);
 
             foreach (CDynamicClassProperty field in fields) {
-                Type type = ResolveType(field.DataType);
+                var type = Type.GetType(field.DataType);
 
                 if (type == null) {
                     throw new Exception($"Unknown data type '{field.DataType}'");
@@ -40,21 +40,6 @@ namespace bifeldy_sd3_lib_60.Libraries {
 
                 _fields[field.ColumnName] = (type, null);
             }
-        }
-
-        private static Type ResolveType(string name) {
-            return name switch {
-                "string" => typeof(string),
-                "int" => typeof(int),
-                "long" => typeof(long),
-                "short" => typeof(short),
-                "bool" => typeof(bool),
-                "double" => typeof(double),
-                "float" => typeof(float),
-                "decimal" => typeof(decimal),
-                "datetime" => typeof(DateTime),
-                _ => Type.GetType(name)
-            };
         }
 
         public override bool TrySetMember(SetMemberBinder binder, object value) {
@@ -75,16 +60,29 @@ namespace bifeldy_sd3_lib_60.Libraries {
                 throw new Exception($"Cannot assign null to non-nullable field '{binder.Name}'");
             }
 
-            object converted = Convert.ChangeType(value, underlying);
-            _fields[binder.Name] = (declaredType, converted);
+            try {
+                object converted = Convert.ChangeType(value, underlying);
+                _fields[binder.Name] = (declaredType, converted);
+            }
+            catch (Exception ex) {
+                throw new Exception($"Cannot convert value '{value}' to type '{underlying.Name}'", ex);
+            }
 
             return true;
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result) {
             if (_fields.TryGetValue(binder.Name, out (Type Type, object Value) field)) {
-                // return actual stored value, default if null
-                result = field.Value ?? Activator.CreateInstance(Nullable.GetUnderlyingType(field.Type) ?? field.Type);
+                if (field.Value != null) {
+                    result = field.Value;
+                }
+                else if (field.Type.IsValueType) {
+                    result = Activator.CreateInstance(field.Type);
+                }
+                else {
+                    result = null;
+                }
+
                 return true;
             }
 

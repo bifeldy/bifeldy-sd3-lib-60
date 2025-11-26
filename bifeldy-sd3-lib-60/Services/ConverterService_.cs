@@ -42,6 +42,7 @@ namespace bifeldy_sd3_lib_60.Services {
         T XmlJsonToObject<T>(string type, string text, JsonSerializerSettings settings = null);
         string FormatByteSizeHumanReadable(long bytes, string forceUnit = null);
         List<CDynamicClassProperty> GetTableClassStructureModel<T>();
+        List<CDynamicClassPropertyV2> GetPocoStructureModel<T>();
     }
 
     [SingletonServiceRegistration]
@@ -85,7 +86,7 @@ namespace bifeldy_sd3_lib_60.Services {
 
             return result;
         }
-        
+
         private Dictionary<string, object> JObjectToDictionary(JObject jsonObject) {
             var result = new Dictionary<string, object>();
 
@@ -206,14 +207,61 @@ namespace bifeldy_sd3_lib_60.Services {
                     isNullable = primaryKey == null;
                 }
 
-                ls.Add(new CDynamicClassProperty() {
+                var item = new CDynamicClassProperty() {
                     ColumnName = propertyInfo.Name,
                     DataType = dataType.FullName,
                     IsNullable = isNullable
-                });
+                };
+
+                ls.Add(item);
             }
 
             return ls;
+        }
+
+        public List<CDynamicClassPropertyV2> GetPocoStructureModel<T>() {
+            var list = new List<CDynamicClassPropertyV2>();
+
+            foreach (PropertyInfo prop in typeof(T).GetProperties()) {
+                Type type = prop.PropertyType;
+
+                // Nullable<T> detection
+                bool isNullable = Nullable.GetUnderlyingType(type) != null;
+                Type coreType = isNullable ? Nullable.GetUnderlyingType(type) : type;
+
+                bool isList =
+                    coreType.IsGenericType &&
+                    coreType.GetGenericTypeDefinition() == typeof(List<>);
+
+                bool isDictionary =
+                    coreType.IsGenericType &&
+                    coreType.GetGenericTypeDefinition() == typeof(Dictionary<,>);
+
+                bool isArray = coreType.IsArray;
+                bool isEnum = coreType.IsEnum;
+
+                bool isClass =
+                    coreType.IsClass &&
+                    coreType != typeof(string) &&
+                    !isDictionary &&
+                    !isList &&
+                    !isArray &&
+                    !isEnum;
+
+                var item = new CDynamicClassPropertyV2() {
+                    ColumnName = prop.Name,
+                    TypeName = coreType.FullName,
+                    IsNullable = isNullable,
+                    IsArray = isArray,
+                    IsList = isList,
+                    IsDictionary = isDictionary,
+                    IsClass = isClass
+                };
+
+                list.Add(item);
+            }
+
+            return list;
         }
 
     }
