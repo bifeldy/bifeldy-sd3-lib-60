@@ -17,9 +17,9 @@ using System.Text;
 
 namespace bifeldy_sd3_lib_60.Extensions {
 
-    public static class ListExtensions {
+    public static class IEnumerableExtensions {
 
-        public static DataTable ToDataTable<T>(this List<T> listData, string tableName = null, string arrayListSingleValueColumnName = null) {
+        public static DataTable ToDataTable<T>(this IEnumerable<T> arrayListData, string tableName = null, string arrayListSingleValueColumnName = null) {
             if (string.IsNullOrEmpty(tableName)) {
                 tableName = typeof(T).Name;
             }
@@ -30,10 +30,10 @@ namespace bifeldy_sd3_lib_60.Extensions {
             // Special handling for value types and string
             //
             // Tabel hanya punya 1 kolom
-            // create table `tblNm` ( `tblCl` varchar(255) );
+            // create table `table_name` ( `column_name` varchar(255) );
             //
-            // List<string> ls = new List<string>() { "Row1", "Row2", "Row3" };
-            // ListToDataTable(ls, "tblNm", "tblCl");
+            // IEnumerable<string> ls = new List<string>() { "Row1", "Row2", "Row3" };
+            // ls.ToDataTable(ls, "table_name", "column_name");
             //
 
             Type t = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
@@ -44,7 +44,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
                 var dc = new DataColumn(arrayListSingleValueColumnName, t);
                 table.Columns.Add(dc);
-                foreach (T item in listData) {
+                foreach (T item in arrayListData) {
                     DataRow dr = table.NewRow();
                     dr[0] = item;
                     table.Rows.Add(dr);
@@ -56,7 +56,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     _ = table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
                 }
 
-                foreach (T item in listData) {
+                foreach (T item in arrayListData) {
                     DataRow row = table.NewRow();
                     foreach (PropertyDescriptor prop in properties) {
                         row[prop.Name] = prop.GetValue(item) ?? DBNull.Value;
@@ -67,10 +67,11 @@ namespace bifeldy_sd3_lib_60.Extensions {
             }
 
             table.CaseSensitive = false;
+
             return table;
         }
 
-        public static async Task ToCsv<T>(this List<T> listData, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, CancellationToken token = default) {
+        public static async Task ToCsv<T>(this IEnumerable<T> arrayListData, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, CancellationToken token = default) {
             using (var streamWriter = new StreamWriter(outputFilePath, false, encoding ?? Encoding.UTF8)) {
                 PropertyInfo[] properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
@@ -92,7 +93,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     await streamWriter.WriteLineAsync(headerLine.AsMemory(), token);
                 }
 
-                foreach (T item in listData) {
+                foreach (T item in arrayListData) {
                     string line = string.Join(delimiter, properties.Select(prop => {
                         object value = prop.GetValue(item);
                         if (value == null) {
