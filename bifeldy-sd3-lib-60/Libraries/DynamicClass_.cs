@@ -22,73 +22,90 @@ namespace bifeldy_sd3_lib_60.Libraries {
 
     public sealed class CDynamicClass : DynamicObject {
 
-        private readonly Dictionary<string, KeyValuePair<Type, object>> _fields;
+        private readonly Dictionary<string, (Type Type, object Value)> _fields;
 
         public CDynamicClass(List<CDynamicClassProperty> fields) {
-            this._fields = new Dictionary<string, KeyValuePair<Type, object>>(StringComparer.InvariantCultureIgnoreCase);
+            _fields = new Dictionary<string, (Type, object)>(StringComparer.InvariantCultureIgnoreCase);
 
             foreach (CDynamicClassProperty field in fields) {
-                var type = Type.GetType(field.DataType);
-                object obj = null;
+                Type type = ResolveType(field.DataType);
 
-                if (field.IsNullable) {
+                if (type == null) {
+                    throw new Exception($"Unknown data type '{field.DataType}'");
+                }
+
+                if (field.IsNullable && type.IsValueType) {
                     type = typeof(Nullable<>).MakeGenericType(type);
                 }
-                else if (type.IsValueType) {
-                    obj = Activator.CreateInstance(type);
-                }
 
-                this._fields.Add(field.ColumnName, new KeyValuePair<Type, object>(type, obj));
+                _fields[field.ColumnName] = (type, null);
             }
         }
 
+        private static Type ResolveType(string name) {
+            return name switch {
+                "string" => typeof(string),
+                "int" => typeof(int),
+                "long" => typeof(long),
+                "short" => typeof(short),
+                "bool" => typeof(bool),
+                "double" => typeof(double),
+                "float" => typeof(float),
+                "decimal" => typeof(decimal),
+                "datetime" => typeof(DateTime),
+                _ => Type.GetType(name)
+            };
+        }
+
         public override bool TrySetMember(SetMemberBinder binder, object value) {
-            if (this._fields.ContainsKey(binder.Name)) {
-                Type valueType = value.GetType();
+            if (!_fields.ContainsKey(binder.Name)) {
+                return false;
+            }
 
-                Type _type = this._fields[binder.Name].Key;
-                Type targetType = Nullable.GetUnderlyingType(_type) ?? _type;
+            (Type declaredType, object _) = _fields[binder.Name];
 
-                if (valueType == targetType) {
-                    this._fields[binder.Name] = new KeyValuePair<Type, object>(_type, value);
+            Type underlying = Nullable.GetUnderlyingType(declaredType) ?? declaredType;
+
+            if (value == null) {
+                if (Nullable.GetUnderlyingType(declaredType) != null) {
+                    _fields[binder.Name] = (declaredType, null);
                     return true;
                 }
-                else {
-                    throw new Exception($"Value {value} Is Not {targetType.FullName}");
-                }
+
+                throw new Exception($"Cannot assign null to non-nullable field '{binder.Name}'");
             }
+
+            object converted = Convert.ChangeType(value, underlying);
+            _fields[binder.Name] = (declaredType, converted);
+
+            return true;
+        }
+
+        public override bool TryGetMember(GetMemberBinder binder, out object result) {
+            if (_fields.TryGetValue(binder.Name, out (Type Type, object Value) field)) {
+                // return actual stored value, default if null
+                result = field.Value ?? Activator.CreateInstance(Nullable.GetUnderlyingType(field.Type) ?? field.Type);
+                return true;
+            }
+
+            result = null;
 
             return false;
         }
 
-        public override bool TryGetMember(GetMemberBinder binder, out object result) {
-            Type _type = this._fields[binder.Name].Key;
-            Type targetType = Nullable.GetUnderlyingType(_type);
-
-            result = targetType == null ? Activator.CreateInstance(_type) : this._fields[binder.Name].Value;
-
-            return true;
-        }
-
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result) {
-            result = null;
-
-            foreach (object idx in indexes) {
-                string keyName = idx.ToString();
-                if (this._fields.ContainsKey(keyName)) {
-                    if (result == null) {
-                        result = this._fields[keyName].Value;
-                    }
-                    else {
-                        result = ((dynamic)result).Value;
-                    }
-                }
-                else {
-                    throw new Exception($"Key {keyName} Is Exists In {result.GetType().Name}");
-                }
+            if (indexes.Length != 1) {
+                throw new ArgumentException("Only single index supported.");
             }
 
-            return true;
+            string key = indexes[0].ToString();
+
+            if (_fields.TryGetValue(key, out (Type Type, object Value) field)) {
+                result = field.Value;
+                return true;
+            }
+
+            throw new Exception($"Field '{key}' does not exist.");
         }
 
     }

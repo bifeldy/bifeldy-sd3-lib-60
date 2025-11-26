@@ -102,10 +102,11 @@ namespace bifeldy_sd3_lib_60.Services {
 
             encoding ??= Encoding.UTF8;
 
-            if (httpContent.GetType() == typeof(string)) {
+            Type t = httpContent.GetType();
+            if (t == typeof(string)) {
                 content = new StringContent(httpContent, encoding, contentType);
             }
-            else if (typeof(HttpRequest).IsAssignableFrom(httpContent.GetType())) {
+            else if (typeof(HttpRequest).IsAssignableFrom(t)) {
                 using (var ms = new MemoryStream()) {
                     await httpContent.Body.CopyToAsync(ms);
                     await ms.FlushAsync();
@@ -113,10 +114,10 @@ namespace bifeldy_sd3_lib_60.Services {
                     content = new ByteArrayContent(arr);
                 }
             }
-            else if (typeof(Stream).IsAssignableFrom(httpContent.GetType())) {
+            else if (typeof(Stream).IsAssignableFrom(t)) {
                 content = new StreamContent(httpContent);
             }
-            else if (httpContent.GetType() == typeof(byte[])) {
+            else if (t == typeof(byte[])) {
                 content = new ByteArrayContent(httpContent);
             }
             else {

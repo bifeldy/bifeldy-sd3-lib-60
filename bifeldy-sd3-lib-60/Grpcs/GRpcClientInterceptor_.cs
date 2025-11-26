@@ -70,7 +70,7 @@ namespace bifeldy_sd3_lib_60.Grpcs {
         }
 
         private void ApplyDeadline<TRequest, TResponse>(ref ClientInterceptorContext<TRequest, TResponse> context) where TRequest : class where TResponse : class {
-            if (context.Options.Deadline is null) {
+            if (context.Options.Deadline == null) {
                 CallOptions co = context.Options.WithDeadline(DateTime.UtcNow.AddMinutes(60));
                 context = new(context.Method, context.Host, co);
             }

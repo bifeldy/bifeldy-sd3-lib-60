@@ -29,7 +29,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     T objT = default;
 
                     Type t = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-                    if (t.IsPrimitive || t == typeof(string) || t == typeof(DateTime) || t == typeof(decimal)) {
+                    if (t.IsValueType || t == typeof(string)) {
                         if (!dr.IsDBNull(0)) {
                             dynamic val = dr.GetValue(0);
 

@@ -17,80 +17,99 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class ObjectExtensions {
 
-        //
-        // Rekursif se dalam - dalamnya
-        // Rawan sTaCkOvErFlOw ..
-        // Semoga gak kena :: max call stack
-        // Wkwkwk ~
-        //
-
         private static readonly BindingFlags bf = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
 
-        private static Dictionary<string, object> ConvertIEnumerableToDictionary(IEnumerable enumerable) {
-            int index = 0;
-            var items = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
-            foreach (object item in enumerable) {
-                if (item.GetType().IsPrimitive || item is string) {
-                    items.Add(index.ToString(), item);
-                }
-                else if (item is IEnumerable enumerableItem) {
-                    items.Add(index.ToString(), ConvertIEnumerableToDictionary(enumerableItem));
-                }
-                else {
-                    var dictionary = item.ToDictionary();
-                    items.Add(index.ToString(), dictionary);
-                }
+        private static readonly HashSet<Type> ExtraSimpleTypes = new() {
+            typeof(string),
+            typeof(decimal),
+            typeof(DateTime),
+            typeof(Guid)
+        };
 
+        private static bool IsSimpleType(Type type) {
+            type = Nullable.GetUnderlyingType(type) ?? type;
+            return type.IsPrimitive || type.IsEnum || ExtraSimpleTypes.Contains(type);
+        }
+
+        private static object ConvertObject(object obj) {
+            if (obj == null) {
+                return null;
+            }
+
+            if (obj is Type) {
+                return obj;
+            }
+
+            // Simple values (includes string)
+            Type type = obj.GetType();
+            if (IsSimpleType(type)) {
+                return obj;
+            }
+
+            if (obj is IDictionary dict) {
+                return ConvertDictionary(dict);
+            }
+
+            // ICollection / IEnumerable but NOT string
+            if (obj is IEnumerable enumerable) {
+                return ConvertEnumerable(enumerable);
+            }
+
+            return ConvertComplexObject(obj);
+        }
+
+        private static Dictionary<string, object> ConvertDictionary(IDictionary dict) {
+            var result = new Dictionary<string, object>();
+
+            foreach (DictionaryEntry entry in dict) {
+                string key = entry.Key.ToString();
+                result[key] = ConvertObject(entry.Value);
+            }
+
+            result["IsCollection"] = true;
+
+            return result;
+        }
+
+        private static Dictionary<string, object> ConvertEnumerable(IEnumerable enumerable) {
+            var result = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+
+            int index = 0;
+            foreach (object item in enumerable) {
+                result[index.ToString()] = ConvertObject(item);
                 index++;
             }
 
-            items.Add("IsCollection", true);
-            items.Add("Count", index);
-            return items;
+            result["IsCollection"] = true;
+            result["Count"] = index;
+
+            return result;
         }
 
-        private static object ConvertPropertyToDictionary(PropertyInfo propertyInfo, object owner) {
-            Type propertyType = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
-            object propertyValue = propertyInfo.GetValue(owner);
+        private static Dictionary<string, object> ConvertComplexObject(object obj) {
+            Type type = obj.GetType();
+            var result = new Dictionary<string, object>();
 
-            if (propertyValue is Type) {
-                return propertyValue;
+            foreach (PropertyInfo prop in type.GetProperties(bf)) {
+                if (!prop.CanRead) {
+                    continue;
+                }
+
+                if (prop.GetIndexParameters().Any()) {
+                    continue; // skip indexers
+                }
+
+                object value = prop.GetValue(obj);
+                result[prop.Name] = ConvertObject(value);
             }
 
-            // Khusus collection / yang bisa di looping (list, array, enum, dict)
-            if (typeof(IEnumerable).IsAssignableFrom(propertyType)) {
-                return ConvertIEnumerableToDictionary((IEnumerable) propertyInfo.GetValue(owner));
-            }
+            result["IsCollection"] = false;
 
-            // Khusus tipe data standar (int, bool, ...) + string, udahan
-            if (propertyType.IsPrimitive || propertyType == typeof(string) || propertyType == typeof(DateTime) || propertyType == typeof(decimal)) {
-                return propertyValue;
-            }
-
-            // Masih object / class
-            PropertyInfo[] properties = propertyType.GetProperties(bf);
-            if (properties.Any()) {
-                Dictionary<string, object> resultDictionary = properties.ToDictionary(
-                  subtypePropertyInfo => subtypePropertyInfo.Name,
-                  subtypePropertyInfo => propertyValue == null ? null : ConvertPropertyToDictionary(subtypePropertyInfo, propertyValue)
-                );
-                resultDictionary.Add("IsCollection", false);
-                return resultDictionary;
-            }
-
-            return propertyValue;
+            return result;
         }
 
         public static Dictionary<string, object> ToDictionary(this object instanceToConvert) {
-            var resultDictionary = instanceToConvert.GetType()
-                .GetProperties(bf)
-                .Where(propertyInfo => !propertyInfo.GetIndexParameters().Any())
-                .ToDictionary(
-                    propertyInfo => propertyInfo.Name,
-                    propertyInfo => ConvertPropertyToDictionary(propertyInfo, instanceToConvert)
-                );
-            resultDictionary.Add("IsCollection", false);
-            return resultDictionary;
+            return ConvertObject(instanceToConvert) as Dictionary<string, object> ?? new Dictionary<string, object>();
         }
 
     }

@@ -37,7 +37,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             //
 
             Type t = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-            if (t.IsValueType || t == typeof(string) || t == typeof(DateTime) || t == typeof(decimal)) {
+            if (t.IsValueType || t == typeof(string)) {
                 if (string.IsNullOrEmpty(arrayListSingleValueColumnName)) {
                     throw new Exception("Nama Kolom Tabel Wajib Diisi");
                 }

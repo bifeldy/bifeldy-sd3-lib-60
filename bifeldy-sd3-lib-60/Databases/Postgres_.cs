@@ -12,6 +12,7 @@
  * 
  */
 
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -100,7 +101,8 @@ namespace bifeldy_sd3_lib_60.Databases {
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
 
-                    if (pValType.IsArray || (pValType.IsGenericType && pValType.GetGenericTypeDefinition() == typeof(List<>))) {
+                    bool isEnumerable = typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string);
+                    if (isEnumerable) {
                         string bindStr = string.Empty;
                         int id = 1;
                         foreach (dynamic data in pVal) {
