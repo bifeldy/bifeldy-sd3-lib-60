@@ -110,7 +110,21 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void InitApp(WebApplication app) => App = app;
+        public static void InitApp(WebApplication app, bool forceGcToCleanUpRamEveryRequest = false) {
+            App = app;
+
+            if (forceGcToCleanUpRamEveryRequest) {
+                _ = App.Use(async (context, next) => {
+                    context.Response.OnCompleted(() => {
+                        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+                        GC.WaitForPendingFinalizers();
+                        return Task.CompletedTask;
+                    });
+
+                    await next();
+                });
+            }
+        }
 
         public static void SetKestrelApiGrpcPort(IConfigurationSection configuration = null, bool enableGrpc = true) {
             IConfigurationSection config = configuration ?? Config.GetSection("ENV");
