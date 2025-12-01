@@ -34,7 +34,7 @@ using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
-    public partial interface IDatabase {
+    public interface IDatabase {
         string DbUsername { get; } // Hanya Expose Get Saja
         string DbName { get; } // Hanya Expose Get Saja
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
@@ -52,6 +52,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        IAsyncEnumerable<int> BulkInsertInto<T>(string tableName, IEnumerable<T> dataListArray, int chunkSize = 2048, int commandTimeoutSeconds = 3600, [EnumeratorCancellation] CancellationToken token = default);
         Task<string> BulkGetCsv(string queryString, string delimiter, string filename, List<CDbQueryParamBind> bindParam = null, string outputFolderPath = null, bool useRawQueryWithoutParam = false, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
@@ -503,6 +504,26 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public abstract Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<bool> BulkInsertInto(string tableName, DataTable dataTable, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+
+        public virtual async IAsyncEnumerable<int> BulkInsertInto<T>(string tableName, IEnumerable<T> dataListArray, int chunkSize = 2048, int commandTimeoutSeconds = 3600, [EnumeratorCancellation] CancellationToken token = default) {
+            int batchNumber = 1;
+            int totalInserted = 0;
+
+            foreach (T[] chunk in dataListArray.Chunk(chunkSize)) {
+                DataTable dt = chunk.ToDataTable(tableName);
+
+                bool res = await this.BulkInsertInto(tableName, dt, commandTimeoutSeconds, token);
+                if (!res) {
+                    throw new Exception($"Gagal Menyimpan Data (Batch: #{batchNumber} | Sukses: {totalInserted})");
+                }
+
+                batchNumber++;
+                totalInserted += dt.Rows.Count;
+
+                yield return totalInserted;
+            }
+        }
+
         public abstract Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
 
