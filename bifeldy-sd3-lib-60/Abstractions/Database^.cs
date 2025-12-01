@@ -520,7 +520,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                 batchNumber++;
                 totalInserted += dt.Rows.Count;
 
-                yield return totalInserted;
+                // Return Completed Each Batch Total Data
+                yield return dt.Rows.Count;
             }
         }
 
