@@ -149,6 +149,8 @@ namespace bifeldy_sd3_lib_60 {
             Console.WriteLine(logInfo);
 
             _ = Builder.WebHost.ConfigureKestrel(options => {
+                options.Limits.MaxRequestBodySize = null;
+
                 options.Listen(IPAddress.Any, webApiPort, listenOptions => {
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                 });
