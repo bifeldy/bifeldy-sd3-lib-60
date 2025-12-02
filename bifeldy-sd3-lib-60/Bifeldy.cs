@@ -76,6 +76,8 @@ namespace bifeldy_sd3_lib_60 {
 
         public static string PLUGINS_PROJECT_NAMESPACE = null;
 
+        public static DateTime? LAST_GC_RUN = null;
+
         public static bool IS_USING_SECRET = false;
         public static bool IS_USING_API_KEY = false;
         public static bool IS_USING_JWT = false;
@@ -110,14 +112,21 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
-        public static void InitApp(WebApplication app, bool forceGcToCleanUpRamEveryRequest = false) {
+        public static void InitApp(WebApplication app, bool forceGcToCleanUpRamEveryRequest = false, int gcDelaySkipRunMinutes = 30) {
             App = app;
 
             if (forceGcToCleanUpRamEveryRequest) {
                 _ = App.Use(async (context, next) => {
                     context.Response.OnCompleted(() => {
+                        if (LAST_GC_RUN != null && (DateTime.Now - LAST_GC_RUN.Value).TotalMinutes < gcDelaySkipRunMinutes) {
+                            return Task.CompletedTask;
+                        }
+
+                        LAST_GC_RUN = DateTime.Now;
+
                         GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
                         GC.WaitForPendingFinalizers();
+
                         return Task.CompletedTask;
                     });
 
