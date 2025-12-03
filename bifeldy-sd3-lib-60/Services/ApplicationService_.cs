@@ -79,7 +79,7 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public string GetVariabel(string key, string kunci) {
-            string cacheKey = $"{key}_{kunci}";
+            string cacheKey = $"{kunci}_{key}".ToLower().Trim();
 
             try {
                 _ = this._locker.SemaphoreGlobalApp("KUNCI").Wait(-1);
