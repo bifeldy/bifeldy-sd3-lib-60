@@ -41,6 +41,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
         private readonly IDistributedCache _cache;
         private readonly IHttpContextAccessor _hca;
+        private readonly ILockerService _locker;
+        private readonly IConverterService _converter;
 
         private readonly Assembly _prgAsm = Assembly.GetEntryAssembly();
         private readonly Assembly _libAsm = Assembly.GetExecutingAssembly();
@@ -65,17 +67,23 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public CApplicationService(
             IDistributedCache cache,
-            IHttpContextAccessor hca
+            IHttpContextAccessor hca,
+            ILockerService locker,
+            IConverterService converter
         ) {
             this._cache = cache;
             this._hca = hca;
+            this._locker = locker;
+            this._converter = converter;
             this._SettingLibb = new SettingLibb.Class1();
         }
 
         public string GetVariabel(string key, string kunci) {
-            string cacheKey = $"{this.GetType().Name}_{key}_{kunci}";
+            string cacheKey = $"{key}_{kunci}";
 
             try {
+                _ = this._locker.SemaphoreGlobalApp("KUNCI").Wait(-1);
+
                 string result = this._cache.GetString(cacheKey);
                 if (!string.IsNullOrEmpty(result?.Trim())) {
                     return result;
@@ -83,27 +91,58 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 // http://xxx.xxx.xxx.xxx/KunciGxxx
                 result = this._SettingLibb.GetVariabel(key, kunci);
+                result = result?.Split(';').FirstOrDefault();
                 result = result?.Trim();
 
+                string jsonPathKunci = Path.Combine(Bifeldy.DEFAULT_DATA_FOLDER, "Kunci.json");
                 if (!string.IsNullOrEmpty(result)) {
                     if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
-                        if (this._hca.HttpContext != null) {
-                            string reqPath = this._hca.HttpContext.Request.Path.Value;
-                            if (!string.IsNullOrEmpty(reqPath)) {
-                                if (reqPath.StartsWith($"/{Bifeldy.API_PREFIX}/", StringComparison.InvariantCultureIgnoreCase)) {
-                                    return null;
+                        bool fromSavedJsonFile = false;
+
+                        if (File.Exists(jsonPathKunci)) {
+                            IDictionary<string, object> dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(File.ReadAllText(jsonPathKunci));
+
+                            if (dictKunci != null) {
+                                if (dictKunci.ContainsKey(cacheKey)) {
+                                    object val = dictKunci[cacheKey];
+
+                                    if (val != null) {
+                                        result = val?.ToString();
+
+                                        result = result?.Split(';').FirstOrDefault();
+                                        result = result?.Trim();
+
+                                        fromSavedJsonFile = true;
+                                    }
                                 }
                             }
                         }
 
-                        throw new KunciServerTidakTersediaException($"Terjadi Kesalahan Saat Mendapatkan Kunci {key} @ {kunci} :: {result}");
+                        if (!fromSavedJsonFile) {
+                            if (this._hca.HttpContext != null) {
+                                string reqPath = this._hca.HttpContext.Request.Path.Value;
+                                if (!string.IsNullOrEmpty(reqPath)) {
+                                    if (reqPath.StartsWith($"/{Bifeldy.API_PREFIX}/", StringComparison.InvariantCultureIgnoreCase)) {
+                                        return null;
+                                    }
+                                }
+                            }
+
+                            throw new KunciServerTidakTersediaException($"Terjadi Kesalahan Saat Mendapatkan Kunci {key} @ {kunci} :: {result}");
+                        }
                     }
-                }
+                    else {
+                        var dictKunci = new Dictionary<string, object>();
 
-                result = result?.Split(';').FirstOrDefault();
-                result = result?.Trim();
+                        if (File.Exists(jsonPathKunci)) {
+                            dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(File.ReadAllText(jsonPathKunci));
+                        }
 
-                if (!string.IsNullOrEmpty(result)) {
+                        dictKunci[cacheKey] = result;
+
+                        File.WriteAllText(jsonPathKunci, this._converter.ObjectToJson(dictKunci));
+                    }
+
                     this._cache.SetString(cacheKey, result, new DistributedCacheEntryOptions() {
                         SlidingExpiration = TimeSpan.FromMinutes(15)
                     });
@@ -114,6 +153,9 @@ namespace bifeldy_sd3_lib_60.Services {
             catch {
                 this._cache.Remove(cacheKey);
                 throw;
+            }
+            finally {
+                _ = this._locker.SemaphoreGlobalApp("KUNCI").Release();
             }
         }
 
