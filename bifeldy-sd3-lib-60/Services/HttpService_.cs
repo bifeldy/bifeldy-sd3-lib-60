@@ -152,10 +152,10 @@ namespace bifeldy_sd3_lib_60.Services {
             else if (type == typeof(byte[])) {
                 return new ByteArrayContent(httpContent);
             }
-            else if (type == typeof(Stream) || type == typeof(HttpRequest)) {
+            else if (type == typeof(Stream) || typeof(HttpRequest).IsAssignableFrom(type)) {
                 HttpContent streamContent;
 
-                if (type == typeof(HttpRequest)) {
+                if (typeof(HttpRequest).IsAssignableFrom(type)) {
                     var req = (HttpRequest)httpContent;
                     streamContent = new StreamContent(req.Body);
 
