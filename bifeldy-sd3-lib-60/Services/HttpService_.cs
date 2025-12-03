@@ -16,6 +16,7 @@ using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -97,35 +98,82 @@ namespace bifeldy_sd3_lib_60.Services {
             return lsHeader;
         }
 
-        private async Task<HttpContent> GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
-            HttpContent content = null;
+        public HttpContent CreateStreamingJsonContent(IAsyncEnumerable<object> stream, JsonSerializerOptions jsonOpt = null) {
+            jsonOpt ??= new JsonSerializerOptions {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
 
+            var content = new PushStreamContent(async (output, _, __) => {
+                await using (var writer = new Utf8JsonWriter(output)) {
+                    writer.WriteStartArray();
+
+                    await foreach (object obj in stream) {
+                        JsonSerializer.Serialize(writer, obj, jsonOpt);
+                        await writer.FlushAsync();
+                    }
+
+                    writer.WriteEndArray();
+                    await writer.FlushAsync();
+                }
+            });
+
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+            return content;
+        }
+
+        public HttpContent CreateNdjsonContent(IAsyncEnumerable<object> stream, JsonSerializerOptions jsonOpt = null) {
+            jsonOpt ??= new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+            var content = new PushStreamContent(async (output, _, __) => {
+                await using (var writer = new StreamWriter(output)) {
+                    await foreach (object obj in stream) {
+                        string json = JsonSerializer.Serialize(obj, jsonOpt);
+
+                        await writer.WriteLineAsync(json);
+                        await writer.FlushAsync();
+                    }
+                }
+            });
+
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/x-ndjson");
+
+            return content;
+        }
+
+        private HttpContent GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
             encoding ??= Encoding.UTF8;
 
-            Type t = httpContent.GetType();
-            if (t == typeof(string)) {
-                content = new StringContent(httpContent, encoding, contentType);
-            }
-            else if (typeof(HttpRequest).IsAssignableFrom(t)) {
-                using (var ms = new MemoryStream()) {
-                    await httpContent.Body.CopyToAsync(ms);
-                    await ms.FlushAsync();
-                    byte[] arr = ms.ToArray();
-                    content = new ByteArrayContent(arr);
-                }
-            }
-            else if (typeof(Stream).IsAssignableFrom(t)) {
-                content = new StreamContent(httpContent);
-            }
-            else if (t == typeof(byte[])) {
-                content = new ByteArrayContent(httpContent);
-            }
-            else {
-                content = new StringContent(this._cs.ObjectToJson(httpContent), encoding, contentType);
-            }
+            switch (httpContent) {
+                case string s:
+                    return new StringContent(s, encoding, contentType);
 
-            content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
-            return content;
+                case byte[] bytes:
+                    return new ByteArrayContent(bytes);
+
+                case Stream inputStream:
+                    var streamContent = new StreamContent(inputStream);
+                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                    return streamContent;
+
+                case HttpRequest req:
+                    var direct = new StreamContent(req.Body);
+                    direct.Headers.ContentType = new MediaTypeHeaderValue(req.ContentType ?? contentType);
+                    return direct;
+
+                case IAsyncEnumerable<object> asyncEnum:
+                    // Auto detect JSON vs NDJSON
+                    if (contentType == "application/x-ndjson") {
+                        return this.CreateNdjsonContent(asyncEnum);
+                    }
+
+                    return this.CreateStreamingJsonContent(asyncEnum);
+
+                default:
+                    // JSON object
+                    dynamic json = JsonSerializer.Serialize(httpContent);
+                    return new StringContent(json, encoding, contentType);
+            }
         }
 
         private async Task<HttpRequestMessage> ParseApiData(
