@@ -94,7 +94,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 result = result?.Split(';').FirstOrDefault();
                 result = result?.Trim();
 
-                string jsonPathKunci = Path.Combine(Bifeldy.DEFAULT_DATA_FOLDER, "Kunci.json");
+                string jsonPathKunci = Path.Combine(this.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "Kunci.json");
                 if (!string.IsNullOrEmpty(result)) {
                     if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
                         bool fromSavedJsonFile = false;

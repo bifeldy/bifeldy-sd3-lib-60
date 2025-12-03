@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Models;
 
@@ -183,7 +184,7 @@ namespace bifeldy_sd3_lib_60.Services {
                     return this.CreateNdjsonContent(httpContent);
                 }
 
-                throw new NotSupportedException($"Unsupported Streaming '{contentType}'");
+                throw new PluginGagalProsesException($"Streaming Untuk Content-Type '{contentType}' Tidak Tersedia");
             }
             else {
                 dynamic json = JsonSerializer.Serialize(httpContent);
@@ -431,11 +432,11 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public async IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, JsonSerializerOptions options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
             if (response == null) {
-                throw new ArgumentNullException(nameof(response));
+                throw new PluginGagalProsesException("Response Tidak Ada Isinya");
             }
 
             if (!response.IsSuccessStatusCode) {
-                throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+                throw new PluginGagalProsesException($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
             }
 
             options ??= new JsonSerializerOptions() {
@@ -472,7 +473,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 yield break;
             }
 
-            throw new NotSupportedException($"Unsupported Streaming '{response.Content.Headers.ContentType?.MediaType}'");
+            throw new PluginGagalProsesException($"Streaming Untuk Content-Type '{response.Content.Headers.ContentType?.MediaType}' Tidak Tersedia");
         }
 
         public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {

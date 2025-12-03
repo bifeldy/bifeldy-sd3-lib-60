@@ -748,7 +748,7 @@ namespace bifeldy_sd3_lib_60 {
             await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
                 info = $"{statusCode} - Whoops :: {(isPlugin ? $"Plugin `{pluginName}` Bermasalah" : "Terjadi Kesalahan")}",
                 result = new ResponseJsonMessage() {
-                    message = showErrorDetail || isPlugin ? errDtl : "Gagal Melanjutkan Permintaan"
+                    message = isPlugin ? errMsg : (showErrorDetail ? errDtl : "Gagal Melanjutkan Permintaan")
                 }
             });
         }
