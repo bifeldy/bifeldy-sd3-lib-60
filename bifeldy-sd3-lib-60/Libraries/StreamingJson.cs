@@ -1,4 +1,16 @@
-﻿using System.Text.Json;
+﻿/**
+* 
+* Author       :: Basilius Bias Astho Christyono
+* Phone        :: (+62) 889 236 6466
+* 
+* Department   :: IT SD 03
+* Mail         :: bias@indomaret.co.id
+* 
+* Catatan      :: application/json
+* 
+*/
+
+using System.Text.Json;
 
 namespace bifeldy_sd3_lib_60.Libraries {
 
