@@ -23,7 +23,9 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
 
         public static readonly List<string> AcceptedContentType = new() {
             MediaTypeNames.Application.Json,
-            MediaTypeNames.Application.Xml
+            MediaTypeNames.Application.Xml,
+            "application/x-ndjson",
+            "text/csv"
         };
 
         public void Apply(OpenApiOperation operation, OperationFilterContext context) {
