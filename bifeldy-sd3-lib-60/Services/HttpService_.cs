@@ -11,8 +11,10 @@
  * 
  */
 
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -24,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Libraries;
 using bifeldy_sd3_lib_60.Models;
 
 namespace bifeldy_sd3_lib_60.Services {
@@ -32,6 +35,7 @@ namespace bifeldy_sd3_lib_60.Services {
         List<Tuple<string, string>> CleanHeader(IHeaderDictionary httpHeader);
         HttpClient CreateHttpClient(uint timeoutSeconds = 60, string publicKeysBase64HashJsonFilePath = null);
         Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null);
+        IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, JsonSerializerOptions options = null, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
         Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
         Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
@@ -49,21 +53,44 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly ILogger<CHttpService> _logger;
         private readonly IConverterService _cs;
 
-        private string[] ProhibitedHeaders { get; } = new string[] {
-            "accept-charset", "accept-encoding", "access-control-request-headers", "access-control-request-method",
-            "connection", "content-length", "cookie", "date", "dnt", "expect", "feature-policy", "host", "via",
-            "keep-alive", "origin", "proxy-*", "sec-*", "referer", "te", "trailer", "transfer-encoding", "upgrade"
+        private static readonly HashSet<string> HopByHopHeaders = new(StringComparer.OrdinalIgnoreCase) {
+            // RFC 7230 / RFC 9110
+            "Connection",
+            "Proxy-Connection",
+            "Keep-Alive",
+            "TE",
+            "Trailer",
+            "Transfer-Encoding",
+            "Upgrade",
+    
+            // Wildcards (never forward)
+            "Proxy-*",
+            "Sec-*"
         };
 
-        private string[] RequestHeadersToRemove { get; } = new string [] {
-            "host", "user-agent", "accept", "accept-encoding", "content-length",
-            "forwarded", "x-forwarded-proto", "x-cloud-trace-context",
-            /* "x-real-ip", "cf-connecting-ip", "x-forwarded-for" */
+
+        private static readonly HashSet<string> RequestHeadersToRemove = new(StringComparer.OrdinalIgnoreCase) {
+            "Host",               // replaced by HttpClient
+            "Content-Length",     // recalculated by HttpClient
+            "Content-Encoding",   // ASP.NET may already decompress
+            "Transfer-Encoding",  // HttpClient will decide
+            "Expect"              // avoid 100-continue problems
+
+            /* "x-real-ip", "cf-connecting-ip", */
+
+            // Optional: depends on your proxy policy
+            // "Accept-Encoding", // do not forward if proxy wants to decompress
+            // "User-Agent",
+            // "Forwarded", "X-Forwarded-*"
         };
 
-        private string[] ResponseHeadersToRemove { get; } = new string [] {
-            "accept-ranges", "content-length", "keep-alive", "connection",
-            "content-encoding", "set-cookie"
+        private static readonly HashSet<string> ResponseHeadersToRemove = new(StringComparer.OrdinalIgnoreCase) {
+            "Transfer-Encoding",
+            "Content-Length",
+            "Connection",
+            "Keep-Alive",
+            "Proxy-Connection",
+            "Trailer"
         };
 
         public CHttpService(ILogger<CHttpService> logger, IConverterService cs) {
@@ -71,117 +98,107 @@ namespace bifeldy_sd3_lib_60.Services {
             this._cs = cs;
         }
 
-        public List<Tuple<string, string>> CleanHeader(IHeaderDictionary httpHeader) {
-            var lsHeader = new List<Tuple<string, string>>();
+        public List<Tuple<string, string>> CleanHeader(IHeaderDictionary headers) {
+            var list = new List<Tuple<string, string>>();
 
-            string[] hdrListReq = this.ProhibitedHeaders.Union(this.RequestHeadersToRemove).ToArray();
-            foreach (KeyValuePair<string, StringValues> header in httpHeader) {
-                bool isOk = true;
-                foreach (string hl in hdrListReq) {
-                    string h = hl.ToLower();
-                    string hdrKey = header.Key.ToLower();
-                    if (h.EndsWith("*")) {
-                        if (hdrKey.StartsWith(h.Split("*")[0])) {
-                            isOk = false;
-                        }
-                    }
-                    else if (hdrKey == h) {
-                        isOk = false;
-                    }
+            foreach (KeyValuePair<string, StringValues> header in headers) {
+                if (RequestHeadersToRemove.Contains(header.Key)) {
+                    continue;
                 }
 
-                if (isOk) {
-                    lsHeader.Add(new Tuple<string, string>(header.Key, header.Value));
+                if (HopByHopHeaders.Any(p => HeaderMatches(p, header.Key))) {
+                    continue;
                 }
+
+                list.Add(Tuple.Create(header.Key, header.Value.ToString()));
             }
 
-            return lsHeader;
+            return list;
         }
 
         public HttpContent CreateStreamingJsonContent(IAsyncEnumerable<object> stream, JsonSerializerOptions jsonOpt = null) {
-            jsonOpt ??= new JsonSerializerOptions {
+            jsonOpt ??= new JsonSerializerOptions() {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
-            var content = new PushStreamContent(async (output, _, __) => {
-                await using (var writer = new Utf8JsonWriter(output)) {
-                    writer.WriteStartArray();
-
-                    await foreach (object obj in stream) {
-                        JsonSerializer.Serialize(writer, obj, jsonOpt);
-                        await writer.FlushAsync();
-                    }
-
-                    writer.WriteEndArray();
-                    await writer.FlushAsync();
+            return new StreamContent(new StreamingJson(stream, jsonOpt)) {
+                Headers = {
+                    ContentType = new MediaTypeHeaderValue("application/json")
                 }
-            });
-
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-            return content;
+            };
         }
 
         public HttpContent CreateNdjsonContent(IAsyncEnumerable<object> stream, JsonSerializerOptions jsonOpt = null) {
-            jsonOpt ??= new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            jsonOpt ??= new JsonSerializerOptions() {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
 
-            var content = new PushStreamContent(async (output, _, __) => {
-                await using (var writer = new StreamWriter(output)) {
-                    await foreach (object obj in stream) {
-                        string json = JsonSerializer.Serialize(obj, jsonOpt);
-
-                        await writer.WriteLineAsync(json);
-                        await writer.FlushAsync();
-                    }
+            return new StreamContent(new StreamingNdjson(stream, jsonOpt)) {
+                Headers = {
+                    ContentType = new MediaTypeHeaderValue("application/x-ndjson")
                 }
-            });
-
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/x-ndjson");
-
-            return content;
+            };
         }
 
         private HttpContent GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
             encoding ??= Encoding.UTF8;
 
-            switch (httpContent) {
-                case string s:
-                    return new StringContent(s, encoding, contentType);
+            Type type = httpContent.GetType();
 
-                case byte[] bytes:
-                    return new ByteArrayContent(bytes);
+            if (type == typeof(string)) {
+                return new StringContent(httpContent, encoding, contentType);
+            }
+            else if (type == typeof(byte[])) {
+                return new ByteArrayContent(httpContent);
+            }
+            else if (type == typeof(Stream) || type == typeof(HttpRequest)) {
+                HttpContent streamContent;
 
-                case Stream inputStream:
-                    var streamContent = new StreamContent(inputStream);
-                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                    return streamContent;
+                if (type == typeof(HttpRequest)) {
+                    var req = (HttpRequest)httpContent;
+                    streamContent = new StreamContent(req.Body);
 
-                case HttpRequest req:
-                    var direct = new StreamContent(req.Body);
-                    direct.Headers.ContentType = new MediaTypeHeaderValue(req.ContentType ?? contentType);
-                    return direct;
-
-                case IAsyncEnumerable<object> asyncEnum:
-                    // Auto detect JSON vs NDJSON
-                    if (contentType == "application/x-ndjson") {
-                        return this.CreateNdjsonContent(asyncEnum);
+                    if (!string.IsNullOrEmpty(req.ContentType)) {
+                        streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(req.ContentType);
                     }
 
-                    return this.CreateStreamingJsonContent(asyncEnum);
+                    streamContent.Headers.ContentLength = null;
+                    streamContent.Headers.ContentEncoding.Clear();
+                }
+                else {
+                    streamContent = new StreamContent((Stream)httpContent);
+                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                }
 
-                default:
-                    // JSON object
-                    dynamic json = JsonSerializer.Serialize(httpContent);
-                    return new StringContent(json, encoding, contentType);
+                return streamContent;
+            }
+            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)) {
+                string ct = contentType?.ToLowerInvariant();
+
+                if (ct == "application/json") {
+                    return this.CreateStreamingJsonContent(httpContent);
+                }
+
+                if (ct == "application/x-ndjson") {
+                    return this.CreateNdjsonContent(httpContent);
+                }
+
+                throw new NotSupportedException($"Unsupported Streaming '{contentType}'");
+            }
+            else {
+                dynamic json = JsonSerializer.Serialize(httpContent);
+                return new StringContent(json, encoding, contentType);
             }
         }
 
-        private async Task<HttpRequestMessage> ParseApiData(
+        private HttpRequestMessage ParseApiData(
             string httpUri, HttpMethod httpMethod, dynamic httpContent = null,
             bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
             string[] contentKeyName = null, string[] contentType = null,
             Encoding encoding = null
         ) {
+            encoding ??= Encoding.UTF8;
+
             var httpRequestMessage = new HttpRequestMessage() {
                 Method = httpMethod,
                 RequestUri = new Uri(httpUri)
@@ -196,16 +213,22 @@ namespace bifeldy_sd3_lib_60.Services {
                     if (httpContent.GetType().IsArray) {
                         for (int i = 0; i < httpContent.Length; i++) {
                             lsContent.Add(
-                                await GetHttpContent(
+                                GetHttpContent(
                                     httpContent[i],
                                     contentType?.Length > 0 ? contentType[i] : "application/octet-stream",
-                                    encoding ?? Encoding.UTF8
+                                    encoding
                                 )
                             );
                         }
                     }
                     else {
-                        lsContent.Add(await GetHttpContent(httpContent, "application/octet-stream"));
+                        lsContent.Add(
+                            GetHttpContent(
+                                httpContent,
+                                contentType?.Length > 0 ? contentType[0] : "application/octet-stream",
+                                encoding
+                            )
+                        );
                     }
 
                     httpContent = new MultipartFormDataContent();
@@ -214,9 +237,10 @@ namespace bifeldy_sd3_lib_60.Services {
                     }
                 }
                 else {
-                    httpContent = await GetHttpContent(
+                    httpContent = GetHttpContent(
                         httpContent,
-                        contentType?.Length > 0 ? contentType[0] : "application/json"
+                        contentType?.Length > 0 ? contentType[0] : "application/json",
+                        encoding
                     );
                 }
 
@@ -226,7 +250,9 @@ namespace bifeldy_sd3_lib_60.Services {
             if (httpHeaders != null) {
                 foreach (Tuple<string, string> hdr in httpHeaders) {
                     try {
-                        httpRequestMessage.Headers.Add(hdr.Item1, hdr.Item2);
+                        if (!httpRequestMessage.Headers.TryAddWithoutValidation(hdr.Item1, hdr.Item2)) {
+                            _ = httpRequestMessage.Content?.Headers.TryAddWithoutValidation(hdr.Item1, hdr.Item2);
+                        }
                     }
                     catch {
                         // Skip Invalid Header ~
@@ -252,7 +278,7 @@ namespace bifeldy_sd3_lib_60.Services {
             HttpRequestMessage httpRequestMessage = null;
 
             for (int retry = 0; retry < maxRetry; retry++) {
-                httpRequestMessage = await this.ParseApiData(
+                httpRequestMessage = this.ParseApiData(
                     httpUri, httpMethod, httpContent,
                     multipart, httpHeaders,
                     contentKeyName, contentType,
@@ -280,7 +306,9 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public HttpClient CreateHttpClient(uint timeoutSeconds = 60, string publicKeysBase64HashJsonFilePath = null) {
-            var httpMessageHandler = new HttpClientHandler();
+            var httpMessageHandler = new HttpClientHandler() {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
+            };
 
             if (!string.IsNullOrEmpty(publicKeysBase64HashJsonFilePath)) {
                 string json = File.ReadAllText(publicKeysBase64HashJsonFilePath);
@@ -324,23 +352,37 @@ namespace bifeldy_sd3_lib_60.Services {
             };
         }
 
+        private static bool HeaderMatches(string pattern, string header) {
+            if (string.IsNullOrEmpty(pattern) || string.IsNullOrEmpty(header)) {
+                return false;
+            }
+
+            pattern = pattern.ToLowerInvariant();
+            header = header.ToLowerInvariant();
+
+            if (pattern.EndsWith("*")) {
+                string prefix = pattern[..^1];
+                return header.StartsWith(prefix);
+            }
+
+            return header == pattern;
+        }
+
         public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null) {
             List<Tuple<string, string>> lsHeader = this.CleanHeader(request.Headers);
 
-            HttpResponseMessage res = await this.CreateHttpClient(timeoutSeconds, publicKeysBase64HashJsonFilePath).SendAsync(
-                await this.ParseApiData(
-                    urlTarget,
-                    new HttpMethod(request.Method),
-                    request,
-                    httpHeaders: lsHeader,
-                    contentType: new string[] {
-                        request.ContentType
-                    }
-                ),
-                HttpCompletionOption.ResponseHeadersRead
+            HttpRequestMessage forwardMsg = this.ParseApiData(
+                urlTarget,
+                new HttpMethod(request.Method),
+                request,
+                httpHeaders: lsHeader,
+                contentType: request.ContentType != null ? new[] { request.ContentType } : null
             );
 
-            int statusCode = (int) res.StatusCode;
+            HttpResponseMessage res = await this.CreateHttpClient(timeoutSeconds, publicKeysBase64HashJsonFilePath)
+                .SendAsync(forwardMsg, HttpCompletionOption.ResponseHeadersRead);
+
+            int statusCode = (int)res.StatusCode;
 
             response.Clear();
             response.StatusCode = statusCode;
@@ -349,7 +391,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 return new NotFoundObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "404 - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
                     result = new ResponseJsonMessage() {
-                        message = $"Silahkan Periksa Kembali Dokumentasi API"
+                        message = "Silahkan Periksa Kembali Dokumentasi API"
                     }
                 });
             }
@@ -357,36 +399,80 @@ namespace bifeldy_sd3_lib_60.Services {
                 return new BadRequestObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
                     info = "502 - Whoops :: Alamat Server Tujuan Tidak Tersedia",
                     result = new ResponseJsonMessage() {
-                        message = $"Silahkan Hubungi S/SD 3 Untuk informasi Lebih Lanjut"
+                        message = "Silahkan Hubungi S/SD 3 Untuk informasi Lebih Lanjut"
                     }
                 });
             }
-            else {
-                KeyValuePair<string, IEnumerable<string>>[] hdrContentListRes = res.Headers.Union(res.Content.Headers).ToArray();
-                string[] hdrListRes = this.ProhibitedHeaders.Union(this.ResponseHeadersToRemove).ToArray();
-                foreach (KeyValuePair<string, IEnumerable<string>> header in hdrContentListRes) {
-                    bool isOk = true;
-                    foreach (string hl in hdrListRes) {
-                        string h = hl.ToLower();
-                        string hdrKey = header.Key.ToLower();
-                        if (h.EndsWith("*")) {
-                            if (hdrKey.StartsWith(h.Split("*")[0])) {
-                                isOk = false;
-                            }
-                        }
-                        else if (hdrKey == h) {
-                            isOk = false;
-                        }
-                    }
 
-                    if (isOk) {
-                        response.Headers[header.Key] = header.Value.ToArray();
+            KeyValuePair<string, IEnumerable<string>>[] allHeaders = res.Headers
+                .Concat(res.Content.Headers)
+                .ToArray();
+
+            string[] blockedHeaders = HopByHopHeaders
+                .Union(ResponseHeadersToRemove)
+                .ToArray();
+
+            foreach (KeyValuePair<string, IEnumerable<string>> header in allHeaders) {
+                string hdrKey = header.Key;
+
+                // Skip prohibited OR hop-by-hop headers
+                if (blockedHeaders.Any(b => HeaderMatches(b, hdrKey))) {
+                    continue;
+                }
+
+                response.Headers[hdrKey] = header.Value.ToArray();
+            }
+
+            Stream stream = await res.Content.ReadAsStreamAsync();
+            string mediaType = res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+
+            return new FileStreamResult(stream, mediaType);
+        }
+
+        public async IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, JsonSerializerOptions options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+            if (response == null) {
+                throw new ArgumentNullException(nameof(response));
+            }
+
+            if (!response.IsSuccessStatusCode) {
+                throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+            }
+
+            options ??= new JsonSerializerOptions() {
+                PropertyNameCaseInsensitive = true
+            };
+
+            Stream stream = await response.Content.ReadAsStreamAsync();
+
+            if (response.Content.Headers.ContentType?.MediaType == "application/json") {
+                await foreach (T item in JsonSerializer.DeserializeAsyncEnumerable<T>(stream, options, cancellationToken)) {
+                    if (item != null) {
+                        yield return item;
                     }
                 }
 
-                Stream stream = await res.Content.ReadAsStreamAsync();
-                return new FileStreamResult(stream, res.Content.Headers.ContentType.MediaType);
+                yield break;
             }
+
+            if (response.Content.Headers.ContentType?.MediaType == "application/x-ndjson") {
+                using (var reader = new StreamReader(stream)) {
+                    while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested) {
+                        string line = await reader.ReadLineAsync();
+
+                        if (!string.IsNullOrWhiteSpace(line)) {
+                            T obj = JsonSerializer.Deserialize<T>(line, options);
+
+                            if (obj != null) {
+                                yield return obj;
+                            }
+                        }
+                    }
+                }
+
+                yield break;
+            }
+
+            throw new NotSupportedException($"Unsupported Streaming '{response.Content.Headers.ContentType?.MediaType}'");
         }
 
         public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
