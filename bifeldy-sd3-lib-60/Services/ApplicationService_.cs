@@ -143,9 +143,11 @@ namespace bifeldy_sd3_lib_60.Services {
                         File.WriteAllText(jsonPathKunci, this._converter.ObjectToJson(dictKunci));
                     }
 
-                    this._cache.SetString(cacheKey, result, new DistributedCacheEntryOptions() {
-                        SlidingExpiration = TimeSpan.FromMinutes(15)
-                    });
+                    if (!string.IsNullOrEmpty(result)) {
+                        this._cache.SetString(cacheKey, result, new DistributedCacheEntryOptions() {
+                            SlidingExpiration = TimeSpan.FromMinutes(15)
+                        });
+                    }
                 }
 
                 return result;
