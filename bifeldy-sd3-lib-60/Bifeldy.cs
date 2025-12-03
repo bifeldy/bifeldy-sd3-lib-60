@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
@@ -57,6 +58,7 @@ using StackExchange.Redis;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Backgrounds;
 using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Grpcs;
 using bifeldy_sd3_lib_60.Libraries;
@@ -110,6 +112,9 @@ namespace bifeldy_sd3_lib_60 {
             _ = Services.Configure<JsonOptions>(opt => {
                 opt.SerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
             });
+            _ = Services.Configure<FormOptions>(o => {
+                o.MultipartBodyLengthLimit = long.MaxValue;
+            });
         }
 
         public static void InitApp(WebApplication app, bool forceGcToCleanUpRamEveryRequest = false, int gcDelaySkipRunMinutes = 30) {
@@ -158,7 +163,7 @@ namespace bifeldy_sd3_lib_60 {
             Console.WriteLine(logInfo);
 
             _ = Builder.WebHost.ConfigureKestrel(options => {
-                options.Limits.MaxRequestBodySize = null;
+                options.Limits.MaxRequestBodySize = long.MaxValue;
 
                 options.Listen(IPAddress.Any, webApiPort, listenOptions => {
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
@@ -676,6 +681,78 @@ namespace bifeldy_sd3_lib_60 {
             });
         }
 
+        private static async Task HandleRequestException<T>(HttpContext context, Exception ex, int statusCode, string pluginName = null) {
+            ILogger<T> _logger = context.RequestServices.GetRequiredService<ILogger<T>>();
+
+            var user = (UserApiSession)context.Items["user"];
+
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            response.Clear();
+
+            string xRequestTraceProxy = null;
+            if (response.Headers.ContainsKey("x-request-trace-proxy")) {
+                xRequestTraceProxy = response.Headers["x-request-trace-proxy"];
+            }
+            else {
+                if (request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
+                    string proxyPath = pathBase.Last();
+                    if (!string.IsNullOrEmpty(proxyPath)) {
+                        xRequestTraceProxy = proxyPath;
+                        response.Headers.Add("x-request-trace-proxy", xRequestTraceProxy);
+                    }
+                }
+            }
+
+            string xRequestTraceActivity = null;
+            if (response.Headers.ContainsKey("x-request-trace-activity")) {
+                xRequestTraceActivity = response.Headers["x-request-trace-activity"];
+            }
+            else {
+                xRequestTraceActivity = Activity.Current?.Id;
+                response.Headers.Add("x-request-trace-activity", xRequestTraceActivity);
+            }
+
+            string xRequestTraceId = null;
+            if (response.Headers.ContainsKey("x-request-trace-id")) {
+                xRequestTraceId = response.Headers["x-request-trace-id"];
+            }
+            else {
+                xRequestTraceId = context?.TraceIdentifier;
+                response.Headers.Add("x-request-trace-id", xRequestTraceId);
+            }
+
+            response.StatusCode = statusCode;
+
+            string errMsg = ex.Message;
+
+            Exception ie = ex.InnerException;
+            while (ie != null) {
+                errMsg += " ~ " + ie.Message;
+                ie = ie.InnerException;
+            }
+
+            string errDtl = errMsg + Environment.NewLine + ex.StackTrace;
+
+            bool isPlugin = !string.IsNullOrEmpty(pluginName);
+
+            _logger.LogError(
+                "[" + (isPlugin ? "PLUGIN" : "GLOBAL") + "_ERROR_HANDLER] {TraceId} {xRequestTraceProxy} 💣 {Message}",
+                xRequestTraceActivity, xRequestTraceProxy, errDtl
+            );
+
+            context.Items["error_detail"] = errDtl;
+
+            bool showErrorDetail = App.Environment.IsDevelopment() || user?.role <= UserSessionRole.USER_SD_SSD_3;
+            await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
+                info = $"{statusCode} - Whoops :: {(isPlugin ? $"Plugin `{pluginName}` Bermasalah" : "Terjadi Kesalahan")}",
+                result = new ResponseJsonMessage() {
+                    message = showErrorDetail || isPlugin ? errDtl : "Gagal Melanjutkan Permintaan"
+                }
+            });
+        }
+
         public static void Handle500ApiError<T>() {
             _ = App.Use(async (context, next) => {
 
@@ -691,79 +768,13 @@ namespace bifeldy_sd3_lib_60 {
                         await next();
                     }
                     catch (Exception ex) {
-                        ILogger<T> _logger = context.RequestServices.GetRequiredService<ILogger<T>>();
-
-                        var user = (UserApiSession)context.Items["user"];
-
-                        HttpRequest request = context.Request;
-                        HttpResponse response = context.Response;
-
-                        response.Clear();
-
-                        string xRequestTraceProxy = null;
-                        if (response.Headers.ContainsKey("x-request-trace-proxy")) {
-                            xRequestTraceProxy = response.Headers["x-request-trace-proxy"];
-                        }
-                        else {
-                            if (request.Headers.TryGetValue(NGINX_PATH_NAME, out StringValues pathBase)) {
-                                string proxyPath = pathBase.Last();
-                                if (!string.IsNullOrEmpty(proxyPath)) {
-                                    xRequestTraceProxy = proxyPath;
-                                    response.Headers.Add("x-request-trace-proxy", xRequestTraceProxy);
-                                }
-                            }
-                        }
-
-                        string xRequestTraceActivity = null;
-                        if (response.Headers.ContainsKey("x-request-trace-activity")) {
-                            xRequestTraceActivity = response.Headers["x-request-trace-activity"];
-                        }
-                        else {
-                            xRequestTraceActivity = Activity.Current?.Id;
-                            response.Headers.Add("x-request-trace-activity", xRequestTraceActivity);
-                        }
-
-                        string xRequestTraceId = null;
-                        if (response.Headers.ContainsKey("x-request-trace-id")) {
-                            xRequestTraceId = response.Headers["x-request-trace-id"];
-                        }
-                        else {
-                            xRequestTraceId = context?.TraceIdentifier;
-                            response.Headers.Add("x-request-trace-id", xRequestTraceId);
-                        }
-
-                        response.StatusCode = StatusCodes.Status500InternalServerError;
-
-                        string errMsg = ex.Message;
-
-                        Exception ie = ex.InnerException;
-                        while (ie != null) {
-                            errMsg += " ~ " + ie.Message;
-                            ie = ie.InnerException;
-                        }
-
-                        string errDtl = errMsg + Environment.NewLine + ex.StackTrace;
-
-                        _logger.LogError(
-                            "[GLOBAL_ERROR_HANDLER] {TraceId} {xRequestTraceProxy} 💣 {Message}",
-                            xRequestTraceActivity, xRequestTraceProxy, errDtl
-                        );
-
-                        context.Items["error_detail"] = errDtl;
-
-                        bool showErrorDetail = App.Environment.IsDevelopment() || user?.role <= UserSessionRole.USER_SD_SSD_3;
-                        await response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = "500 - Whoops :: Terjadi Kesalahan",
-                            result = new ResponseJsonMessage() {
-                                message = showErrorDetail ? errDtl : "Gagal Melanjutkan Permintaan"
-                            }
-                        });
+                        await HandleRequestException<T>(context, ex, StatusCodes.Status500InternalServerError);
                     }
                 }
             });
         }
 
-        public static void HandleDynamicApiPluginRouteEndpoint(string pluginFolderName = "plugins") {
+        public static void HandleDynamicApiPluginRouteEndpoint<T>(string pluginFolderName = "plugins") {
             _ = App.Use(async (context, next) => {
                 string path = context.Request.Path.Value?.Trim('/');
 
@@ -807,15 +818,8 @@ namespace bifeldy_sd3_lib_60 {
                                     await next();
                                 }
                             }
-                            catch (Exception ex) {
-                                context.Response.Clear();
-                                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                                await context.Response.WriteAsJsonAsync(new ResponseJsonSingle<ResponseJsonMessage>() {
-                                    info = "503 - Whoops :: API Plugin Bermasalah",
-                                    result = new ResponseJsonMessage() {
-                                        message = ex.Message
-                                    }
-                                });
+                            catch (PluginGagalProsesException ex) {
+                                await HandleRequestException<T>(context, ex, StatusCodes.Status503ServiceUnavailable, pluginName);
                             }
 
                             return;
