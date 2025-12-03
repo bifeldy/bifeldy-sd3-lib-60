@@ -461,10 +461,17 @@ namespace bifeldy_sd3_lib_60.Services {
                         string line = await reader.ReadLineAsync();
 
                         if (!string.IsNullOrWhiteSpace(line)) {
-                            T obj = JsonSerializer.Deserialize<T>(line, options);
+                            T item = default;
 
-                            if (obj != null) {
-                                yield return obj;
+                            try {
+                                item = JsonSerializer.Deserialize<T>(line, options);
+                            }
+                            catch {
+                                throw new PluginGagalProsesException("Format X-(ND)JSON Harus Per Baris 1 Object Lengkap");
+                            }
+
+                            if (item != null) {
+                                yield return item;
                             }
                         }
                     }
