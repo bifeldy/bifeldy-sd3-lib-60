@@ -96,6 +96,12 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "protobuf-net/bcl.proto"));
                     return;
                 }
+                else if (context.Request.Path.Value.StartsWith("/api/swagger-ndjson.js", StringComparison.InvariantCultureIgnoreCase)) {
+                    context.Response.StatusCode = StatusCodes.Status200OK;
+                    context.Response.ContentType = "application/javascript";
+                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "swagger-ndjson.js"));
+                    return;
+                }
 
                 int shortCircuit = 0;
                 object res = null;

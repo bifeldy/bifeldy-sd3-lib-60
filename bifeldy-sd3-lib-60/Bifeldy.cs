@@ -129,8 +129,9 @@ namespace bifeldy_sd3_lib_60 {
 
                         LAST_GC_RUN = DateTime.Now;
 
-                        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+                        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, false);
                         GC.WaitForPendingFinalizers();
+                        GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false, false);
 
                         return Task.CompletedTask;
                     });
@@ -313,6 +314,7 @@ namespace bifeldy_sd3_lib_60 {
                     });
                 }
 
+                c.OperationFilter<SwaggerStreamOperationFilter>();
                 c.OperationFilter<SwaggerMediaTypesOperationFilter>();
                 c.SchemaFilter<SwaggerHideJsonPropertyFilter>();
 
@@ -355,6 +357,8 @@ namespace bifeldy_sd3_lib_60 {
                 }
 
                 c.DefaultModelsExpandDepth(-1);
+
+                c.InjectJavascript("./swagger-ndjson.js");
             });
         }
 

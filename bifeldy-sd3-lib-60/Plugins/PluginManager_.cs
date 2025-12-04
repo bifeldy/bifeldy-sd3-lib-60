@@ -265,9 +265,9 @@ namespace bifeldy_sd3_lib_60.Plugins {
                 }
 
                 if (!skipGC) {
-                    GC.Collect();
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
                     GC.WaitForPendingFinalizers();
-                    GC.Collect();
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false, true);
                 }
 
                 if (reloadDynamicApiPluginRouteEndpoint) {
