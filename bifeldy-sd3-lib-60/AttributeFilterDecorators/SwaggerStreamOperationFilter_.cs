@@ -30,7 +30,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
                 return;
             }
 
-            (string contentType, OpenApiSchema schema) = this.BuildSchema(attr.Format);
+            (string contentType, OpenApiSchema schema, IOpenApiAny example) = this.BuildSchema(attr.Format);
 
             operation.RequestBody = new OpenApiRequestBody() {
                 Description = schema.Description,
@@ -40,7 +40,7 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
                         contentType,
                         new OpenApiMediaType() {
                             Schema = schema,
-                            Example = new OpenApiString("{ \"key\": \"1\" }\n{ \"key\": \"2\" }", true)
+                            Example = example
                         }
                     }
                 },
@@ -50,26 +50,28 @@ namespace bifeldy_sd3_lib_60.AttributeFilterDecorators {
             };
         }
 
-        private (string, OpenApiSchema) BuildSchema(SwaggerStreamFormat format) {
+        private (string, OpenApiSchema, IOpenApiAny) BuildSchema(SwaggerStreamFormat format) {
             return format switch {
                 SwaggerStreamFormat.Ndjson => (
                     "application/x-ndjson",
                     new OpenApiSchema {
                         Type = "string",
-                        Description = "X-NDJSON (Newline Delimited JSON) streamed line-by-line"
-                    }
+                        Description = "X-NDJSON (Newline Delimited JSON) Bisa di push line-by-line 1-1"
+                    },
+                    new OpenApiString("{ \"key\": \"1\" }\n{ \"key\": \"2\" }", true)
                 ),
 
                 SwaggerStreamFormat.JsonArray => (
                     "application/json",
                     new OpenApiSchema {
                         Type = "array",
-                        Description = "Streaming JSON array of objects",
+                        Description = "Streaming JSON array of objects (Kirim seperti biasa)",
                         Items = new OpenApiSchema {
                             Type = "object",
                             AdditionalPropertiesAllowed = true
                         }
-                    }
+                    },
+                    new OpenApiString("[\n  { \"key\": \"1\" }\n  { \"key\": \"2\" }\n]", true)
                 ),
 
                 _ => throw new ArgumentOutOfRangeException(nameof(format))
