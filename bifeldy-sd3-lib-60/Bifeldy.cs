@@ -18,8 +18,8 @@ using System.Reflection;
 using Helmet;
 
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Connections;
@@ -66,11 +66,13 @@ using bifeldy_sd3_lib_60.Middlewares;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Plugins;
 using bifeldy_sd3_lib_60.UserAuth;
+using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60 {
 
     public static class Bifeldy {
 
+        public const string DEFAULT_ASSETS_FOLDER = "_assets";
         public const string DEFAULT_DATA_FOLDER = "_data";
 
         public static List<string> GRPC_ROUTE_PATH = new();
@@ -360,6 +362,17 @@ namespace bifeldy_sd3_lib_60 {
 
                 c.InjectJavascript("./swagger-ndjson.js");
             });
+
+            _ = App.MapGet($"/{API_PREFIX}/swagger-ndjson.js", async (context) => {
+                IApplicationService _app = context.RequestServices.GetRequiredService<IApplicationService>();
+
+                string fp = Path.Combine(_app.AppLocation, DEFAULT_ASSETS_FOLDER, "swagger-ndjson.js");
+
+                context.Response.StatusCode = StatusCodes.Status200OK;
+                context.Response.ContentType = "application/javascript";
+
+                await context.Response.SendFileAsync(fp);
+            });
         }
 
         /* ** */
@@ -438,13 +451,15 @@ namespace bifeldy_sd3_lib_60 {
 
             if (!File.Exists(Path.Combine(folderPath, "bcl.proto"))) {
                 File.Copy(
-                    Path.Combine(appPathDir, "_assets", "protobuf-net", "bcl.proto"),
+                    Path.Combine(appPathDir, DEFAULT_ASSETS_FOLDER, "protobuf-net", "bcl.proto"),
                     Path.Combine(folderPath, "bcl.proto")
                 );
             }
 
             List<string> route = App.AutoMapGrpcService();
+
             _ = App.MapCodeFirstGrpcReflectionService();
+
             return route;
         }
 

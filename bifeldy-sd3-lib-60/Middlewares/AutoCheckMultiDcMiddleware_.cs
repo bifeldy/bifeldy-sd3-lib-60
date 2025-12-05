@@ -52,54 +52,42 @@ namespace bifeldy_sd3_lib_60.Middlewares {
             HttpResponse response = context.Response;
 
             try {
-                string defaultDataFolder = Path.Combine(this._app.AppLocation, "_assets");
+                string defaultAssetsFolder = Path.Combine(this._app.AppLocation, Bifeldy.DEFAULT_ASSETS_FOLDER);
 
                 if (context.Request.Path.Value.StartsWith("/server-config.html", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "text/html; charset=utf-8";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "html/server-config.html"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultAssetsFolder, "html/server-config.html"));
                     return;
                 }
                 else if (context.Request.Path.Value.StartsWith("/css/bootstrap.min.css", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "text/css";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "css/bootstrap.min.css"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultAssetsFolder, "css/bootstrap.min.css"));
                     return;
                 }
                 else if (context.Request.Path.Value.StartsWith("/js/bootstrap.bundle.min.js", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "application/javascript";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "js/bootstrap.bundle.min.js"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultAssetsFolder, "js/bootstrap.bundle.min.js"));
                     return;
                 }
                 else if (context.Request.Path.Value.StartsWith("/img/domar.gif", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "image/gif";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "img/domar.gif"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultAssetsFolder, "img/domar.gif"));
                     return;
                 }
                 else if (context.Request.Path.Value.StartsWith("/img/domar.ico", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "image/x-icon";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "img/domar.ico"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultAssetsFolder, "img/domar.ico"));
                     return;
                 }
                 else if (context.Request.Path.Value.StartsWith("/img/indomaret.png", StringComparison.InvariantCultureIgnoreCase)) {
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "image/png";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "img/indomaret.png"));
-                    return;
-                }
-                else if (context.Request.Path.Value.StartsWith("/api/protobuf-net/bcl.proto", StringComparison.InvariantCultureIgnoreCase)) {
-                    context.Response.StatusCode = StatusCodes.Status200OK;
-                    context.Response.ContentType = "text-plain";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "protobuf-net/bcl.proto"));
-                    return;
-                }
-                else if (context.Request.Path.Value.StartsWith("/api/swagger-ndjson.js", StringComparison.InvariantCultureIgnoreCase)) {
-                    context.Response.StatusCode = StatusCodes.Status200OK;
-                    context.Response.ContentType = "application/javascript";
-                    await context.Response.SendFileAsync(Path.Combine(defaultDataFolder, "swagger-ndjson.js"));
+                    await context.Response.SendFileAsync(Path.Combine(defaultAssetsFolder, "img/indomaret.png"));
                     return;
                 }
 
