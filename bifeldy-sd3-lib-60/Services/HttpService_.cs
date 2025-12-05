@@ -405,29 +405,28 @@ namespace bifeldy_sd3_lib_60.Services {
                 });
             }
 
-            KeyValuePair<string, IEnumerable<string>>[] allHeaders = res.Headers
-                .Concat(res.Content.Headers)
-                .ToArray();
-
-            string[] blockedHeaders = HopByHopHeaders
-                .Union(ResponseHeadersToRemove)
-                .ToArray();
+            KeyValuePair<string, IEnumerable<string>>[] allHeaders = res.Headers.Concat(res.Content.Headers).ToArray();
+            string[] blockedHeaders = HopByHopHeaders.Union(ResponseHeadersToRemove).ToArray();
 
             foreach (KeyValuePair<string, IEnumerable<string>> header in allHeaders) {
-                string hdrKey = header.Key;
-
-                // Skip prohibited OR hop-by-hop headers
-                if (blockedHeaders.Any(b => HeaderMatches(b, hdrKey))) {
-                    continue;
+                if (!blockedHeaders.Any(b => HeaderMatches(b, header.Key))) {
+                    response.Headers[header.Key] = header.Value.ToArray();
                 }
-
-                response.Headers[hdrKey] = header.Value.ToArray();
             }
 
-            Stream stream = await res.Content.ReadAsStreamAsync();
-            string mediaType = res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            await response.StartAsync();
 
-            return new FileStreamResult(stream, mediaType);
+            using (Stream upstream = await res.Content.ReadAsStreamAsync()) {
+                byte[] buffer = new byte[8192];
+                int bytesRead = 0;
+
+                while ((bytesRead = await upstream.ReadAsync(buffer, 0, buffer.Length)) > 0) {
+                    await response.Body.WriteAsync(buffer, 0, bytesRead);
+                    await response.Body.FlushAsync();
+                }
+            }
+
+            return new EmptyResult();
         }
 
         public async IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, JsonSerializerOptions options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
