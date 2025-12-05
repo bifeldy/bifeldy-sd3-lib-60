@@ -32,11 +32,18 @@ namespace bifeldy_sd3_lib_60.Services {
         public SemaphoreSlim MutexGlobalApp { get; } = null;
 
         public SemaphoreSlim SemaphoreGlobalApp(string name, int initialCount = 1, int maximumCount = 1) {
-            if (!this.semaphore_global_app.ContainsKey(name)) {
-                this.semaphore_global_app.Add(name, new SemaphoreSlim(initialCount, maximumCount));
-            }
+            try {
+                _ = this.MutexGlobalApp.Wait(-1);
 
-            return this.semaphore_global_app[name];
+                if (!this.semaphore_global_app.ContainsKey(name)) {
+                    this.semaphore_global_app.Add(name, new SemaphoreSlim(initialCount, maximumCount));
+                }
+
+                return this.semaphore_global_app[name];
+            }
+            finally {
+                _ = this.MutexGlobalApp.Release();
+            }
         }
 
     }

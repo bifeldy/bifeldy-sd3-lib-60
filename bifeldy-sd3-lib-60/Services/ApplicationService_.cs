@@ -100,21 +100,28 @@ namespace bifeldy_sd3_lib_60.Services {
                         bool fromSavedJsonFile = false;
 
                         if (File.Exists(jsonPathKunci)) {
-                            IDictionary<string, object> dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(File.ReadAllText(jsonPathKunci));
+                            try {
+                                string jsonContent = File.ReadAllText(jsonPathKunci);
 
-                            if (dictKunci != null) {
-                                if (dictKunci.ContainsKey(cacheKey)) {
-                                    object val = dictKunci[cacheKey];
+                                IDictionary<string, object> dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(jsonContent);
 
-                                    if (val != null) {
-                                        result = val?.ToString();
+                                if (dictKunci != null) {
+                                    if (dictKunci.ContainsKey(cacheKey)) {
+                                        object val = dictKunci[cacheKey];
 
-                                        result = result?.Split(';').FirstOrDefault();
-                                        result = result?.Trim();
+                                        if (val != null) {
+                                            result = val?.ToString();
 
-                                        fromSavedJsonFile = true;
+                                            result = result?.Split(';').FirstOrDefault();
+                                            result = result?.Trim();
+
+                                            fromSavedJsonFile = true;
+                                        }
                                     }
                                 }
+                            }
+                            catch {
+                                File.Delete(jsonPathKunci);
                             }
                         }
 
@@ -135,10 +142,23 @@ namespace bifeldy_sd3_lib_60.Services {
                         var dictKunci = new Dictionary<string, object>();
 
                         if (File.Exists(jsonPathKunci)) {
-                            dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(File.ReadAllText(jsonPathKunci));
+                            string jsonContent = File.ReadAllText(jsonPathKunci);
+
+                            try {
+                                dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(jsonContent);
+                            }
+                            catch {
+                                File.Delete(jsonPathKunci);
+                            }
                         }
 
-                        dictKunci[cacheKey] = result;
+                        if (!dictKunci.ContainsKey(cacheKey)) {
+                            dictKunci.Add(cacheKey, result);
+                        }
+
+                        if (result != dictKunci[cacheKey]?.ToString()) {
+                            dictKunci[cacheKey] = result;
+                        }
 
                         File.WriteAllText(jsonPathKunci, this._converter.ObjectToJson(dictKunci));
                     }
