@@ -17,6 +17,7 @@ using System.Data;
 using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -175,6 +176,14 @@ namespace bifeldy_sd3_lib_60.Databases {
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
             return await this.GetDataTableAsync(cmd, token);
+        }
+
+        public override IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, [EnumeratorCancellation] CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
+            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            cmd.CommandText = queryString;
+            cmd.CommandType = CommandType.Text;
+            this.BindQueryParameter(cmd, bindParam);
+            return this.GetAsyncEnumerable(cmd, token, callback);
         }
 
         public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {

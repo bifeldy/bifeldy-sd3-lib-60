@@ -46,6 +46,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task TransactionRollback(DbTransaction useTrx = null, bool forceCloseConnection = false);
         Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600);
         Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
         Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
         Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
@@ -279,12 +280,26 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return (exception == null) ? result : throw exception;
         }
 
+        protected virtual async IAsyncEnumerable<T> GetAsyncEnumerable<T>(DbCommand databaseCommand, [EnumeratorCancellation] CancellationToken token = default, Action<T> callback = null) {
+            try {
+                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess, token)) {
+                    foreach (T item in dr.ToEnumerable(token, callback)) {
+                        yield return item;
+                    }
+                }
+            }
+            finally {
+                await this.CloseConnection();
+            }
+        }
+
         protected virtual async Task<List<T>> GetListAsync<T>(DbCommand databaseCommand, CancellationToken token = default, Action<T> callback = null) {
             var result = new List<T>();
             Exception exception = null;
             try {
-                using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess, token)) {
-                    result = dr.ToList(token, callback);
+                IAsyncEnumerable<T> iea = this.GetAsyncEnumerable(databaseCommand, token, callback);
+                await foreach (T item in iea) {
+                    result.Add(item);
                 }
             }
             catch (Exception ex) {
@@ -498,6 +513,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public abstract Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600);
         public abstract Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
+        public abstract IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
         public abstract Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600);
         public abstract Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
         public abstract Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default);
