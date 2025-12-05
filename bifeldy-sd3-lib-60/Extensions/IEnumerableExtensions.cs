@@ -122,7 +122,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
             }
         }
 
-        public static async IAsyncEnumerable<object> ToAsyncEnumerable<T>(this IEnumerable<T> items) {
+        public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> items) {
             foreach (T item in items) {
                 yield return item;
                 await Task.Yield();

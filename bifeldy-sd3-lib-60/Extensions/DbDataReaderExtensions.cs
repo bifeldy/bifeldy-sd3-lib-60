@@ -10,7 +10,6 @@
  * 
  */
 
-using Confluent.Kafka;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
@@ -21,7 +20,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class DbDataReaderExtensions {
 
-        public static IEnumerable<T> FetchRow<T>(this DbDataReader dr, CancellationToken token = default, Action<T> callback = null) {
+        public static IEnumerable<T> ToEnumerable<T>(this DbDataReader dr, CancellationToken token = default, Action<T> callback = null) {
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             if (dr.HasRows) {
@@ -78,16 +77,6 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     yield return objT;
                 }
             }
-        }
-
-        public static List<T> ToList<T>(this DbDataReader dr, CancellationToken token = default, Action<T> callback = null) {
-            var ls = new List<T>();
-
-            foreach (T objT in dr.FetchRow(token, callback)) {
-                ls.Add(objT);
-            }
-
-            return ls;
         }
 
         public static async Task ToCsv(this DbDataReader dr, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, CancellationToken token = default) {

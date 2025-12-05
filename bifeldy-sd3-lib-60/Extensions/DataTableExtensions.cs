@@ -19,10 +19,9 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class DataTableExtensions {
 
-        public static List<T> ToList<T>(this DataTable dt) {
+        public static IEnumerable<T> ToEnumerable<T>(this DataTable dt, Action<T> callback = null) {
             dt.CaseSensitive = false;
 
-            var ls = new List<T>();
             PropertyInfo[] properties = typeof(T).GetProperties();
 
             foreach (DataRow row in dt.Rows) {
@@ -54,10 +53,9 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     }
                 }
 
-                ls.Add(objT);
+                callback?.Invoke(objT);
+                yield return objT;
             }
-
-            return ls;
         }
 
         public static async Task ToCsv(this DataTable dt, string delimiter, string outputFilePath = null, bool includeHeader = true, bool useDoubleQuote = true, bool allUppercase = true, Encoding encoding = null, CancellationToken token = default) {

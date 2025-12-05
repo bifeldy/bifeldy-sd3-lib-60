@@ -29,7 +29,6 @@ namespace bifeldy_sd3_lib_60.Services {
         string Csv2Json(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null);
         IDataReader Csv2DataReader(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null);
         IEnumerable<T> Csv2Enumerable<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null);
-        List<T> Csv2List<T>(string filePath, string delimiter = ",", List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null);
     }
 
     [SingletonServiceRegistration]
@@ -188,10 +187,6 @@ namespace bifeldy_sd3_lib_60.Services {
                     yield return objT;
                 }
             }
-        }
-
-        public List<T> Csv2List<T>(string filePath, string delimiter, List<CCsvColumn> csvColumn = null, string nullValue = "", string eolDelimiter = null, Encoding encoding = null) {
-            return this.Csv2Enumerable<T>(filePath, delimiter, csvColumn, nullValue, eolDelimiter, encoding ?? Encoding.UTF8).ToList();
         }
 
     }
