@@ -43,7 +43,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
         Task<(bool, IDatabase, IDatabase)> OpenConnectionToDcFromHo(bool isPg, IDatabase db, string kodeDcTarget, IServiceProvider sp);
         Task GetDcApiPathAppFromHo(bool isPg, IDatabase db, HttpRequest request, string dcKode, Action<string, Uri> Callback);
         Task<string> GetAppHoApiUrlBase(bool isPg, IDatabase db, string apiPath);
-        Task CheckKoordinatorHO(bool isPg, IDatabase db, InputJsonDc f, bool isGrpc = false);
+        Task CheckKoordinatorHO(bool isPg, IDatabase db, string kodeDc, bool isGrpc = false);
     }
 
     [ScopedServiceRegistration]
@@ -347,8 +347,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
             return uriBuilder.ToString();
         }
 
-        public async Task CheckKoordinatorHO(bool isPg, IDatabase db, InputJsonDc fd, bool isGrpc = false) {
-            string targetJenisDc = await this.GetJenisDc(isPg, db, fd.kode_dc.ToUpper());
+        public async Task CheckKoordinatorHO(bool isPg, IDatabase db, string kodeDc, bool isGrpc = false) {
+            string targetJenisDc = await this.GetJenisDc(isPg, db, kodeDc.ToUpper());
 
             if (Enum.TryParse(targetJenisDc.ToUpper(), true, out EJenisDc _eJenisDc)) {
                 bool isDcHo = await this.IsDcHo(isPg, db);
