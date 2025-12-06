@@ -103,7 +103,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
                 var rgxLs = new List<string>() {
                     "g[0-9]{3}",
                     "dcho|whho",
-                    "kcbn|pgcbn"
+                    "kcbn|pgcbn",
+                    "rltm|realtime|timescale"
                 };
 
                 string kodeDc = null;
@@ -130,6 +131,9 @@ namespace bifeldy_sd3_lib_60.Repositories {
 
                 if (kodeDc.ToLower() == "pgcbn") {
                     kodeDc = "kcbn";
+                }
+                else if (kodeDc.ToLower() == "realtime" || kodeDc.ToLower() == "timescale") {
+                    kodeDc = "rltm";
                 }
 
                 _ = this.UseKodeServerKunciDc(kodeDc, null, serverTarget).Result;
@@ -196,6 +200,19 @@ namespace bifeldy_sd3_lib_60.Repositories {
         }
 
         public async Task<List<ServerConfigKunci>> GetKodeServerKunciDc(string kodeDc = null) {
+            string kunciGxxx = this._env.KUNCI_GXXX;
+            if (!string.IsNullOrEmpty(kunciGxxx)) {
+                if (!kunciGxxx.StartsWith("/")) {
+                    return new List<ServerConfigKunci>() {
+                        new() {
+                            kode_dc = null,
+                            kunci_gxxx = kunciGxxx,
+                            server_target = null
+                        }
+                    };
+                }
+            }
+
             string sqlQuery = "SELECT * FROM server_kunci";
             var sqlParams = new List<CDbQueryParamBind>();
 

@@ -35,8 +35,7 @@ using bifeldy_sd3_lib_60.Services;
 namespace bifeldy_sd3_lib_60.Abstractions {
 
     public interface IDatabase {
-        string DbUsername { get; } // Hanya Expose Get Saja
-        string DbName { get; } // Hanya Expose Get Saja
+        public string DbConnectionString { get; } // Hanya Expose Get Saja
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         DbSet<TEntity> Set<TEntity>(string name = null, [CallerMemberName] string callerMemberName = null) where TEntity : EntityTableView;
         object Clone();
@@ -68,12 +67,13 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         protected readonly IApplicationService _as;
         protected readonly IGlobalService _gs;
 
-        public string DbUsername { get; set; }
-        public string DbPassword { get; set; }
-        public string DbIpAddrss { get; set; }
-        public string DbPort { get; set; }
-        public string DbName { get; set; }
-        public string DbTnsOdp { get; set; }
+        protected string DbUsername { get; set; }
+        protected string DbPassword { get; set; }
+        protected string DbIpAddrss { get; set; }
+        protected string DbPort { get; set; }
+        protected string DbName { get; set; }
+        protected string DbTnsOdp { get; set; }
+
         public string DbConnectionString { get; set; }
 
         public bool HasUnCommitRollbackSqlQuery => this.Database.CurrentTransaction != null;

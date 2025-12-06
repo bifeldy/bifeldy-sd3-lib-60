@@ -26,7 +26,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<string> GetKodeDc(bool isPg, IDatabase db);
         Task<string> GetNamaDc(bool isPg, IDatabase db);
         Task<bool> IsDcHo(bool isPg, IDatabase db);
-        Task<bool> IsKonsolidasiCbn(bool isPg, IDatabase db);
+        Task<bool> IsNonDc(bool isPg, IDatabase db);
         Task<bool> IsWhHo(bool isPg, IDatabase db);
         Task<bool> IsHo(bool isPg, IDatabase db);
         Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay);
@@ -62,27 +62,28 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<EJenisDc> GetJenisDc(bool isPg, IDatabase db) {
             if (this.JenisDc == 0) {
-                // Sementara (& Selamanya) Di Hard-Coded ~
+                string _dbConStr = db.DbConnectionString?.ToUpper();
+                if (!string.IsNullOrEmpty(_dbConStr)) {
+                    // Sementara (& Selamanya) Di Hard-Coded ~
 
-                string _dbUser = db.DbUsername.ToUpper();
-                if (_dbUser.StartsWith("PGBOUNCER_")) {
-                    _dbUser = _dbUser[10..];
-                }
-
-                if (_dbUser.Contains("DCHO") || _dbUser.Contains("WHHO")) {
-                    this.JenisDc = EJenisDc.HO;
-                }
-                else if (_dbUser.Contains("PGCBN")) {
-                    this.JenisDc = EJenisDc.KONSOLIDASICBN;
-                }
-                else {
-                    string jenisDc = await this.GetJenisDc(isPg, db, null);
-
-                    if (Enum.TryParse(jenisDc, true, out EJenisDc eJenisDc)) {
-                        this.JenisDc = eJenisDc;
+                    if (
+                        _dbConStr.Contains("KCBN") || _dbConStr.Contains("PGCBN") ||
+                        _dbConStr.Contains("RLTM") || _dbConStr.Contains("REALTIME") || _dbConStr.Contains("TIMESCALE")
+                    ) {
+                        this.JenisDc = EJenisDc.NONDC;
+                    }
+                    else if (_dbConStr.Contains("DCHO") || _dbConStr.Contains("WHHO")) {
+                        this.JenisDc = EJenisDc.HO;
                     }
                     else {
-                        throw new Exception("Jenis DC Tidak Valid");
+                        string jenisDc = await this.GetJenisDc(isPg, db, null);
+
+                        if (Enum.TryParse(jenisDc, true, out EJenisDc eJenisDc)) {
+                            this.JenisDc = eJenisDc;
+                        }
+                        else {
+                            throw new Exception("Jenis DC Tidak Valid");
+                        }
                     }
                 }
             }
@@ -92,25 +93,26 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<string> GetKodeDc(bool isPg, IDatabase db) {
             if (string.IsNullOrEmpty(this.KodeDc)) {
-                // Sementara (& Selamanya) Di Hard-Coded ~
+                string _dbConStr = db.DbConnectionString?.ToUpper();
+                if (!string.IsNullOrEmpty(_dbConStr)) {
+                    // Sementara (& Selamanya) Di Hard-Coded ~
 
-                string _dbUser = db.DbUsername.ToUpper();
-                if (_dbUser.StartsWith("PGBOUNCER_")) {
-                    _dbUser = _dbUser[10..];
-                }
-
-                if (_dbUser.Contains("DCHO")) {
-                    this.KodeDc = "DCHO";
-                }
-                else if (_dbUser.Contains("PGCBN")) {
-                    this.KodeDc = "KCBN";
-                }
-                else if (_dbUser.Contains("WHHO")) {
-                    this.KodeDc = "WHHO";
-                }
-                else {
-                    DC_TABEL_DC_T _kodeDc = await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync();
-                    this.KodeDc = _kodeDc?.TBL_DC_KODE?.ToUpper();
+                    if (_dbConStr.Contains("KCBN") || _dbConStr.Contains("PGCBN")) {
+                        this.KodeDc = "KCBN";
+                    }
+                    else if (_dbConStr.Contains("RLTM") || _dbConStr.Contains("REALTIME") || _dbConStr.Contains("TIMESCALE")) {
+                        this.KodeDc = "RLTM";
+                    }
+                    else if(_dbConStr.Contains("DCHO")) {
+                        this.KodeDc = "DCHO";
+                    }
+                    else if (_dbConStr.Contains("WHHO")) {
+                        this.KodeDc = "WHHO";
+                    }
+                    else {
+                        DC_TABEL_DC_T _kodeDc = await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync();
+                        this.KodeDc = _kodeDc?.TBL_DC_KODE?.ToUpper();
+                    }
                 }
             }
 
@@ -119,34 +121,35 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<string> GetNamaDc(bool isPg, IDatabase db) {
             if (string.IsNullOrEmpty(this.NamaDc)) {
-                // Sementara (& Selamanya) Di Hard-Coded ~
+                string _dbConStr = db.DbConnectionString?.ToUpper();
+                if (!string.IsNullOrEmpty(_dbConStr)) {
+                    // Sementara (& Selamanya) Di Hard-Coded ~
 
-                string _dbUser = db.DbUsername.ToUpper();
-                if (_dbUser.StartsWith("PGBOUNCER_")) {
-                    _dbUser = _dbUser[10..];
-                }
-
-                if (_dbUser.Contains("DCHO")) {
-                    this.NamaDc = "DC HEAD OFFICE";
-                }
-                else if (_dbUser.Contains("PGCBN")) {
-                    this.NamaDc = "KONSOLIDASI CBN";
-                }
-                else if (_dbUser.Contains("WHHO")) {
-                    this.NamaDc = "WH HEAD OFFICE";
-                }
-                else {
-                    DC_TABEL_DC_T _namaDc = await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync();
-                    this.NamaDc = _namaDc?.TBL_DC_NAMA?.ToUpper();
+                    if (_dbConStr.Contains("KCBN") || _dbConStr.Contains("PGCBN")) {
+                        this.NamaDc = "KONSOLIDASI CBN";
+                    }
+                    else if (_dbConStr.Contains("RLTM") || _dbConStr.Contains("REALTIME") || _dbConStr.Contains("TIMESCALE")) {
+                        this.NamaDc = "REAL-TIME-SCALE";
+                    }
+                    else if (_dbConStr.Contains("DCHO")) {
+                        this.NamaDc = "DC HEAD OFFICE";
+                    }
+                    else if (_dbConStr.Contains("WHHO")) {
+                        this.NamaDc = "WH HEAD OFFICE";
+                    }
+                    else {
+                        DC_TABEL_DC_T _namaDc = await db.Set<DC_TABEL_DC_T>().AsNoTracking().SingleOrDefaultAsync();
+                        this.NamaDc = _namaDc?.TBL_DC_NAMA?.ToUpper();
+                    }
                 }
             }
 
             return this.NamaDc?.ToUpper();
         }
 
-        public async Task<bool> IsKonsolidasiCbn(bool isPg, IDatabase db) {
-            string kodeDc = await this.GetKodeDc(isPg, db);
-            return kodeDc == "KCBN";
+        public async Task<bool> IsNonDc(bool isPg, IDatabase db) {
+            EJenisDc jenisDc = await this.GetJenisDc(isPg, db);
+            return jenisDc == EJenisDc.NONDC;
         }
 
         public async Task<bool> IsDcHo(bool isPg, IDatabase db) {
@@ -160,10 +163,8 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         }
 
         public async Task<bool> IsHo(bool isPg, IDatabase db) {
-            bool isKonsolidasiCbn = await this.IsKonsolidasiCbn(isPg, db);
-            bool isDcHo = await this.IsDcHo(isPg, db);
-            bool isWhHo = await this.IsWhHo(isPg, db);
-            return isKonsolidasiCbn || isDcHo || isWhHo;
+            EJenisDc jenisDc = await this.GetJenisDc(isPg, db);
+            return jenisDc == EJenisDc.HO;
         }
 
         public async Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay) {

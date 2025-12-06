@@ -273,10 +273,10 @@ namespace bifeldy_sd3_lib_60.Services {
 
             if (isSwaggerApiDocs) {
                 if (
+                    (hideType == typeof(ApiHideNonDcAttribute) && jenisDc == EJenisDc.NONDC) ||
                     (hideType == typeof(ApiHideDcHoAttribute) && kodeDc == "DCHO") ||
-                    (hideType == typeof(ApiHideKonsolidasiCbnAttribute) && kodeDc == "KCBN") ||
                     (hideType == typeof(ApiHideWhHoAttribute) && kodeDc == "WHHO") ||
-                    (hideType == typeof(ApiHideAllDcAttribute) && kodeDc != "DCHO" && kodeDc != "KCBN" && kodeDc != "WHHO")
+                    (hideType == typeof(ApiHideAllDcAttribute) && jenisDc != EJenisDc.NONDC && kodeDc != "DCHO" && kodeDc != "WHHO")
                 ) {
                     isVisibleAllowed = false;
                 }

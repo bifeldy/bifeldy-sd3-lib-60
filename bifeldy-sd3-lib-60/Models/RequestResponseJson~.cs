@@ -66,23 +66,23 @@ namespace bifeldy_sd3_lib_60.Models {
     public class InputJson : RequestJson { }
 
     [ProtoContract]
-    public class InputJsonHoKonsolidasiCbn : InputJson { }
+    public class InputJsonNonDc : InputJson { }
 
     [ProtoContract]
-    public class InputJsonHoDataSingle<T> : InputJsonHoKonsolidasiCbn {
+    public class InputJsonNonDcDataSingle<T> : InputJsonNonDc {
         [ProtoMember(5)][InheritedProtoMember(5)][JsonPropertyOrder(5)] public T data { get; set; }
     }
 
     [ProtoContract]
-    public class InputJsonHoDataMulti<T> : InputJsonHoKonsolidasiCbn {
+    public class InputJsonNonDcDataMulti<T> : InputJsonNonDc {
         [ProtoMember(5)][InheritedProtoMember(5)][JsonPropertyOrder(5)] public T[] data { get; set; }
     }
 
     [ProtoContract]
-    public class InputJsonKonsolidasiCbnDataSingle<T> : InputJsonHoDataSingle<T> { }
+    public class InputJsonHoDataSingle<T> : InputJsonNonDcDataSingle<T> { }
 
     [ProtoContract]
-    public class InputJsonKonsolidasiCbnDataMulti<T> : InputJsonHoDataMulti<T> { }
+    public class InputJsonHoDataMulti<T> : InputJsonNonDcDataMulti<T> { }
 
     [ProtoContract]
     public class InputJsonDc : InputJson {
