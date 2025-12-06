@@ -25,6 +25,7 @@ using Microsoft.Extensions.Options;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
+using System.Net.Mime;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -239,7 +240,9 @@ namespace bifeldy_sd3_lib_60.Services {
             string rbString = null;
             if (contentType == "application/grpc" || SwaggerMediaTypesOperationFilter.AcceptedContentType.Contains(contentType)) {
                 try {
-                    rbString = await request.GetHttpRequestBodyStringAsync();
+                    if (contentType == MediaTypeNames.Application.Json || contentType == MediaTypeNames.Application.Xml) {
+                        rbString = await request.GetHttpRequestBodyStringAsync();
+                    }
                 }
                 catch {
                     // Bukan Text
