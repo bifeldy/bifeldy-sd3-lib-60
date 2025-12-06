@@ -15,7 +15,6 @@
 using System.Collections;
 using System.Data;
 using System.Data.Common;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -152,7 +151,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             return await this.GetDataTableAsync(cmd, token);
         }
 
-        public override IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, [EnumeratorCancellation] CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
+        public override IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
             var cmd = (SqlCommand) this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
