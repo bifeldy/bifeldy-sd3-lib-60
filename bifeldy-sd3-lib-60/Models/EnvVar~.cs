@@ -70,6 +70,19 @@ namespace bifeldy_sd3_lib_60.Models {
             set => this.kunciIpDomain = value;
         }
 
+        private string kunciGxxx = string.Empty;
+        public string KUNCI_GXXX {
+            get {
+                string kunciGxxxEnv = GetEnvVar("KUNCI_GXXX");
+                if (!string.IsNullOrEmpty(kunciGxxxEnv)) {
+                    this.kunciGxxx = kunciGxxxEnv;
+                }
+
+                return this.kunciGxxx;
+            }
+            set => this.kunciGxxx = value;
+        }
+
         private bool isUsingPostgres = true;
         public bool IS_USING_POSTGRES {
             get {
@@ -81,19 +94,6 @@ namespace bifeldy_sd3_lib_60.Models {
                 return this.isUsingPostgres;
             }
             set => this.isUsingPostgres = value;
-        }
-
-        private string devBasePath = string.Empty;
-        public string DEV_PATH_BASE {
-            get {
-                string devBasePathEnv = GetEnvVar("DEV_PATH_BASE");
-                if (!string.IsNullOrEmpty(devBasePathEnv)) {
-                    this.devBasePath = devBasePathEnv;
-                }
-
-                return this.devBasePath;
-            }
-            set => this.devBasePath = value;
         }
 
         private string jwtAudience = "jwt_audience";

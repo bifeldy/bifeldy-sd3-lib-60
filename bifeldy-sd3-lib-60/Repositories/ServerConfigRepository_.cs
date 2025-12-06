@@ -14,6 +14,7 @@
 using System.Text.RegularExpressions;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
@@ -36,6 +37,8 @@ namespace bifeldy_sd3_lib_60.Repositories {
     [ScopedServiceRegistration]
     public sealed class CServerConfigRepository : IServerConfigRepository {
 
+        private readonly EnvVar _env;
+
         private readonly IHttpContextAccessor _hca;
         private readonly ISqlite _sqlite;
         private readonly IGlobalService _gs;
@@ -43,16 +46,25 @@ namespace bifeldy_sd3_lib_60.Repositories {
         private string KunciGxxx = null;
 
         public CServerConfigRepository(
+            IOptions<EnvVar> env,
             IHttpContextAccessor hca,
             ISqlite sqlite,
             IGlobalService gs
         ) {
+            this._env = env.Value;
             this._hca = hca;
             this._sqlite = sqlite;
             this._gs = gs;
         }
 
         public string CurrentLoadedKodeServerKunciDc(HttpContext httpContext = null) {
+            string kunciGxxx = this._env.KUNCI_GXXX;
+            if (!string.IsNullOrEmpty(kunciGxxx)) {
+                if (!kunciGxxx.StartsWith("/")) {
+                    return kunciGxxx;
+                }
+            }
+
             if (!string.IsNullOrEmpty(this.KunciGxxx)) {
                 return this.KunciGxxx;
             }

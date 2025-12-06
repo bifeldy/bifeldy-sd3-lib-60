@@ -184,19 +184,14 @@ namespace bifeldy_sd3_lib_60.Middlewares {
                     return;
                 }
 
-                if (this._app.DebugMode) {
-                    string proxyPath = this._env.DEV_PATH_BASE;
-
-                    if (!string.IsNullOrEmpty(proxyPath)) {
-                        if (!proxyPath.StartsWith("/")) {
-                            proxyPath = $"/{proxyPath}";
-                        }
-
+                string kunciGxxx = this._env.KUNCI_GXXX;
+                if (!string.IsNullOrEmpty(kunciGxxx)) {
+                    if (kunciGxxx.StartsWith("/")) {
                         if (context.Request.Headers.ContainsKey(Bifeldy.NGINX_PATH_NAME)) {
                             _ = context.Request.Headers.Remove(Bifeldy.NGINX_PATH_NAME);
                         }
 
-                        context.Request.Headers.Add(Bifeldy.NGINX_PATH_NAME, proxyPath);
+                        context.Request.Headers.Add(Bifeldy.NGINX_PATH_NAME, kunciGxxx);
                     }
                 }
 
