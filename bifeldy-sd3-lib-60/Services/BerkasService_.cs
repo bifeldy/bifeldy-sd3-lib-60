@@ -29,6 +29,7 @@ namespace bifeldy_sd3_lib_60.Services {
         void CopyAllFilesAndDirectories(DirectoryInfo source, DirectoryInfo target, bool isInRecursive = false);
         void BackupAllFilesInFolder(string folderPath);
         bool CheckSign(FileInfo fileInfo, string signFull, bool isRequired = true, Encoding encoding = null);
+        List<string> ReadFileTextGetLastLines(string filePath, int numberOfLines);
     }
 
     [SingletonServiceRegistration]
@@ -161,6 +162,48 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return true;
+        }
+
+        public List<string> ReadFileTextGetLastLines(string filePath, int numberOfLines) {
+            var lastLines = new List<string>();
+
+            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
+                long position = fs.Length;
+                var currentLine = new StringBuilder();
+
+                while (position > 0 && lastLines.Count < numberOfLines) {
+                    position--;
+
+                    _ = fs.Seek(position, SeekOrigin.Begin);
+
+                    int byteRead = fs.ReadByte();
+
+                    if (byteRead == -1) {
+                        break;
+                    }
+
+                    char character = (char)byteRead;
+
+                    if (character == '\n') {
+                        if (currentLine.Length > 0 && currentLine[^1] == '\r') {
+                            _ = currentLine.Remove(currentLine.Length - 1, 1);
+                        }
+
+                        lastLines.Insert(0, currentLine.ToString());
+
+                        _ = currentLine.Clear();
+                    }
+                    else {
+                        _ = currentLine.Insert(0, character);
+                    }
+                }
+
+                if (currentLine.Length > 0 && lastLines.Count < numberOfLines) {
+                    lastLines.Insert(0, currentLine.ToString());
+                }
+            }
+
+            return lastLines;
         }
 
     }
