@@ -113,6 +113,7 @@ namespace bifeldy_sd3_lib_60 {
             //
             _ = Services.Configure<JsonOptions>(opt => {
                 opt.SerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
+                opt.SerializerOptions.Converters.Add(new NullableDecimalSystemTextJsonConverter());
             });
             _ = Services.Configure<FormOptions>(o => {
                 o.MultipartBodyLengthLimit = long.MaxValue;
