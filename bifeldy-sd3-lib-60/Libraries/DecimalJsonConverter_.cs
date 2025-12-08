@@ -23,7 +23,21 @@ namespace bifeldy_sd3_lib_60.Libraries {
             Type typeToConvert,
             System.Text.Json.JsonSerializerOptions options
         ) {
-            return reader.GetDecimal().RemoveTrail();
+            switch (reader.TokenType) {
+                case System.Text.Json.JsonTokenType.Number:
+                    return reader.GetDecimal().RemoveTrail();
+
+                case System.Text.Json.JsonTokenType.String:
+                    string s = reader.GetString();
+
+                    if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal d)) {
+                        return d.RemoveTrail();
+                    }
+
+                    break;
+            }
+
+            throw new System.Text.Json.JsonException($"Unexpected token {reader.TokenType} when parsing decimal.");
         }
 
         public override void Write(
@@ -31,23 +45,36 @@ namespace bifeldy_sd3_lib_60.Libraries {
             decimal value,
             System.Text.Json.JsonSerializerOptions options
         ) {
-            writer.WriteRawValue(value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
+            writer.WriteNumberValue(value.RemoveTrail());
         }
 
     }
 
-    public sealed class MullableDecimalSystemTextJsonConverter : System.Text.Json.Serialization.JsonConverter<decimal?> {
+    public sealed class NullableDecimalSystemTextJsonConverter : System.Text.Json.Serialization.JsonConverter<decimal?> {
 
         public override decimal? Read(
             ref System.Text.Json.Utf8JsonReader reader,
             Type typeToConvert,
             System.Text.Json.JsonSerializerOptions options
         ) {
-            if (reader.TryGetDecimal(out decimal value)) {
-                return value;
+            switch (reader.TokenType) {
+                case System.Text.Json.JsonTokenType.Null:
+                    return null;
+
+                case System.Text.Json.JsonTokenType.Number:
+                    return reader.GetDecimal().RemoveTrail();
+
+                case System.Text.Json.JsonTokenType.String:
+                    string s = reader.GetString();
+
+                    if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal d)) {
+                        return d.RemoveTrail();
+                    }
+
+                    return null;
             }
 
-            return default;
+            throw new System.Text.Json.JsonException($"Unexpected token {reader.TokenType} when parsing decimal?");
         }
 
         public override void Write(
@@ -55,7 +82,12 @@ namespace bifeldy_sd3_lib_60.Libraries {
             decimal? value,
             System.Text.Json.JsonSerializerOptions options
         ) {
-            writer.WriteRawValue(value?.RemoveTrail().ToString(CultureInfo.InvariantCulture));
+            if (value.HasValue) {
+                writer.WriteNumberValue(value.Value.RemoveTrail());
+            }
+            else {
+                writer.WriteNullValue();
+            }
         }
 
     }
@@ -69,21 +101,25 @@ namespace bifeldy_sd3_lib_60.Libraries {
             bool hasExistingValue,
             Newtonsoft.Json.JsonSerializer serializer
         ) {
-            decimal? _val = reader.ReadAsDecimal();
-
-            decimal val = 0;
-            if (_val.HasValue) {
-                val = _val.Value;
+            if (
+                reader.TokenType == Newtonsoft.Json.JsonToken.Integer ||
+                reader.TokenType == Newtonsoft.Json.JsonToken.Float
+            ) {
+                return Convert.ToDecimal(reader.Value, CultureInfo.InvariantCulture).RemoveTrail();
             }
 
-            return val.RemoveTrail();
+            if (reader.TokenType == Newtonsoft.Json.JsonToken.String) {
+                string s = (string)reader.Value;
+
+                if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal d)) {
+                    return d.RemoveTrail();
+                }
+            }
+
+            throw new Newtonsoft.Json.JsonSerializationException($"Unexpected token {reader.TokenType}");
         }
 
-        public override void WriteJson(
-            Newtonsoft.Json.JsonWriter writer,
-            decimal value,
-            Newtonsoft.Json.JsonSerializer serializer
-        ) {
+        public override void WriteJson(Newtonsoft.Json.JsonWriter writer, decimal value, Newtonsoft.Json.JsonSerializer serializer) {
             writer.WriteRawValue(value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
         }
 
@@ -98,16 +134,37 @@ namespace bifeldy_sd3_lib_60.Libraries {
             bool hasExistingValue,
             Newtonsoft.Json.JsonSerializer serializer
         ) {
-            decimal? _val = reader.ReadAsDecimal();
-            return _val?.RemoveTrail();
+            if (reader.TokenType == Newtonsoft.Json.JsonToken.Null) {
+                return null;
+            }
+
+            if (
+                reader.TokenType == Newtonsoft.Json.JsonToken.Integer ||
+                reader.TokenType == Newtonsoft.Json.JsonToken.Float
+            ) {
+                return Convert.ToDecimal(reader.Value, CultureInfo.InvariantCulture).RemoveTrail();
+            }
+
+            if (reader.TokenType == Newtonsoft.Json.JsonToken.String) {
+                string s = (string)reader.Value;
+
+                if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal d)) {
+                    return d.RemoveTrail();
+                }
+
+                return null;
+            }
+
+            throw new Newtonsoft.Json.JsonSerializationException($"Unexpected token {reader.TokenType}");
         }
 
-        public override void WriteJson(
-            Newtonsoft.Json.JsonWriter writer,
-            decimal? value,
-            Newtonsoft.Json.JsonSerializer serializer
-        ) {
-            writer.WriteRawValue(value?.RemoveTrail().ToString(CultureInfo.InvariantCulture));
+        public override void WriteJson(Newtonsoft.Json.JsonWriter writer, decimal? value, Newtonsoft.Json.JsonSerializer serializer) {
+            if (value == null) {
+                writer.WriteNull();
+            }
+            else {
+                writer.WriteRawValue(value.Value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
+            }
         }
 
     }
