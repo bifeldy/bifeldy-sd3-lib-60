@@ -119,7 +119,11 @@ namespace bifeldy_sd3_lib_60.Libraries {
             throw new Newtonsoft.Json.JsonSerializationException($"Unexpected token {reader.TokenType}");
         }
 
-        public override void WriteJson(Newtonsoft.Json.JsonWriter writer, decimal value, Newtonsoft.Json.JsonSerializer serializer) {
+        public override void WriteJson(
+            Newtonsoft.Json.JsonWriter writer,
+            decimal value,
+            Newtonsoft.Json.JsonSerializer serializer
+        ) {
             writer.WriteRawValue(value.RemoveTrail().ToString(CultureInfo.InvariantCulture));
         }
 
@@ -158,7 +162,11 @@ namespace bifeldy_sd3_lib_60.Libraries {
             throw new Newtonsoft.Json.JsonSerializationException($"Unexpected token {reader.TokenType}");
         }
 
-        public override void WriteJson(Newtonsoft.Json.JsonWriter writer, decimal? value, Newtonsoft.Json.JsonSerializer serializer) {
+        public override void WriteJson(
+            Newtonsoft.Json.JsonWriter writer,
+            decimal? value,
+            Newtonsoft.Json.JsonSerializer serializer
+        ) {
             if (value == null) {
                 writer.WriteNull();
             }
