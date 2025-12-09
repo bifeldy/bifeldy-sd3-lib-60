@@ -284,6 +284,10 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             try {
                 using (DbDataReader dr = await this.ExecReaderAsync(databaseCommand, CommandBehavior.SequentialAccess, token)) {
                     foreach (T item in dr.ToEnumerable(token, callback)) {
+                        if (token.IsCancellationRequested) {
+                            break;
+                        }
+
                         yield return item;
                     }
                 }

@@ -29,6 +29,7 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<bool> IsNonDc(bool isPg, IDatabase db);
         Task<bool> IsWhHo(bool isPg, IDatabase db);
         Task<bool> IsHo(bool isPg, IDatabase db);
+        Task<bool> IsDc(bool isPg, IDatabase db);
         Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay);
         Task<DateTime> OraPg_GetLastOrNextMonth(bool isPg, IDatabase db, int lastMonth);
         Task<DateTime> OraPg_GetCurrentTimestamp(bool isPg, IDatabase db);
@@ -165,6 +166,14 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         public async Task<bool> IsHo(bool isPg, IDatabase db) {
             EJenisDc jenisDc = await this.GetJenisDc(isPg, db);
             return jenisDc == EJenisDc.HO;
+        }
+
+        public async Task<bool> IsDc(bool isPg, IDatabase db) {
+            bool isNonDc = await this.IsNonDc(isPg, db);
+            bool isDcHo = await this.IsDcHo(isPg, db);
+            bool isWhHo = await this.IsWhHo(isPg, db);
+            bool isHo = await this.IsHo(isPg, db);
+            return !isNonDc && !isDcHo && !isWhHo && !isHo;
         }
 
         public async Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay) {
