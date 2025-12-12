@@ -21,6 +21,7 @@ using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Extensions;
 using bifeldy_sd3_lib_60.Models;
+using Microsoft.Extensions.Logging;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -39,6 +40,7 @@ namespace bifeldy_sd3_lib_60.Services {
     [SingletonServiceRegistration]
     public sealed class CApplicationService : IApplicationService {
 
+        private readonly ILogger<CApplicationService> _logger;
         private readonly IDistributedCache _cache;
         private readonly IHttpContextAccessor _hca;
         private readonly ILockerService _locker;
@@ -66,11 +68,13 @@ namespace bifeldy_sd3_lib_60.Services {
         private readonly SettingLibb.Class1 _SettingLibb;
 
         public CApplicationService(
+            ILogger<CApplicationService> logger,
             IDistributedCache cache,
             IHttpContextAccessor hca,
             ILockerService locker,
             IConverterService converter
         ) {
+            this._logger = logger;
             this._cache = cache;
             this._hca = hca;
             this._locker = locker;
@@ -94,8 +98,9 @@ namespace bifeldy_sd3_lib_60.Services {
                 result = result?.Split(';').FirstOrDefault();
                 result = result?.Trim();
 
-                string jsonPathKunci = Path.Combine(this.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "Kunci.json");
                 if (!string.IsNullOrEmpty(result)) {
+                    string jsonPathKunci = Path.Combine(this.AppLocation, Bifeldy.DEFAULT_DATA_FOLDER, "Kunci.json");
+
                     if (result.ToUpper().Contains("ERROR") || result.ToUpper().Contains("EXCEPTION") || result.ToUpper().Contains("GAGAL") || result.ToUpper().Contains("NGINX")) {
                         bool fromSavedJsonFile = false;
 
@@ -120,7 +125,8 @@ namespace bifeldy_sd3_lib_60.Services {
                                     }
                                 }
                             }
-                            catch {
+                            catch (Exception ex) {
+                                this._logger.LogError("[KUNCI_ERR_JSON_ERR] {ex}", ex.Message);
                                 File.Delete(jsonPathKunci);
                             }
                         }
@@ -147,7 +153,8 @@ namespace bifeldy_sd3_lib_60.Services {
                             try {
                                 dictKunci = this._converter.JsonToObject<Dictionary<string, object>>(jsonContent);
                             }
-                            catch {
+                            catch (Exception ex) {
+                                this._logger.LogError("[KUNCI_OK_JSON_ERR] {ex}", ex.Message);
                                 File.Delete(jsonPathKunci);
                             }
                         }
@@ -172,7 +179,8 @@ namespace bifeldy_sd3_lib_60.Services {
 
                 return result;
             }
-            catch {
+            catch (Exception e) {
+                this._logger.LogError("[KUNCI_ERROR] {ex}", e.Message);
                 this._cache.Remove(cacheKey);
                 throw;
             }
