@@ -10,13 +10,22 @@
  * 
  */
 
-using System.Diagnostics;
-using System.Globalization;
-using System.Net;
-using System.Reflection;
-
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Backgrounds;
+using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Exceptions;
+using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Grpcs;
+using bifeldy_sd3_lib_60.Libraries;
+using bifeldy_sd3_lib_60.Middlewares;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Plugins;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.UserAuth;
+using DinkToPdf;
+using DinkToPdf.Contracts;
+using Grpc.Net.Client.Balancer;
 using Helmet;
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -39,34 +48,16 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
-
-using DinkToPdf;
-using DinkToPdf.Contracts;
-
-using Grpc.Net.Client.Balancer;
-
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
-
 using Quartz;
-
 using Serilog;
 using Serilog.Events;
-
 using StackExchange.Redis;
-
-using bifeldy_sd3_lib_60.AttributeFilterDecorators;
-using bifeldy_sd3_lib_60.Backgrounds;
-using bifeldy_sd3_lib_60.Databases;
-using bifeldy_sd3_lib_60.Exceptions;
-using bifeldy_sd3_lib_60.Extensions;
-using bifeldy_sd3_lib_60.Grpcs;
-using bifeldy_sd3_lib_60.Libraries;
-using bifeldy_sd3_lib_60.Middlewares;
-using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Plugins;
-using bifeldy_sd3_lib_60.UserAuth;
-using bifeldy_sd3_lib_60.Services;
+using System.Diagnostics;
+using System.Globalization;
+using System.Net;
+using System.Reflection;
 
 namespace bifeldy_sd3_lib_60 {
 
@@ -641,19 +632,23 @@ namespace bifeldy_sd3_lib_60 {
         }
 
         /* ** */
+
         public static void AutoCheckMultiDc() {
             string appLocation = AppDomain.CurrentDomain.BaseDirectory;
 
             AssemblyName prgAsm = Assembly.GetEntryAssembly().GetName();
             AssemblyName libAsm = Assembly.GetExecutingAssembly().GetName();
 
-            string targetDatabaseLocationApp = Path.Combine(appLocation, DEFAULT_DATA_FOLDER, $"{prgAsm.Name}.db");
+            string dataFolder = Path.Combine(appLocation, DEFAULT_DATA_FOLDER);
+            _ = Directory.CreateDirectory(dataFolder);
+
+            string targetDatabaseLocationApp = Path.Combine(dataFolder, $"{prgAsm.Name}.db");
 
             if (!File.Exists(targetDatabaseLocationApp)) {
                 string defaultDatabaseLocation = Path.Combine(appLocation, $"{prgAsm.Name}.db");
 
                 if (!File.Exists(defaultDatabaseLocation)) {
-                    string targetDatabaseLocationLib = Path.Combine(appLocation, DEFAULT_DATA_FOLDER, $"{libAsm.Name}.db");
+                    string targetDatabaseLocationLib = Path.Combine(dataFolder, $"{libAsm.Name}.db");
 
                     if (!File.Exists(targetDatabaseLocationLib)) {
                         defaultDatabaseLocation = Path.Combine(appLocation, $"{libAsm.Name}.db");
