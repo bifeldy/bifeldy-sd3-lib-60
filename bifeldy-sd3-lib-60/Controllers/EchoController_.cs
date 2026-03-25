@@ -11,6 +11,7 @@
  * 
  */
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 
@@ -38,7 +39,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IDictionary<string, string> cookies = this.Request.Cookies.ToDictionary(a => a.Key, a => string.Join("; ", a.Value));
 
             return this.Ok(new {
-                info = $"200 - {this.GetType().Name}",
+                info = $"{StatusCodes.Status200OK} - {this.GetType().Name}",
                 method = this.Request.Method,
                 query,
                 headers,

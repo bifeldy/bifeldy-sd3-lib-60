@@ -79,7 +79,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 if (string.IsNullOrEmpty(fileName)) {
                     if (user.role > UserSessionRole.USER_SD_SSD_3) {
                         return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = $"403 - {this.GetType().Name} :: Hash Files",
+                            info = $"{StatusCodes.Status403Forbidden} - {this.GetType().Name} :: Hash Files",
                             result = new ResponseJsonMessage() {
                                 message = "Harap input nama file ?fileName=blablabla.ext"
                             }
@@ -102,7 +102,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                                 })
                                 .Select(p => new FileInfo(p))
                                 .OrderBy(fi => fi.Name);
-                                // .OrderByDescending(fi => fi.LastWriteTime);
+                            // .OrderByDescending(fi => fi.LastWriteTime);
 
                             foreach (FileInfo fi in fileInfos) {
                                 string crc32 = this._chiper.CalculateCRC32File(fi.FullName);
@@ -132,7 +132,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     if (fileHash.Count <= 0) {
                         return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            info = $"{StatusCodes.Status404NotFound} - {this.GetType().Name} :: Hash Files",
                             result = new ResponseJsonMessage() {
                                 message = "Tidak Tersedia Pembaharuan"
                             }
@@ -140,7 +140,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     }
 
                     return this.Ok(new ResponseJsonSingle<dynamic>() {
-                        info = $"200 - {this.GetType().Name} :: Hash Files",
+                        info = $"{StatusCodes.Status200OK} - {this.GetType().Name} :: Hash Files",
                         result = fileHash
                     });
                 }
@@ -176,7 +176,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                             if (!isFound) {
                                 if (user.role > UserSessionRole.USER_SD_SSD_3) {
                                     return this.StatusCode(StatusCodes.Status403Forbidden, new ResponseJsonSingle<ResponseJsonMessage>() {
-                                        info = $"403 - {this.GetType().Name} :: Hash Files",
+                                        info = $"{StatusCodes.Status403Forbidden} - {this.GetType().Name} :: Hash Files",
                                         result = new ResponseJsonMessage() {
                                             message = "Harap input tipe file ?fileType=csv / ?fileType=zip"
                                         }
@@ -194,7 +194,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     if (!System.IO.File.Exists(filePath)) {
                         return this.NotFound(new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            info = $"{StatusCodes.Status404NotFound} - {this.GetType().Name} :: Hash Files",
                             result = new ResponseJsonMessage() {
                                 message = "File Tidak Ditemukan"
                             }
@@ -229,7 +229,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
                     if (!isFileReady) {
                         return this.StatusCode(StatusCodes.Status410Gone, new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = $"404 - {this.GetType().Name} :: Hash Files",
+                            info = $"{StatusCodes.Status404NotFound} - {this.GetType().Name} :: Hash Files",
                             result = new ResponseJsonMessage() {
                                 message = "File Belum Tersedia"
                             }
@@ -264,7 +264,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 this._cache.Remove(cacheKey);
 
                 return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"400 - {this.GetType().Name} :: Hash File",
+                    info = $"{StatusCodes.Status400BadRequest} - {this.GetType().Name} :: Hash File",
                     result = new ResponseJsonMessage() {
                         message = "Terjadi kesalahan saat proses data!"
                     }

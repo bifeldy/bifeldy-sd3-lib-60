@@ -50,7 +50,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         private readonly IUserRepository _userRepo;
         private readonly IOraPg _orapg;
 
-        protected UserApiSession UserTokenData => (UserApiSession) this.HttpContext.Items["user"];
+        protected UserApiSession UserTokenData => (UserApiSession)this.HttpContext.Items["user"];
 
         public _Controller(
             IServer server,
@@ -81,7 +81,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
 
             if (string.IsNullOrEmpty(secret) && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))) {
                 return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = $"400 - {this.GetType().Name} :: Login Gagal",
+                    info = $"{StatusCodes.Status400BadRequest} - {this.GetType().Name} :: Login Gagal",
                     result = new ResponseJsonMessage() {
                         message = "Data Tidak Lengkap!"
                     }
@@ -98,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                     DC_USER_T dcUserT = await this._userRepo.GetByUserNameNikPassword(this._envVar.IS_USING_POSTGRES, this._orapg, userName, password);
                     if (dcUserT == null) {
                         return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                            info = $"400 - {this.GetType().Name} :: Login Gagal",
+                            info = $"{StatusCodes.Status400BadRequest} - {this.GetType().Name} :: Login Gagal",
                             result = new ResponseJsonMessage() {
                                 message = "User name / password salah!"
                             }
@@ -121,7 +121,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
                 API_KEY_T apiKeyT = await this._apiKeyRepo.SecretLogin(this._envVar.IS_USING_POSTGRES, this._orapg, secret);
                 if (apiKeyT == null) {
                     return this.BadRequest(new ResponseJsonSingle<ResponseJsonMessage>() {
-                        info = $"400 - {this.GetType().Name} :: Login Gagal",
+                        info = $"{StatusCodes.Status400BadRequest} - {this.GetType().Name} :: Login Gagal",
                         result = new ResponseJsonMessage() {
                             message = "Secret salah / tidak dikenali!"
                         }
@@ -138,7 +138,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             string token = this._chiper.EncodeJWT(userSession);
 
             return this.StatusCode(StatusCodes.Status201Created, new {
-                info = $"201 - {this.GetType().Name} :: Login Berhasil",
+                info = $"{StatusCodes.Status201Created} - {this.GetType().Name} :: Login Berhasil",
                 result = userSession,
                 token
             });
@@ -158,7 +158,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             }
 
             return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
-                info = $"202 - {this.GetType().Name} :: Logout Berhasil",
+                info = $"{StatusCodes.Status202Accepted} - {this.GetType().Name} :: Logout Berhasil",
                 result = this.UserTokenData
             });
         }
@@ -169,7 +169,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
         [SwaggerOperation(Summary = "Mengecek / validasi token untuk mendapatkan informasi sesi login")]
         public IActionResult Verify() {
             return this.Accepted(new ResponseJsonSingle<UserApiSession>() {
-                info = $"202 - {this.GetType().Name} :: Verifikasi Berhasil",
+                info = $"{StatusCodes.Status202Accepted} - {this.GetType().Name} :: Verifikasi Berhasil",
                 result = this.UserTokenData
             });
         }
@@ -202,7 +202,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             IEnumerable<string> fileNames = Directory.GetFiles(folderPath).Select(p => Path.GetFileName(p)).Where(p => !p.Contains("Services.TarikData.DbLink") && !p.Contains("Services.ProsesData.DbLink"));
 
             return this.Ok(new {
-                info = $"200 - {this.GetType().Name} :: Informasi GRPC",
+                info = $"{StatusCodes.Status200OK} - {this.GetType().Name} :: Informasi GRPC",
                 grpc_port = grpcPort,
                 grpc_services = fileNames
             });
@@ -238,7 +238,7 @@ namespace bifeldy_sd3_lib_60.Controllers {
             ");
 
             return this.Ok(new {
-                info = $"200 - {this.GetType().Name} :: All DC",
+                info = $"{StatusCodes.Status200OK} - {this.GetType().Name} :: All DC",
                 results = ls.Select(l => new {
                     kode_dc = l.TBL_DC_KODE,
                     nama_dc = l.TBL_DC_NAMA
