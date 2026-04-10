@@ -71,8 +71,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
 
         private static readonly HashSet<string> RequestHeadersToRemove = new(StringComparer.OrdinalIgnoreCase) {
-            "Host",               // replaced by HttpClient
-            "Content-Length",     // recalculated by HttpClient
+            "Host",               // replaced
+            "Content-Type",       // recreated
+            "Content-Length",     // recalculated
             "Content-Encoding",   // ASP.NET may already decompress
             "Transfer-Encoding",  // HttpClient will decide
             "Expect"              // avoid 100-continue problems
