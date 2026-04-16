@@ -11,8 +11,16 @@
  * 
  */
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Libraries;
+using bifeldy_sd3_lib_60.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -20,32 +28,22 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
-
-using bifeldy_sd3_lib_60.AttributeFilterDecorators;
-using bifeldy_sd3_lib_60.Exceptions;
-using bifeldy_sd3_lib_60.Libraries;
-using bifeldy_sd3_lib_60.Models;
-
 namespace bifeldy_sd3_lib_60.Services {
 
     public interface IHttpService {
         List<Tuple<string, string>> CleanHeader(IHeaderDictionary httpHeader);
         HttpClient CreateHttpClient(uint timeoutSeconds = 60, string publicKeysBase64HashJsonFilePath = null);
-        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null);
-        IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, JsonSerializerOptions options = null, CancellationToken cancellationToken = default);
-        Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
-        Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null);
+        Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, int bufferSize = 32768, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> PostData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> PutData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> PatchData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
     }
 
     [SingletonServiceRegistration]
@@ -71,9 +69,9 @@ namespace bifeldy_sd3_lib_60.Services {
 
 
         private static readonly HashSet<string> RequestHeadersToRemove = new(StringComparer.OrdinalIgnoreCase) {
-            "Host",               // replaced
-            "Content-Type",       // recreated
-            "Content-Length",     // recalculated
+            "Host",               // replaced by HttpClient
+            "Content-Type",       // recreated by HttpClient
+            "Content-Length",     // recalculated by HttpClient
             "Content-Encoding",   // ASP.NET may already decompress
             "Transfer-Encoding",  // HttpClient will decide
             "Expect"              // avoid 100-continue problems
@@ -118,195 +116,6 @@ namespace bifeldy_sd3_lib_60.Services {
             return list;
         }
 
-        public HttpContent CreateStreamingJsonContent(IAsyncEnumerable<object> stream, JsonSerializerOptions jsonOpt = null) {
-            jsonOpt ??= new JsonSerializerOptions() {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-
-            return new StreamContent(new StreamingJson(stream, jsonOpt)) {
-                Headers = {
-                    ContentType = new MediaTypeHeaderValue("application/json")
-                }
-            };
-        }
-
-        public HttpContent CreateNdjsonContent(IAsyncEnumerable<object> stream, JsonSerializerOptions jsonOpt = null) {
-            jsonOpt ??= new JsonSerializerOptions() {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-
-            return new StreamContent(new StreamingNdjson(stream, jsonOpt)) {
-                Headers = {
-                    ContentType = new MediaTypeHeaderValue("application/x-ndjson")
-                }
-            };
-        }
-
-        private HttpContent GetHttpContent(dynamic httpContent, string contentType, Encoding encoding = null) {
-            encoding ??= Encoding.UTF8;
-
-            Type type = httpContent.GetType();
-
-            if (type == typeof(string)) {
-                return new StringContent(httpContent, encoding, contentType);
-            }
-            else if (type == typeof(byte[])) {
-                return new ByteArrayContent(httpContent);
-            }
-            else if (type == typeof(Stream) || typeof(HttpRequest).IsAssignableFrom(type)) {
-                HttpContent streamContent;
-
-                if (typeof(HttpRequest).IsAssignableFrom(type)) {
-                    var req = (HttpRequest)httpContent;
-                    streamContent = new StreamContent(req.Body);
-
-                    if (!string.IsNullOrEmpty(req.ContentType)) {
-                        streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(req.ContentType);
-                    }
-
-                    streamContent.Headers.ContentLength = null;
-                    streamContent.Headers.ContentEncoding.Clear();
-                }
-                else {
-                    streamContent = new StreamContent((Stream)httpContent);
-                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                }
-
-                return streamContent;
-            }
-            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)) {
-                string ct = contentType?.ToLowerInvariant();
-
-                if (ct == "application/json") {
-                    return this.CreateStreamingJsonContent(httpContent);
-                }
-
-                if (ct == "application/x-ndjson") {
-                    return this.CreateNdjsonContent(httpContent);
-                }
-
-                throw new PluginGagalProsesException($"Streaming Untuk Content-Type '{contentType}' Tidak Tersedia");
-            }
-            else {
-                dynamic json = JsonSerializer.Serialize(httpContent);
-                return new StringContent(json, encoding, contentType);
-            }
-        }
-
-        private HttpRequestMessage ParseApiData(
-            string httpUri, HttpMethod httpMethod, dynamic httpContent = null,
-            bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
-            string[] contentKeyName = null, string[] contentType = null,
-            Encoding encoding = null
-        ) {
-            encoding ??= Encoding.UTF8;
-
-            var httpRequestMessage = new HttpRequestMessage() {
-                Method = httpMethod,
-                RequestUri = new Uri(httpUri)
-            };
-
-            if (httpContent != null) {
-                if (multipart) {
-                    // Send binary form data with key value
-                    // file=...binary...;
-                    var lsContent = new List<HttpContent>();
-
-                    if (httpContent.GetType().IsArray) {
-                        for (int i = 0; i < httpContent.Length; i++) {
-                            lsContent.Add(
-                                GetHttpContent(
-                                    httpContent[i],
-                                    contentType?.Length > 0 ? contentType[i] : "application/octet-stream",
-                                    encoding
-                                )
-                            );
-                        }
-                    }
-                    else {
-                        lsContent.Add(
-                            GetHttpContent(
-                                httpContent,
-                                contentType?.Length > 0 ? contentType[0] : "application/octet-stream",
-                                encoding
-                            )
-                        );
-                    }
-
-                    httpContent = new MultipartFormDataContent();
-                    for (int i = 0; i < lsContent.Count; i++) {
-                        httpContent.Add(lsContent[i], contentKeyName?.Length > 0 ? contentKeyName[i] : "file");
-                    }
-                }
-                else {
-                    httpContent = GetHttpContent(
-                        httpContent,
-                        contentType?.Length > 0 ? contentType[0] : "application/json",
-                        encoding
-                    );
-                }
-
-                httpRequestMessage.Content = httpContent;
-            }
-
-            if (httpHeaders != null) {
-                foreach (Tuple<string, string> hdr in httpHeaders) {
-                    try {
-                        if (!httpRequestMessage.Headers.TryAddWithoutValidation(hdr.Item1, hdr.Item2)) {
-                            _ = httpRequestMessage.Content?.Headers.TryAddWithoutValidation(hdr.Item1, hdr.Item2);
-                        }
-                    }
-                    catch {
-                        // Skip Invalid Header ~
-                    }
-                }
-            }
-
-            return httpRequestMessage;
-        }
-
-        private async Task<HttpResponseMessage> SendWithRetry(
-            string httpUri, HttpMethod httpMethod, dynamic httpContent = null,
-            bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
-            string[] contentKeyName = null, string[] contentType = null,
-            Encoding encoding = null,
-            uint timeoutSeconds = 180, uint maxRetry = 3,
-            HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead,
-            string publicKeysBase64HashJsonFilePath = null
-        ) {
-            HttpClient httpClient = this.CreateHttpClient(timeoutSeconds, publicKeysBase64HashJsonFilePath);
-
-            HttpResponseMessage httpResponseMessage = null;
-            HttpRequestMessage httpRequestMessage = null;
-
-            for (int retry = 0; retry < maxRetry; retry++) {
-                httpRequestMessage = this.ParseApiData(
-                    httpUri, httpMethod, httpContent,
-                    multipart, httpHeaders,
-                    contentKeyName, contentType,
-                    encoding ?? Encoding.UTF8
-                );
-
-                httpRequestMessage.Headers.Add("x-retry-number", $"{retry}");
-
-                try {
-                    httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, readOpt);
-
-                    if (((int)httpResponseMessage.StatusCode) < 500) {
-                        break;
-                    }
-                }
-                catch (Exception ex) {
-                    this._logger.LogError("[HTTP_REQUEST_{method}] {ex}", httpRequestMessage.Method.Method, ex.Message);
-                }
-                finally {
-                    await Task.Delay(Math.Min((int)timeoutSeconds / (int)maxRetry * retry, 5 * retry) * 1000);
-                }
-            }
-
-            return httpResponseMessage;
-        }
-
         public HttpClient CreateHttpClient(uint timeoutSeconds = 60, string publicKeysBase64HashJsonFilePath = null) {
             var httpMessageHandler = new HttpClientHandler() {
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
@@ -321,26 +130,20 @@ namespace bifeldy_sd3_lib_60.Services {
                 httpMessageHandler.ServerCertificateCustomValidationCallback = (httpRequestMessage, x509Certificate2, x509Chain, sslPolicyErrors) => {
                     if (sslPolicyErrors == SslPolicyErrors.None) {
                         byte[] serverPublicKey = x509Certificate2.GetPublicKey();
+                        byte[] hash = SHA256.HashData(serverPublicKey);
+                        string base64Hash = Convert.ToBase64String(hash);
 
-                        using (var sha256 = SHA256.Create()) {
-                            byte[] hash = sha256.ComputeHash(serverPublicKey);
-                            string base64Hash = Convert.ToBase64String(hash);
-
-                            if (pinnedPublicKeys.Contains(base64Hash)) {
-                                return true;
-                            }
+                        if (pinnedPublicKeys.Contains(base64Hash)) {
+                            return true;
                         }
 
                         foreach (X509ChainElement element in x509Chain.ChainElements) {
                             byte[] chainServerPublicKey = element.Certificate.GetPublicKey();
+                            hash = SHA256.HashData(chainServerPublicKey);
+                            base64Hash = Convert.ToBase64String(hash);
 
-                            using (var sha256 = SHA256.Create()) {
-                                byte[] hash = sha256.ComputeHash(chainServerPublicKey);
-                                string base64Hash = Convert.ToBase64String(hash);
-
-                                if (pinnedPublicKeys.Contains(base64Hash)) {
-                                    return true;
-                                }
+                            if (pinnedPublicKeys.Contains(base64Hash)) {
+                                return true;
                             }
                         }
                     }
@@ -350,8 +153,162 @@ namespace bifeldy_sd3_lib_60.Services {
             }
 
             return new HttpClient(httpMessageHandler) {
-                Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+                Timeout = timeoutSeconds <= 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(timeoutSeconds)
             };
+        }
+
+        private HttpContent GetHttpContent(object payload, string contentType, Encoding encoding = null) {
+            encoding ??= Encoding.UTF8;
+
+            if (payload == null) {
+                return null;
+            }
+
+            if (payload is byte[] b) {
+                return new ByteArrayContent(b);
+            }
+
+            if (payload is HttpRequestMessage reqMsg) {
+                return reqMsg.Content;
+            }
+
+            if (payload is HttpRequest req) {
+                var streamContent = new StreamContent(req.Body);
+
+                if (!string.IsNullOrEmpty(req.ContentType)) {
+                    streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(req.ContentType);
+                }
+
+                streamContent.Headers.ContentLength = null;
+                streamContent.Headers.ContentEncoding.Clear();
+
+                return streamContent;
+            }
+
+            if (payload is Stream stream) {
+                var streamContent = new StreamContent(stream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                return streamContent;
+            }
+
+            if (payload is not string) {
+                string json = this._cs.ObjectToJson(payload);
+                return new StringContent(json, encoding, MediaTypeNames.Application.Json);
+            }
+
+            return new StringContent(payload.ToString(), encoding, contentType);
+        }
+
+        private HttpRequestMessage ParseApiData(
+            string httpUri, HttpMethod httpMethod, object payload,
+            bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
+            string[] contentKeyName = null, string[] contentType = null,
+            Encoding encoding = null
+        ) {
+            var request = new HttpRequestMessage() {
+                Method = httpMethod,
+                RequestUri = new Uri(httpUri)
+            };
+
+            if (payload != null) {
+                HttpContent finalContent = null;
+
+                if (multipart) {
+                    var form = new MultipartFormDataContent();
+
+                    if (payload is object[] arr) {
+                        for (int i = 0; i < arr.Length; i++) {
+                            HttpContent part = this.GetHttpContent(
+                                arr.GetValue(i),
+                                contentType?.ElementAtOrDefault(i) ?? MediaTypeNames.Application.Octet,
+                                encoding
+                            );
+
+                            form.Add(
+                                part,
+                                contentKeyName?.ElementAtOrDefault(i) ?? "file"
+                            );
+                        }
+                    }
+                    else {
+                        form.Add(
+                            this.GetHttpContent(
+                                payload,
+                                contentType?.FirstOrDefault() ?? MediaTypeNames.Application.Octet,
+                                encoding
+                            ),
+                            contentKeyName?.FirstOrDefault() ?? "file"
+                        );
+                    }
+
+                    finalContent = form;
+                }
+                else {
+                    finalContent = this.GetHttpContent(
+                        payload,
+                        contentType?.FirstOrDefault() ?? MediaTypeNames.Application.Json,
+                        encoding
+                    );
+                }
+
+                request.Content = finalContent;
+            }
+
+            if (httpHeaders != null) {
+                foreach (Tuple<string, string> hdr in httpHeaders) {
+                    if (!request.Headers.TryAddWithoutValidation(hdr.Item1, hdr.Item2)) {
+                        _ = (request.Content?.Headers.TryAddWithoutValidation(hdr.Item1, hdr.Item2));
+                    }
+                }
+            }
+
+            return request;
+        }
+
+        private async Task<HttpResponseMessage> SendWithRetry(
+            string httpUri, HttpMethod httpMethod, object httpContent,
+            bool multipart = false, List<Tuple<string, string>> httpHeaders = null,
+            string[] contentKeyName = null, string[] contentType = null,
+            Encoding encoding = null,
+            uint timeoutSeconds = 180, uint maxRetry = 3,
+            HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead,
+            string publicKeysBase64HashJsonFilePath = null,
+            CancellationToken token = default
+        ) {
+            HttpClient httpClient = this.CreateHttpClient(timeoutSeconds, publicKeysBase64HashJsonFilePath);
+
+            HttpResponseMessage httpResponseMessage = null;
+
+            if (httpContent is Stream or HttpRequest or HttpRequestMessage) {
+                maxRetry = 1;
+            }
+
+            for (int retry = 0; retry < maxRetry; retry++) {
+                using (HttpRequestMessage httpRequestMessage = this.ParseApiData(
+                    httpUri, httpMethod, httpContent,
+                    multipart, httpHeaders,
+                    contentKeyName, contentType,
+                    encoding ?? Encoding.UTF8
+                )) {
+                    httpRequestMessage.Headers.Add("x-retry-number", $"{retry}");
+
+                    try {
+                        httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, readOpt, token);
+
+                        if (((int)httpResponseMessage.StatusCode) < 500) {
+                            break;
+                        }
+                    }
+                    catch (Exception ex) {
+                        this._logger.LogError("[HTTP_REQUEST_{method}] {ex}", httpRequestMessage.Method.Method, ex.Message);
+                    }
+                    finally {
+                        await Task.Delay(TimeSpan.FromSeconds(Math.Min(5 * retry, timeoutSeconds / maxRetry)), token);
+                    }
+                }
+            }
+
+            return httpResponseMessage;
         }
 
         private static bool HeaderMatches(string pattern, string header) {
@@ -362,7 +319,7 @@ namespace bifeldy_sd3_lib_60.Services {
             pattern = pattern.ToLowerInvariant();
             header = header.ToLowerInvariant();
 
-            if (pattern.EndsWith("*")) {
+            if (pattern.EndsWith('*')) {
                 string prefix = pattern[..^1];
                 return header.StartsWith(prefix);
             }
@@ -370,7 +327,7 @@ namespace bifeldy_sd3_lib_60.Services {
             return header == pattern;
         }
 
-        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null) {
+        public async Task<IActionResult> ForwardRequest(string urlTarget, HttpRequest request, HttpResponse response, bool isApiEndpoint = false, uint timeoutSeconds = 300, string publicKeysBase64HashJsonFilePath = null, CancellationToken cancellationToken = default) {
             List<Tuple<string, string>> lsHeader = this.CleanHeader(request.Headers);
 
             HttpRequestMessage forwardMsg = this.ParseApiData(
@@ -378,11 +335,11 @@ namespace bifeldy_sd3_lib_60.Services {
                 new HttpMethod(request.Method),
                 request,
                 httpHeaders: lsHeader,
-                contentType: request.ContentType != null ? new[] { request.ContentType } : null
+                contentType: request.ContentType != null ? new string[] { request.ContentType } : null
             );
 
             HttpResponseMessage res = await this.CreateHttpClient(timeoutSeconds, publicKeysBase64HashJsonFilePath)
-                .SendAsync(forwardMsg, HttpCompletionOption.ResponseHeadersRead);
+                .SendAsync(forwardMsg, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
             int statusCode = (int)res.StatusCode;
 
@@ -390,20 +347,33 @@ namespace bifeldy_sd3_lib_60.Services {
             response.StatusCode = statusCode;
 
             if (statusCode == 404 && (isApiEndpoint || urlTarget.Contains($"/{Bifeldy.API_PREFIX}/"))) {
-                return new NotFoundObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = "404 - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
+                var r1 = new ResponseJsonSingle<ResponseJsonMessage>() {
+                    info = $"{statusCode} - Whoops :: Alamat Server Tujuan Tidak Ditemukan",
                     result = new ResponseJsonMessage() {
                         message = "Silahkan Periksa Kembali Dokumentasi API"
                     }
-                });
+                };
+
+                return new NotFoundObjectResult(r1);
             }
-            else if (statusCode == 502 && (isApiEndpoint || urlTarget.Contains($"/{Bifeldy.API_PREFIX}/"))) {
-                return new BadRequestObjectResult(new ResponseJsonSingle<ResponseJsonMessage>() {
-                    info = "502 - Whoops :: Alamat Server Tujuan Tidak Tersedia",
+
+            if (statusCode == 502 && (isApiEndpoint || urlTarget.Contains($"/{Bifeldy.API_PREFIX}/"))) {
+                var jsonSerializerOptions = new JsonSerializerOptions();
+                jsonSerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
+                jsonSerializerOptions.Converters.Add(new NullableDecimalSystemTextJsonConverter());
+
+                var r2 = new ResponseJsonSingle<ResponseJsonMessage>() {
+                    info = $"{statusCode} - Whoops :: Alamat Server Tujuan Tidak Tersedia",
                     result = new ResponseJsonMessage() {
                         message = "Silahkan Hubungi S/SD 3 Untuk informasi Lebih Lanjut"
                     }
-                });
+                };
+
+                return new JsonResult(r2) {
+                    SerializerSettings = jsonSerializerOptions,
+                    ContentType = MediaTypeNames.Application.Json,
+                    StatusCode = StatusCodes.Status502BadGateway
+                };
             }
 
             KeyValuePair<string, IEnumerable<string>>[] allHeaders = res.Headers.Concat(res.Content.Headers).ToArray();
@@ -415,38 +385,45 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            await response.StartAsync();
+            await response.StartAsync(cancellationToken);
 
-            using (Stream upstream = await res.Content.ReadAsStreamAsync()) {
+            await using (Stream upstream = await res.Content.ReadAsStreamAsync(cancellationToken)) {
                 byte[] buffer = new byte[8192];
                 int bytesRead = 0;
 
-                while ((bytesRead = await upstream.ReadAsync(buffer, 0, buffer.Length)) > 0) {
-                    await response.Body.WriteAsync(buffer, 0, bytesRead);
-                    await response.Body.FlushAsync();
+                while ((bytesRead = await upstream.ReadAsync(buffer, cancellationToken)) > 0) {
+                    await response.Body.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                    await response.Body.FlushAsync(cancellationToken);
                 }
             }
 
             return new EmptyResult();
         }
 
-        public async IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, JsonSerializerOptions options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        private static async IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(
+            HttpResponseMessage response,
+            Func<Stream, IAsyncEnumerable<T>> callbackStream,
+            Func<string, T> callbackLine,
+            int bufferSize = 32768,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default
+        ) {
             if (response == null) {
-                throw new PluginGagalProsesException("Response Tidak Ada Isinya");
+                throw new Exception("Response Tidak Ada Isinya");
             }
 
             if (!response.IsSuccessStatusCode) {
-                throw new PluginGagalProsesException($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+                throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
             }
 
-            options ??= new JsonSerializerOptions() {
-                PropertyNameCaseInsensitive = true
-            };
+            Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
-            Stream stream = await response.Content.ReadAsStreamAsync();
-
-            if (response.Content.Headers.ContentType?.MediaType == "application/json") {
-                await foreach (T item in JsonSerializer.DeserializeAsyncEnumerable<T>(stream, options, cancellationToken)) {
+            if (string.Equals(
+                response.Content.Headers.ContentType?.MediaType,
+                MediaTypeNames.Application.Json,
+                StringComparison.OrdinalIgnoreCase
+            )) {
+                IAsyncEnumerable<T> iae = callbackStream(stream);
+                await foreach (T item in iae.WithCancellation(cancellationToken)) {
                     if (item != null) {
                         yield return item;
                     }
@@ -455,19 +432,23 @@ namespace bifeldy_sd3_lib_60.Services {
                 yield break;
             }
 
-            if (response.Content.Headers.ContentType?.MediaType == "application/x-ndjson") {
-                using (var reader = new StreamReader(stream)) {
+            if (string.Equals(
+                response.Content.Headers.ContentType?.MediaType,
+                "application/x-ndjson",
+                StringComparison.OrdinalIgnoreCase
+            )) {
+                using (var reader = new StreamReader(stream, Encoding.UTF8, false, bufferSize, true)) {
                     while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested) {
                         string line = await reader.ReadLineAsync();
 
-                        if (!string.IsNullOrWhiteSpace(line)) {
+                        if (!string.IsNullOrEmpty(line)) {
                             T item = default;
 
                             try {
-                                item = JsonSerializer.Deserialize<T>(line, options);
+                                item = callbackLine(line);
                             }
                             catch {
-                                throw new PluginGagalProsesException("Format X-(ND)JSON Harus Per Baris 1 Object Lengkap");
+                                throw new Exception("Format X-(ND)JSON Harus Per Baris 1 Object Lengkap");
                             }
 
                             if (item != null) {
@@ -480,43 +461,61 @@ namespace bifeldy_sd3_lib_60.Services {
                 yield break;
             }
 
-            throw new PluginGagalProsesException($"Streaming Untuk Content-Type '{response.Content.Headers.ContentType?.MediaType}' Tidak Tersedia");
+            throw new Exception($"Streaming Untuk Content-Type '{response.Content.Headers.ContentType?.MediaType}' Tidak Tersedia");
         }
 
-        public async Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, HttpMethod.Head, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public async IAsyncEnumerable<T> ReadStreamingJsonAsync<T>(HttpResponseMessage response, int bufferSize = 32768, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+            var jsonSerializerOptions = new JsonSerializerOptions();
+            jsonSerializerOptions.Converters.Add(new DecimalSystemTextJsonConverter());
+            jsonSerializerOptions.Converters.Add(new NullableDecimalSystemTextJsonConverter());
+
+            IAsyncEnumerable<T> iae = ReadStreamingJsonAsync(
+                response,
+                (stream) => JsonSerializer.DeserializeAsyncEnumerable<T>(stream, jsonSerializerOptions, cancellationToken),
+                (line) => JsonSerializer.Deserialize<T>(line, jsonSerializerOptions),
+                bufferSize,
+                cancellationToken
+            );
+
+            await foreach (T ie in iae.WithCancellation(cancellationToken)) {
+                yield return ie;
+            }
         }
 
-        public async Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, HttpMethod.Get, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> HeadData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, HttpMethod.Head, null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, HttpMethod.Delete, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> GetData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, HttpMethod.Get, null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> PostData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, HttpMethod.Post, objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> DeleteData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, HttpMethod.Delete, null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> PutData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, HttpMethod.Put, objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> PostData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, HttpMethod.Post, objBody, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, new HttpMethod("CONNECT"), httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> PutData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, HttpMethod.Put, objBody, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, new HttpMethod("OPTIONS"), httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> ConnectData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, new HttpMethod("CONNECT"), null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> PatchData(string urlPath, dynamic objBody, bool multipart = false, List<Tuple<string, string>> headerOpts = null, string[] contentKeyName = null, string[] contentType = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, new HttpMethod("PATCH"), objBody, multipart, headerOpts, contentKeyName, contentType, encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, new HttpMethod("OPTIONS"), null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
-        public async Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null) {
-            return await this.SendWithRetry(urlPath, HttpMethod.Trace, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath);
+        public Task<HttpResponseMessage> PatchData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, new HttpMethod("PATCH"), objBody, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
+        }
+
+        public Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
+            return this.SendWithRetry(urlPath, HttpMethod.Trace, null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
         }
 
     }
