@@ -11,19 +11,6 @@
  * 
  */
 
-using System.Collections.Specialized;
-using System.Data;
-using System.Web;
-
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-
-using Confluent.Kafka;
-
-using Grpc.Core;
-
 using bifeldy_sd3_lib_60.Abstractions;
 using bifeldy_sd3_lib_60.AttributeFilterDecorators;
 using bifeldy_sd3_lib_60.Databases;
@@ -31,6 +18,15 @@ using bifeldy_sd3_lib_60.Exceptions;
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.Services;
 using bifeldy_sd3_lib_60.TableView;
+using Confluent.Kafka;
+using Grpc.Core;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using System.Collections.Specialized;
+using System.Data;
+using System.Web;
 
 namespace bifeldy_sd3_lib_60.Repositories {
 
@@ -227,7 +223,7 @@ namespace bifeldy_sd3_lib_60.Repositories {
             List<ListApiDc> listApiDcs = await db.GetListAsync<ListApiDc>($@"
                 SELECT
                     a.dc_kode,
-                    a.ip_nginx,
+                    COALESCE(a.ip_nginx_cloud, a.ip_nginx) AS ip_nginx,
                     b.api_host,
                     b.api_path
                 FROM
