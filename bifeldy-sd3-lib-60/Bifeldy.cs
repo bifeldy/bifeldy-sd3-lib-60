@@ -10,22 +10,18 @@
  * 
  */
 
-using bifeldy_sd3_lib_60.AttributeFilterDecorators;
-using bifeldy_sd3_lib_60.Backgrounds;
-using bifeldy_sd3_lib_60.Databases;
-using bifeldy_sd3_lib_60.Exceptions;
-using bifeldy_sd3_lib_60.Extensions;
-using bifeldy_sd3_lib_60.Grpcs;
-using bifeldy_sd3_lib_60.Libraries;
-using bifeldy_sd3_lib_60.Middlewares;
-using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Plugins;
-using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.UserAuth;
+using System.Diagnostics;
+using System.Globalization;
+using System.Net;
+using System.Reflection;
+
 using DinkToPdf;
 using DinkToPdf.Contracts;
+
 using Grpc.Net.Client.Balancer;
+
 using Helmet;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -48,16 +44,29 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OpenApi.Models;
+
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
+
 using Quartz;
+
 using Serilog;
 using Serilog.Events;
+
 using StackExchange.Redis;
-using System.Diagnostics;
-using System.Globalization;
-using System.Net;
-using System.Reflection;
+
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Backgrounds;
+using bifeldy_sd3_lib_60.Databases;
+using bifeldy_sd3_lib_60.Exceptions;
+using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Grpcs;
+using bifeldy_sd3_lib_60.Libraries;
+using bifeldy_sd3_lib_60.Middlewares;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Plugins;
+using bifeldy_sd3_lib_60.Services;
+using bifeldy_sd3_lib_60.UserAuth;
 
 namespace bifeldy_sd3_lib_60 {
 
