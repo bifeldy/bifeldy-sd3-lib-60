@@ -46,6 +46,8 @@ namespace bifeldy_sd3_lib_60.Services {
         Task<HttpResponseMessage> OptionsData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
         Task<HttpResponseMessage> PatchData(string urlPath, object objBody, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
         Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default);
+        Task<string> CheckHttpJsonResult(HttpResponseMessage res);
+        IAsyncEnumerable<string> ReadSseStreamAsync(string urlPath, uint timeoutSeconds = 300, bool closeByEvent = true, CancellationToken cancellationToken = default);
     }
 
     [SingletonServiceRegistration]
@@ -518,6 +520,73 @@ namespace bifeldy_sd3_lib_60.Services {
 
         public Task<HttpResponseMessage> TraceData(string urlPath, List<Tuple<string, string>> headerOpts = null, uint timeoutSeconds = 180, uint maxRetry = 3, HttpCompletionOption readOpt = HttpCompletionOption.ResponseContentRead, Encoding encoding = null, string publicKeysBase64HashJsonFilePath = null, CancellationToken token = default) {
             return this.SendWithRetry(urlPath, HttpMethod.Trace, null, httpHeaders: headerOpts, encoding: encoding ?? Encoding.UTF8, timeoutSeconds: timeoutSeconds, maxRetry: maxRetry, readOpt: readOpt, publicKeysBase64HashJsonFilePath: publicKeysBase64HashJsonFilePath, token: token);
+        }
+
+        public async Task<string> CheckHttpJsonResult(HttpResponseMessage res) {
+            string jsonString = await res.Content.ReadAsStringAsync();
+
+            if (!res.IsSuccessStatusCode) {
+                string errMsg = res.ReasonPhrase;
+
+                try {
+                    ResponseJsonSingle<ResponseJsonMessage> r = this._cs.JsonToObject<ResponseJsonSingle<ResponseJsonMessage>>(jsonString);
+                    errMsg = r.result.message;
+                }
+                catch {
+                    //
+                }
+
+                throw new Exception($"Tidak Dapat Tersambung HTTP {(int)res.StatusCode} :: {errMsg}");
+            }
+
+            return jsonString;
+        }
+
+        public async IAsyncEnumerable<string> ReadSseStreamAsync(string urlPath, uint timeoutSeconds = 300, bool closeByEvent = true, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+            HttpClient httpClient = this.CreateHttpClient(timeoutSeconds);
+
+            var request = new HttpRequestMessage() {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri(urlPath)
+            };
+
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+            HttpResponseMessage response = await httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken
+            );
+
+            _ = response.EnsureSuccessStatusCode();
+
+            using (Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken)) {
+                using (var reader = new StreamReader(stream)) {
+                    var dataBuffer = new StringBuilder();
+
+                    while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested) {
+                        string line = await reader.ReadLineAsync();
+
+                        if (line == null) {
+                            break;
+                        }
+
+                        if (closeByEvent && line.StartsWith("event: close")) {
+                            break;
+                        }
+
+                        if (line.StartsWith("data: ")) {
+                            _ = dataBuffer.AppendLine(line[6..]);
+                        }
+                        else if (string.IsNullOrWhiteSpace(line)) {
+                            if (dataBuffer.Length > 0) {
+                                yield return dataBuffer.ToString().TrimEnd();
+                                _ = dataBuffer.Clear();
+                            }
+                        }
+                    }
+                }
+            }
         }
 
     }
