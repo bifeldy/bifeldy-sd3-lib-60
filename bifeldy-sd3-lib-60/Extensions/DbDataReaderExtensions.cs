@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 
  * Author       :: Basilius Bias Astho Christyono
  * Phone        :: (+62) 889 236 6466
@@ -31,16 +31,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     if (t.IsValueType || t == typeof(string)) {
                         if (!dr.IsDBNull(0)) {
                             dynamic val = dr.GetValue(0);
-
-                            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
-                            if (converter.CanConvertFrom(val.GetType())) {
-                                val = converter.ConvertFrom(val);
-                            }
-                            else {
-                                val = Convert.ChangeType(val, typeof(T));
-                            }
-
-                            objT = val;
+                            objT = (T)ChangeType(val, typeof(T));
                         }
                     }
                     else {
@@ -59,14 +50,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                                 dynamic val = cols[key];
 
                                 if (val != null) {
-                                    TypeConverter converter = TypeDescriptor.GetConverter(pro.PropertyType);
-                                    if (converter.CanConvertFrom(val.GetType())) {
-                                        val = converter.ConvertFrom(val);
-                                    }
-                                    else {
-                                        val = Convert.ChangeType(val, pro.PropertyType);
-                                    }
-
+                                    val = ChangeType(val, pro.PropertyType);
                                     pro.SetValue(objT, val);
                                 }
                             }
@@ -115,7 +99,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             text = text.ToUpper();
                         }
 
-                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains('\n') || text.Contains('\r');
+                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains((char)10) || text.Contains((char)13);
                         if (useDoubleQuote || mustQuote) {
                             text = $"\"{text.Replace("\"", "\"\"")}\"";
                         }
@@ -126,6 +110,40 @@ namespace bifeldy_sd3_lib_60.Extensions {
                     await streamWriter.WriteLineAsync(line.AsMemory(), token);
                 }
             }
+        }
+
+        // Safe conversion handler that prevents IConvertible crashes for array / reference payloads
+        private static object ChangeType(object value, Type targetType) {
+            if (value == null) {
+                return null;
+            }
+
+            Type underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            // Direct mapping bypass: If database byte[] type fits perfectly into property array type, pass it raw
+            if (targetType.IsAssignableFrom(value.GetType()) || underlyingType.IsAssignableFrom(value.GetType())) {
+                return value;
+            }
+
+            // Larik biner byte[] <-> byte?[]
+            if (value is byte[] rawBytes && targetType == typeof(byte?[])) {
+                return rawBytes.Select(b => (byte?)b).ToArray();
+            }
+            if (value is byte?[] nullableBytes && targetType == typeof(byte[])) {
+                return nullableBytes.Select(b => b ?? (byte)0).ToArray();
+            }
+
+            // Fallback strategy for specialized mapping scenarios
+            TypeConverter converter = TypeDescriptor.GetConverter(targetType);
+            if (converter != null && converter.CanConvertFrom(value.GetType())) {
+                return converter.ConvertFrom(value);
+            }
+
+            if (underlyingType.IsArray) {
+                return value;
+            }
+
+            return Convert.ChangeType(value, underlyingType);
         }
 
     }

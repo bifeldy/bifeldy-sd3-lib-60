@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 
  * Author       :: Basilius Bias Astho Christyono
  * Phone        :: (+62) 889 236 6466
@@ -40,14 +40,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
                         dynamic val = cols[key];
 
                         if (val != null) {
-                            TypeConverter converter = TypeDescriptor.GetConverter(pro.PropertyType);
-                            if (converter.CanConvertFrom(val.GetType())) {
-                                val = converter.ConvertFrom(val);
-                            }
-                            else {
-                                val = Convert.ChangeType(val, pro.PropertyType);
-                            }
-
+                            // Menggunakan helper ChangeType yang aman dari crash IConvertible (array/byte[])
+                            val = ChangeType(val, pro.PropertyType);
                             pro.SetValue(objT, val);
                         }
                     }
@@ -95,7 +89,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             text = text.ToUpper();
                         }
 
-                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains('\n') || text.Contains('\r');
+                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains((char)10) || text.Contains((char)13);
                         if (useDoubleQuote || mustQuote) {
                             text = $"\"{text.Replace("\"", "\"\"")}\"";
                         }
@@ -108,6 +102,40 @@ namespace bifeldy_sd3_lib_60.Extensions {
             }
         }
 
+        // Helper untuk konversi tipe data yang aman dari error IConvertible (Array / byte[])
+        private static object ChangeType(object value, Type targetType) {
+            if (value == null) {
+                return null;
+            }
+
+            Type underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            // Jika tipe data asal (dari DataRow) sudah cocok atau bisa langsung dimasukkan ke target tipe properti, langsung return
+            if (targetType.IsAssignableFrom(value.GetType()) || underlyingType.IsAssignableFrom(value.GetType())) {
+                return value;
+            }
+
+            // Larik biner byte[] <-> byte?[]
+            if (value is byte[] rawBytes && targetType == typeof(byte?[])) {
+                return rawBytes.Select(b => (byte?)b).ToArray();
+            }
+            if (value is byte?[] nullableBytes && targetType == typeof(byte[])) {
+                return nullableBytes.Select(b => b ?? (byte)0).ToArray();
+            }
+
+            // Coba konversi menggunakan TypeConverter bawaan .NET
+            TypeConverter converter = TypeDescriptor.GetConverter(targetType);
+            if (converter != null && converter.CanConvertFrom(value.GetType())) {
+                return converter.ConvertFrom(value);
+            }
+
+            if (underlyingType.IsArray) {
+                return value;
+            }
+
+            // Fallback terakhir untuk tipe primitif murni
+            return Convert.ChangeType(value, underlyingType);
+        }
 
     }
 

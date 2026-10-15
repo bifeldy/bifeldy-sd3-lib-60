@@ -17,7 +17,9 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
     public static class ObjectExtensions {
 
-        private static readonly BindingFlags bf = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
+        // Perbaikan 1: Gunakan properti Instance saja untuk pemetaan kamus objek standar, 
+        // hindari penggabungan Static secara liar yang bisa memicu tabrakan properti instans.
+        private static readonly BindingFlags bf = BindingFlags.Public | BindingFlags.Instance;
 
         private static readonly HashSet<Type> ExtraSimpleTypes = new() {
             typeof(string),
@@ -46,6 +48,11 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 return obj;
             }
 
+            // Perbaikan 2: Amankan tipe biner (byte[] / byte?[]) agar tidak ikut terpecah di blok IEnumerable umum
+            if (type.IsArray && (type.GetElementType() == typeof(byte) || Nullable.GetUnderlyingType(type.GetElementType()) == typeof(byte))) {
+                return obj; // Pertahankan biner sebagai array byte utuh
+            }
+
             if (obj is IDictionary dict) {
                 return ConvertDictionary(dict);
             }
@@ -59,9 +66,14 @@ namespace bifeldy_sd3_lib_60.Extensions {
         }
 
         private static Dictionary<string, object> ConvertDictionary(IDictionary dict) {
-            var result = new Dictionary<string, object>();
+            // Perbaikan 3: Seragamkan penggunaan StringComparer agar konsisten di seluruh hierarki konversi kamus
+            var result = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
             foreach (DictionaryEntry entry in dict) {
+                if (entry.Key == null) {
+                    continue;
+                }
+
                 string key = entry.Key.ToString();
                 result[key] = ConvertObject(entry.Value);
             }
@@ -88,7 +100,7 @@ namespace bifeldy_sd3_lib_60.Extensions {
 
         private static Dictionary<string, object> ConvertComplexObject(object obj) {
             Type type = obj.GetType();
-            var result = new Dictionary<string, object>();
+            var result = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
             foreach (PropertyInfo prop in type.GetProperties(bf)) {
                 if (!prop.CanRead) {
@@ -100,6 +112,8 @@ namespace bifeldy_sd3_lib_60.Extensions {
                 }
 
                 object value = prop.GetValue(obj);
+
+                // Amankan dari potensi duplikasi kunci properti ilegal
                 result[prop.Name] = ConvertObject(value);
             }
 
@@ -109,7 +123,22 @@ namespace bifeldy_sd3_lib_60.Extensions {
         }
 
         public static Dictionary<string, object> ToDictionary(this object instanceToConvert) {
-            return ConvertObject(instanceToConvert) as Dictionary<string, object> ?? new Dictionary<string, object>();
+            // Memastikan hasil balik utama selalu mengalir ke Dictionary root secara aman
+            if (instanceToConvert == null) {
+                return new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+            }
+
+            object converted = ConvertObject(instanceToConvert);
+            if (converted is Dictionary<string, object> finalDict) {
+                return finalDict;
+            }
+
+            // Jika input berupa tipe data primitif tunggal/string, bungkus ke dalam satu entry kamus standard
+            var fallback = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase) {
+                ["Value"] = converted,
+                ["IsCollection"] = false
+            };
+            return fallback;
         }
 
     }

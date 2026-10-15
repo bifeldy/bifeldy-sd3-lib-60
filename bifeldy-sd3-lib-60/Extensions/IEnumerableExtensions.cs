@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 
  * Author       :: Basilius Bias Astho Christyono
  * Phone        :: (+62) 889 236 6466
@@ -53,13 +53,30 @@ namespace bifeldy_sd3_lib_60.Extensions {
             else {
                 PropertyDescriptorCollection properties = TypeDescriptor.GetProperties(t);
                 foreach (PropertyDescriptor prop in properties) {
-                    _ = table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+                    Type propType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+
+                    // Perbaikan 1: Amankan skema kolom DataTable untuk tipe array biner (byte[] / byte?[])
+                    if (propType.IsArray && (propType.GetElementType() == typeof(byte) || Nullable.GetUnderlyingType(propType.GetElementType()) == typeof(byte))) {
+                        propType = typeof(byte[]);
+                    }
+
+                    _ = table.Columns.Add(prop.Name, propType);
                 }
 
                 foreach (T item in arrayListData) {
                     DataRow row = table.NewRow();
                     foreach (PropertyDescriptor prop in properties) {
-                        row[prop.Name] = prop.GetValue(item) ?? DBNull.Value;
+                        object rawValue = prop.GetValue(item);
+
+                        // Perbaikan 2: Normalisasi value array biner tak-standard ke bentuk byte[] agar diterima DataRow
+                        if (rawValue != null && rawValue.GetType().IsArray && rawValue is System.Collections.IEnumerable enumerableVal && !(rawValue is byte[])) {
+                            Type elemType = rawValue.GetType().GetElementType();
+                            if (elemType == typeof(byte) || Nullable.GetUnderlyingType(elemType) == typeof(byte)) {
+                                rawValue = enumerableVal.Cast<object>().Select(x => x == null ? (byte)0 : (byte)Convert.ChangeType(x, typeof(byte))).ToArray();
+                            }
+                        }
+
+                        row[prop.Name] = rawValue ?? DBNull.Value;
                     }
 
                     table.Rows.Add(row);
@@ -100,16 +117,29 @@ namespace bifeldy_sd3_lib_60.Extensions {
                             return "";
                         }
 
-                        string text = value.ToString();
+                        string text;
                         if (value is DateTime dt) {
                             text = dt.ToString("O");
+                        }
+                        // Perbaikan 3: Tangani konversi visual array byte[] standard ke teks Base64 untuk CSV
+                        else if (value is byte[] bytes) {
+                            text = Convert.ToBase64String(bytes);
+                        }
+                        // Perbaikan 4: Tangani konversi visual array byte?[] nullable ke teks Base64 untuk CSV
+                        else if (value is byte?[] nullableBytes) {
+                            byte[] cleanBytes = nullableBytes.Select(b => b ?? 0).ToArray();
+                            text = Convert.ToBase64String(cleanBytes);
+                        }
+                        else {
+                            text = value.ToString();
                         }
 
                         if (allUppercase) {
                             text = text.ToUpper();
                         }
 
-                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains('\n') || text.Contains('\r');
+                        // Perbaikan 5: Menggunakan kode ASCII char agar sistem AI tidak merusak baris string escape lagi
+                        bool mustQuote = text.Contains(delimiter) || text.Contains('"') || text.Contains((char)10) || text.Contains((char)13);
                         if (useDoubleQuote || mustQuote) {
                             text = $"\"{text.Replace("\"", "\"\"")}\"";
                         }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 
  * Author       :: Basilius Bias Astho Christyono
  * Phone        :: (+62) 889 236 6466
@@ -11,22 +11,19 @@
  * 
  */
 
+using bifeldy_sd3_lib_60.AttributeFilterDecorators;
+using bifeldy_sd3_lib_60.Libraries;
+using DinkToPdf;
+using DinkToPdf.Contracts;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using SixLabors.ImageSharp;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Mime;
 using System.Reflection;
+using System.Text;
 using System.Xml.Linq;
-
-using DinkToPdf;
-using DinkToPdf.Contracts;
-
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
-using SixLabors.ImageSharp;
-
-using bifeldy_sd3_lib_60.AttributeFilterDecorators;
-using bifeldy_sd3_lib_60.Libraries;
 
 namespace bifeldy_sd3_lib_60.Services {
 
@@ -137,13 +134,59 @@ namespace bifeldy_sd3_lib_60.Services {
         }
 
         public T ObjectToT<T>(object o2t) {
-            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
-            if (converter.CanConvertFrom(o2t.GetType())) {
-                return (T) converter.ConvertFrom(o2t);
+            if (o2t == null || o2t == DBNull.Value) {
+                return default;
             }
-            else {
-                return (T) Convert.ChangeType(o2t, typeof(T));
+
+            Type targetType = typeof(T);
+            Type underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            // Jika tipe data asal sudah cocok atau bisa langsung di-assign, kembalikan langsung datanya
+            if (targetType.IsAssignableFrom(o2t.GetType()) || underlyingType.IsAssignableFrom(o2t.GetType())) {
+                return (T)o2t;
             }
+
+            // Larik biner byte[] <-> byte?[]
+            if (o2t is byte[] rawBytes && targetType == typeof(byte?[])) {
+                return (T)(object)rawBytes.Select(b => (byte?)b).ToArray();
+            }
+            if (o2t is byte?[] nullableBytes && targetType == typeof(byte[])) {
+                return (T)(object)nullableBytes.Select(b => b ?? (byte)0).ToArray();
+            }
+
+            // Jika target bertipe array byte (byte[] atau byte?[]), lakukan dekode otomatis dari string Base64
+            bool isTargetByteArray = underlyingType.IsArray &&
+                                     (underlyingType.GetElementType() == typeof(byte) || Nullable.GetUnderlyingType(underlyingType.GetElementType()) == typeof(byte));
+            if (isTargetByteArray && o2t is string base64Str) {
+                if (string.IsNullOrEmpty(base64Str)) return default;
+                try {
+                    byte[] bytes = Convert.FromBase64String(base64Str);
+                    if (targetType == typeof(byte?[])) {
+                        return (T)(object)bytes.Select(b => (byte?)b).ToArray();
+                    }
+                    return (T)(object)bytes;
+                }
+                catch {
+                    byte[] bytes = Encoding.UTF8.GetBytes(base64Str);
+                    if (targetType == typeof(byte?[])) {
+                        return (T)(object)bytes.Select(b => (byte?)b).ToArray();
+                    }
+                    return (T)(object)bytes;
+                }
+            }
+
+            // Gunakan TypeConverter bawaan .NET jika didukung komponen tipe tujuannya
+            TypeConverter converter = TypeDescriptor.GetConverter(targetType);
+            if (converter != null && converter.CanConvertFrom(o2t.GetType())) {
+                return (T)converter.ConvertFrom(o2t);
+            }
+
+            if (underlyingType.IsArray) {
+                return (T)o2t;
+            }
+
+            // Fallback terakhir untuk tipe primitif murni C#
+            return (T)Convert.ChangeType(o2t, underlyingType);
         }
 
         public string XmlToJson(string xml) {
@@ -190,7 +233,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
 
-            return $"{(decimal) bytes / digit:0.00} {ext}";
+            return $"{(decimal)bytes / digit:0.00} {ext}";
         }
 
         public List<CDynamicClassProperty> GetTableClassStructureModel<T>() {

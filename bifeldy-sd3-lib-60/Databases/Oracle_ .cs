@@ -12,23 +12,20 @@
  * 
  */
 
+using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
+using bifeldy_sd3_lib_60.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Oracle.ManagedDataAccess.Client;
 using System.Collections;
 using System.Data;
 using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
-
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using Oracle.ManagedDataAccess.Client;
-
-using bifeldy_sd3_lib_60.Abstractions;
-using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Repositories;
-using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -61,8 +58,8 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) {
             _ = options.UseOracle(this.DbConnectionString, opt => {
-                    _ = opt.UseOracleSQLCompatibility("11");
-                })
+                _ = opt.UseOracleSQLCompatibility("11");
+            })
                 // .LogTo(s => Console.WriteLine(s))
                 .EnableDetailedErrors(this._as.DebugMode)
                 .EnableSensitiveDataLogging(this._as.DebugMode);
@@ -101,7 +98,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         protected override DbCommand CreateCommand(int commandTimeoutSeconds) {
-            var cmd = (OracleCommand) base.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)base.CreateCommand(commandTimeoutSeconds);
             cmd.BindByName = true;
             cmd.InitialLOBFetchSize = -1;
             cmd.InitialLONGFetchSize = -1;
@@ -121,8 +118,27 @@ namespace bifeldy_sd3_lib_60.Databases {
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
 
-                    bool isEnumerable = typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string);
-                    if (isEnumerable) {
+                    // Proteksi untuk tipe array biner agar tidak masuk ke loop IEnumerable umum Oracle
+                    bool isByteArray = pValType == typeof(byte[]) ||
+                                       (pValType.IsArray && (pValType.GetElementType() == typeof(byte) || Nullable.GetUnderlyingType(pValType.GetElementType()) == typeof(byte)));
+
+                    if (isByteArray && pVal != null) {
+                        byte[] cleanBytes;
+                        if (pVal is byte[] rawBytes) {
+                            cleanBytes = rawBytes;
+                        }
+                        else {
+                            cleanBytes = ((IEnumerable)pVal).Cast<object>().Select(b => b == null ? (byte)0 : (byte)Convert.ChangeType(b, typeof(byte))).ToArray();
+                        }
+
+                        var param = new OracleParameter() {
+                            ParameterName = pName,
+                            OracleDbType = OracleDbType.Blob,
+                            Value = cleanBytes
+                        };
+                        _ = cmd.Parameters.Add(param);
+                    }
+                    else if (typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string)) {
                         string bindStr = string.Empty;
                         int id = 1;
                         foreach (dynamic data in pVal) {
@@ -159,18 +175,24 @@ namespace bifeldy_sd3_lib_60.Databases {
                 }
             }
 
-            this.LogQueryParameter(cmd, prefix);
+            // Pengaman visual text logger dari crash IConvertible Oracle LOB
+            try {
+                this.LogQueryParameter(cmd, prefix);
+            }
+            catch (Exception logEx) {
+                this._logger.LogWarning("[LOG_PARAMETERS_BYPASS] Gagal mencatat visual teks parameter SQL: " + logEx.Message);
+            }
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} WHERE ROWNUM <= 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -178,7 +200,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -186,7 +208,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -194,7 +216,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -202,7 +224,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -210,7 +232,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -218,7 +240,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = procedureName;
             cmd.CommandType = CommandType.StoredProcedure;
             this.BindQueryParameter(cmd, bindParam);
@@ -230,7 +252,7 @@ namespace bifeldy_sd3_lib_60.Databases {
             Exception exception = null;
             try {
                 await this.OpenConnection();
-                using (var dbBulkCopy = new OracleBulkCopy((OracleConnection) this.GetConnection()) {
+                using (var dbBulkCopy = new OracleBulkCopy((OracleConnection)this.GetConnection()) {
                     DestinationTableName = tableName
                 }) {
                     // Ga Ada Yang Async
@@ -251,7 +273,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -259,7 +281,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (OracleCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (OracleCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -267,7 +289,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public COracle NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbNameSid) {
-            var oracle = (COracle) this.Clone();
+            var oracle = (COracle)this.Clone();
             string dbTnsOdp = $"(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={dbIpAddrss})(PORT={dbPort})))(CONNECT_DATA=(SERVICE_NAME={dbNameSid})))";
             oracle.InitializeConnection(dbUsername, dbPassword, dbTnsOdp);
             oracle.ReSetConnectionString();
@@ -275,7 +297,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public COracle CloneConnection() {
-            var oracle = (COracle) this.Clone();
+            var oracle = (COracle)this.Clone();
             oracle.InitializeConnection(this.DbUsername, this.DbPassword, this.DbTnsOdp);
             oracle.ReSetConnectionString();
             oracle.SetCommandTimeout();

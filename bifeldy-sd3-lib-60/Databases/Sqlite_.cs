@@ -12,20 +12,18 @@
  * 
  */
 
+using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Collections;
 using System.Data;
 using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
-
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using bifeldy_sd3_lib_60.Abstractions;
-using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Services;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -36,7 +34,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
     public sealed class CSqlite : CDatabase, ISqlite {
 
-        public CSqlite (
+        public CSqlite(
             DbContextOptions<CSqlite> options,
             ILogger<CSqlite> logger,
             IOptions<EnvVar> envVar,
@@ -73,8 +71,27 @@ namespace bifeldy_sd3_lib_60.Databases {
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
 
-                    bool isEnumerable = typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string);
-                    if (isEnumerable) {
+                    // PROTEKSI: Amankan tipe array biner byte[] / byte?[] dari loop kueri koleksi umum Sqlite
+                    bool isByteArray = pValType == typeof(byte[]) ||
+                                       (pValType.IsArray && (pValType.GetElementType() == typeof(byte) || Nullable.GetUnderlyingType(pValType.GetElementType()) == typeof(byte)));
+
+                    if (isByteArray && pVal != null) {
+                        byte[] cleanBytes;
+                        if (pVal is byte[] rawBytes) {
+                            cleanBytes = rawBytes;
+                        }
+                        else {
+                            cleanBytes = ((IEnumerable)pVal).Cast<object>().Select(b => b == null ? (byte)0 : (byte)Convert.ChangeType(b, typeof(byte))).ToArray();
+                        }
+
+                        var param = new SqliteParameter() {
+                            ParameterName = pName,
+                            SqliteType = SqliteType.Blob,
+                            Value = cleanBytes
+                        };
+                        _ = cmd.Parameters.Add(param);
+                    }
+                    else if (typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string)) {
                         string bindStr = string.Empty;
                         int id = 1;
                         foreach (dynamic data in pVal) {
@@ -111,18 +128,24 @@ namespace bifeldy_sd3_lib_60.Databases {
                 }
             }
 
-            this.LogQueryParameter(cmd, prefix);
+            // PROTEKSI: Amankan visual text logger dari crash IConvertible Sqlite Blob
+            try {
+                this.LogQueryParameter(cmd, prefix);
+            }
+            catch (Exception logEx) {
+                this._logger.LogWarning("[LOG_PARAMETERS_BYPASS] Gagal mencatat visual teks parameter SQL: " + logEx.Message);
+            }
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -130,7 +153,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -138,7 +161,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -146,7 +169,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -154,7 +177,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -162,7 +185,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -189,10 +212,10 @@ namespace bifeldy_sd3_lib_60.Databases {
                 int[] lengths = new int[colCount];
                 string[] fieldNames = new string[colCount];
 
-                var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+                var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
 
                 cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
-                using (var rdr = (SqliteDataReader) await this.ExecReaderAsync(cmd, CommandBehavior.Default, token)) {
+                using (var rdr = (SqliteDataReader)await this.ExecReaderAsync(cmd, CommandBehavior.Default, token)) {
                     if (rdr.FieldCount != colCount) {
                         throw new Exception("Jumlah Kolom Tabel Tidak Sama");
                     }
@@ -261,7 +284,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -269,7 +292,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (SqliteCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (SqliteCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -277,14 +300,14 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public CSqlite NewExternalConnection(string dbName) {
-            var sqlite = (CSqlite) this.Clone();
+            var sqlite = (CSqlite)this.Clone();
             sqlite.InitializeConnection(dbName);
             sqlite.ReSetConnectionString();
             return sqlite;
         }
 
         public CSqlite CloneConnection() {
-            var sqlite = (CSqlite) this.Clone();
+            var sqlite = (CSqlite)this.Clone();
             sqlite.InitializeConnection(this.DbName);
             sqlite.ReSetConnectionString();
             sqlite.SetCommandTimeout();

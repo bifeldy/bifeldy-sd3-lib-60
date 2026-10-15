@@ -12,27 +12,24 @@
  * 
  */
 
+using bifeldy_sd3_lib_60.Abstractions;
+using bifeldy_sd3_lib_60.Extensions;
+using bifeldy_sd3_lib_60.Models;
+using bifeldy_sd3_lib_60.Repositories;
+using bifeldy_sd3_lib_60.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Npgsql;
+using Npgsql.Schema;
+using NpgsqlTypes;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
-
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using Npgsql;
-using Npgsql.Schema;
-using NpgsqlTypes;
-
-using bifeldy_sd3_lib_60.Abstractions;
-using bifeldy_sd3_lib_60.Models;
-using bifeldy_sd3_lib_60.Services;
-using bifeldy_sd3_lib_60.Extensions;
-using bifeldy_sd3_lib_60.Repositories;
 
 namespace bifeldy_sd3_lib_60.Databases {
 
@@ -101,8 +98,26 @@ namespace bifeldy_sd3_lib_60.Databases {
                     dynamic pVal = parameters[i].VALUE;
                     Type pValType = (pVal == null) ? typeof(DBNull) : pVal.GetType();
 
-                    bool isEnumerable = typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string);
-                    if (isEnumerable) {
+                    bool isByteArray = pValType == typeof(byte[]) ||
+                                       (pValType.IsArray && (pValType.GetElementType() == typeof(byte) || Nullable.GetUnderlyingType(pValType.GetElementType()) == typeof(byte)));
+
+                    if (isByteArray && pVal != null) {
+                        byte[] cleanBytes;
+                        if (pVal is byte[] rawBytes) {
+                            cleanBytes = rawBytes;
+                        }
+                        else {
+                            cleanBytes = ((IEnumerable)pVal).Cast<object>().Select(b => b == null ? (byte)0 : (byte)Convert.ChangeType(b, typeof(byte))).ToArray();
+                        }
+
+                        var param = new NpgsqlParameter() {
+                            ParameterName = pName,
+                            NpgsqlDbType = NpgsqlDbType.Bytea,
+                            Value = cleanBytes
+                        };
+                        _ = cmd.Parameters.Add(param);
+                    }
+                    else if (typeof(IEnumerable).IsAssignableFrom(pValType) && pValType != typeof(string)) {
                         string bindStr = string.Empty;
                         int id = 1;
                         foreach (dynamic data in pVal) {
@@ -139,18 +154,23 @@ namespace bifeldy_sd3_lib_60.Databases {
                 }
             }
 
-            this.LogQueryParameter(cmd, prefix);
+            try {
+                this.LogQueryParameter(cmd, prefix);
+            }
+            catch (Exception logEx) {
+                this._logger.LogWarning("[LOG_PARAMETERS_BYPASS] Gagal mencatat visual teks parameter SQL: {message}", logEx.Message);
+            }
         }
 
         public override async Task<DataColumnCollection> GetAllColumnTableAsync(string tableName, int commandTimeoutSeconds = 3600) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = $@"SELECT * FROM {tableName} LIMIT 1";
             cmd.CommandType = CommandType.Text;
             return await this.GetAllColumnTableAsync(tableName, cmd);
         }
 
         public override async Task<DataTable> GetDataTableAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -158,7 +178,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override IAsyncEnumerable<T> GetAsyncEnumerable<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -166,7 +186,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<T>> GetListAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, CancellationToken token = default, Action<T> callback = null, int commandTimeoutSeconds = 3600) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -174,7 +194,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<T> ExecScalarAsync<T>(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -182,7 +202,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<int> ExecQueryWithResultAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -190,7 +210,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<bool> ExecQueryAsync(string queryString, List<CDbQueryParamBind> bindParam = null, int minRowsAffected = 1, bool shouldEqualMinRowsAffected = false, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -198,7 +218,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<CDbExecProcResult> ExecProcedureAsync(string procedureName, List<CDbQueryParamBind> bindParam = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             string sqlTextQueryParameters = "(";
             if (bindParam != null) {
                 for (int i = 0; i < bindParam.Count; i++) {
@@ -235,9 +255,9 @@ namespace bifeldy_sd3_lib_60.Databases {
                 int[] lengths = new int[colCount];
                 string[] fieldNames = new string[colCount];
 
-                var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+                var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
                 cmd.CommandText = $"SELECT * FROM {tableName} WHERE 1 = 0";
-                using (var rdr = (NpgsqlDataReader) await this.ExecReaderAsync(cmd, CommandBehavior.Default, token)) {
+                using (var rdr = (NpgsqlDataReader)await this.ExecReaderAsync(cmd, CommandBehavior.Default, token)) {
                     ReadOnlyCollection<NpgsqlDbColumn> columns = rdr.GetColumnSchema();
 
                     for (int i = 0; i < colCount; i++) {
@@ -246,8 +266,8 @@ namespace bifeldy_sd3_lib_60.Databases {
                             throw new Exception($"Kolom {lsCol[i]} Tidak Tersedia Di Tabel Tujuan {tableName}");
                         }
 
-                        types[i] = (NpgsqlDbType) column.NpgsqlDbType;
-                        lengths[i] = column.ColumnSize == null ? 0 : (int) column.ColumnSize;
+                        types[i] = (NpgsqlDbType)column.NpgsqlDbType;
+                        lengths[i] = column.ColumnSize == null ? 0 : (int)column.ColumnSize;
                         fieldNames[i] = column.ColumnName;
                     }
                 }
@@ -257,7 +277,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                     _ = sB.Append(", " + fieldNames[p]);
                 }
 
-                using (NpgsqlBinaryImporter writer = await ((NpgsqlConnection) this.GetConnection()).BeginBinaryImportAsync($"COPY {tableName} ({sB}) FROM STDIN (FORMAT BINARY)", token)) {
+                using (NpgsqlBinaryImporter writer = await ((NpgsqlConnection)this.GetConnection()).BeginBinaryImportAsync($"COPY {tableName} ({sB}) FROM STDIN (FORMAT BINARY)", token)) {
                     for (int j = 0; j < dataTable.Rows.Count; j++) {
                         DataRow dR = dataTable.Rows[j];
                         await writer.StartRowAsync(token);
@@ -280,7 +300,7 @@ namespace bifeldy_sd3_lib_60.Databases {
                                         break;
                                     case NpgsqlDbType.Money:
                                     case NpgsqlDbType.Numeric:
-                                        await writer.WriteAsync(((decimal) Convert.ToDecimal(_obj)).RemoveTrail(), types[i], token);
+                                        await writer.WriteAsync(((decimal)Convert.ToDecimal(_obj)).RemoveTrail(), types[i], token);
                                         break;
                                     case NpgsqlDbType.Double:
                                         await writer.WriteAsync(Convert.ToDouble(_obj), types[i], token);
@@ -318,15 +338,15 @@ namespace bifeldy_sd3_lib_60.Databases {
                                         await writer.WriteAsync(Convert.ToDateTime(_obj), types[i], token);
                                         break;
                                     case NpgsqlDbType.Bytea:
-                                        await writer.WriteAsync((byte[]) _obj, types[i], token);
+                                        await writer.WriteAsync((byte[])_obj, types[i], token);
                                         break;
                                     default:
                                         await writer.WriteAsync(_obj, types[i], token);
                                         break;
 
-                                    //
-                                    // TODO :: Add More Handles While Free Time ~
-                                    //
+                                        //
+                                        // TODO :: Add More Handles While Free Time ~
+                                        //
                                 }
                             }
                         }
@@ -441,7 +461,7 @@ namespace bifeldy_sd3_lib_60.Databases {
 
         /// <summary> Jangan Lupa Di Close Koneksinya (Wajib) </summary>
         public override async Task<DbDataReader> ExecReaderAsync(string queryString, List<CDbQueryParamBind> bindParam = null, CommandBehavior commandBehavior = CommandBehavior.Default, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -449,7 +469,7 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public override async Task<List<string>> RetrieveBlob(string stringPathDownload, string queryString, List<CDbQueryParamBind> bindParam = null, string stringCustomSingleFileName = null, Encoding encoding = null, int commandTimeoutSeconds = 3600, CancellationToken token = default) {
-            var cmd = (NpgsqlCommand) this.CreateCommand(commandTimeoutSeconds);
+            var cmd = (NpgsqlCommand)this.CreateCommand(commandTimeoutSeconds);
             cmd.CommandText = queryString;
             cmd.CommandType = CommandType.Text;
             this.BindQueryParameter(cmd, bindParam);
@@ -457,14 +477,14 @@ namespace bifeldy_sd3_lib_60.Databases {
         }
 
         public CPostgres NewExternalConnection(string dbIpAddrss, string dbPort, string dbUsername, string dbPassword, string dbName) {
-            var postgres = (CPostgres) this.Clone();
+            var postgres = (CPostgres)this.Clone();
             postgres.InitializeConnection(dbIpAddrss, dbPort, dbUsername, dbPassword, dbName);
             postgres.ReSetConnectionString();
             return postgres;
         }
 
         public CPostgres CloneConnection() {
-            var postgres = (CPostgres) this.Clone();
+            var postgres = (CPostgres)this.Clone();
             postgres.InitializeConnection(this.DbIpAddrss, this.DbPort, this.DbUsername, this.DbPassword, this.DbName);
             postgres.ReSetConnectionString();
             postgres.SetCommandTimeout();
