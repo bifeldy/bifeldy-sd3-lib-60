@@ -95,7 +95,7 @@ namespace bifeldy_sd3_lib_60.Services {
                 }
             }
             else {
-                csv = csv.WithFirstLineHeader(true);
+                csv = csv.WithFirstLineHeader();
             }
 
             return csv;
