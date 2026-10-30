@@ -13,10 +13,9 @@
  * 
  */
 
-using Microsoft.EntityFrameworkCore;
-
 using bifeldy_sd3_lib_60.Models;
 using bifeldy_sd3_lib_60.TableView;
+using Microsoft.EntityFrameworkCore;
 
 namespace bifeldy_sd3_lib_60.Abstractions {
 
@@ -25,8 +24,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
         Task<EJenisDc> GetJenisDc(bool isPg, IDatabase db);
         Task<string> GetKodeDc(bool isPg, IDatabase db);
         Task<string> GetNamaDc(bool isPg, IDatabase db);
-        Task<bool> IsDcHo(bool isPg, IDatabase db);
         Task<bool> IsNonDc(bool isPg, IDatabase db);
+        Task<bool> IsIgr(bool isPg, IDatabase db);
+        Task<bool> IsDcHo(bool isPg, IDatabase db);
         Task<bool> IsWhHo(bool isPg, IDatabase db);
         Task<bool> IsHo(bool isPg, IDatabase db);
         Task<bool> IsDc(bool isPg, IDatabase db);
@@ -73,6 +73,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     ) {
                         this.JenisDc = EJenisDc.NONDC;
                     }
+                    else if (_dbConStr.Contains("IDEL") || _dbConStr.Contains("IGRDEL")) {
+                        this.JenisDc = EJenisDc.IGR;
+                    }
                     else if (_dbConStr.Contains("DCHO") || _dbConStr.Contains("WHHO")) {
                         this.JenisDc = EJenisDc.HO;
                     }
@@ -104,7 +107,10 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     else if (_dbConStr.Contains("RLTM") || _dbConStr.Contains("REALTIME") || _dbConStr.Contains("TIMESCALE")) {
                         this.KodeDc = "RLTM";
                     }
-                    else if(_dbConStr.Contains("DCHO")) {
+                    else if (_dbConStr.Contains("IDEL") || _dbConStr.Contains("IGRDEL")) {
+                        this.KodeDc = "IDEL";
+                    }
+                    else if (_dbConStr.Contains("DCHO")) {
                         this.KodeDc = "DCHO";
                     }
                     else if (_dbConStr.Contains("WHHO")) {
@@ -132,6 +138,9 @@ namespace bifeldy_sd3_lib_60.Abstractions {
                     else if (_dbConStr.Contains("RLTM") || _dbConStr.Contains("REALTIME") || _dbConStr.Contains("TIMESCALE")) {
                         this.NamaDc = "REAL-TIME-SCALE";
                     }
+                    else if (_dbConStr.Contains("IDEL") || _dbConStr.Contains("IGRDEL")) {
+                        this.NamaDc = "IGR DELIVERY";
+                    }
                     else if (_dbConStr.Contains("DCHO")) {
                         this.NamaDc = "DC HEAD OFFICE";
                     }
@@ -153,6 +162,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
             return jenisDc == EJenisDc.NONDC;
         }
 
+        public async Task<bool> IsIgr(bool isPg, IDatabase db) {
+            EJenisDc jenisDc = await this.GetJenisDc(isPg, db);
+            return jenisDc == EJenisDc.IGR;
+        }
+
         public async Task<bool> IsDcHo(bool isPg, IDatabase db) {
             string kodeDc = await this.GetKodeDc(isPg, db);
             return kodeDc == "DCHO";
@@ -170,10 +184,11 @@ namespace bifeldy_sd3_lib_60.Abstractions {
 
         public async Task<bool> IsDc(bool isPg, IDatabase db) {
             bool isNonDc = await this.IsNonDc(isPg, db);
+            bool isIgr = await this.IsIgr(isPg, db);
             bool isDcHo = await this.IsDcHo(isPg, db);
             bool isWhHo = await this.IsWhHo(isPg, db);
             bool isHo = await this.IsHo(isPg, db);
-            return !isNonDc && !isDcHo && !isWhHo && !isHo;
+            return !isNonDc && !isIgr && !isDcHo && !isWhHo && !isHo;
         }
 
         public async Task<DateTime> OraPg_DateYesterdayOrTommorow(bool isPg, IDatabase db, int lastDay) {
